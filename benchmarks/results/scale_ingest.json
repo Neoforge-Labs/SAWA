@@ -1,0 +1,51 @@
+{
+  "stage": "ingest",
+  "seed": 42,
+  "generated_at": "2026-08-13",
+  "host": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.12",
+    "cpu_count": 8
+  },
+  "measurements": [
+    {
+      "n_sequences": 100,
+      "wall_seconds": 0.10266391601180658,
+      "peak_mb": 102.90625,
+      "throughput_per_sec": 974.0520709194434,
+      "extras": {
+        "n_parsed": 100.0
+      }
+    },
+    {
+      "n_sequences": 500,
+      "wall_seconds": 0.025328207993879914,
+      "peak_mb": 111.046875,
+      "throughput_per_sec": 19740.83599285096,
+      "extras": {
+        "n_parsed": 500.0
+      }
+    },
+    {
+      "n_sequences": 1000,
+      "wall_seconds": 0.03453412500675768,
+      "peak_mb": 115.140625,
+      "throughput_per_sec": 28956.865124114738,
+      "extras": {
+        "n_parsed": 1000.0
+      }
+    },
+    {
+      "n_sequences": 5000,
+      "wall_seconds": 0.14233579201390967,
+      "peak_mb": 128.1875,
+      "throughput_per_sec": 35128.198812505136,
+      "extras": {
+        "n_parsed": 5000.0
+      }
+    }
+  ],
+  "schema_version": "0.1.0",
+  "notes": "synthetic LANL-shaped TSV parser throughput (no network)"
+}

@@ -1,0 +1,60 @@
+{
+  "stage": "align",
+  "seed": 42,
+  "generated_at": "2026-08-13",
+  "host": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.12",
+    "cpu_count": 8
+  },
+  "measurements": [
+    {
+      "n_sequences": 100,
+      "wall_seconds": 0.07022570900153369,
+      "peak_mb": 86.09375,
+      "throughput_per_sec": 1423.9799273200083,
+      "extras": {
+        "n_aligned": 100.0
+      }
+    },
+    {
+      "n_sequences": 200,
+      "wall_seconds": 0.014869250007905066,
+      "peak_mb": 86.359375,
+      "throughput_per_sec": 13450.57752702203,
+      "extras": {
+        "n_aligned": 200.0
+      }
+    },
+    {
+      "n_sequences": 500,
+      "wall_seconds": 0.026739166001789272,
+      "peak_mb": 86.359375,
+      "throughput_per_sec": 18699.16211921277,
+      "extras": {
+        "n_aligned": 500.0
+      }
+    },
+    {
+      "n_sequences": 1000,
+      "wall_seconds": 0.06376900000032037,
+      "peak_mb": 86.359375,
+      "throughput_per_sec": 15681.600777728614,
+      "extras": {
+        "n_aligned": 1000.0
+      }
+    },
+    {
+      "n_sequences": 2000,
+      "wall_seconds": 0.1412093749968335,
+      "peak_mb": 86.359375,
+      "throughput_per_sec": 14163.36557006111,
+      "extras": {
+        "n_aligned": 2000.0
+      }
+    }
+  ],
+  "schema_version": "0.1.0",
+  "notes": "aligner=mappy; synthetic JC69 sequences at pol length"
+}

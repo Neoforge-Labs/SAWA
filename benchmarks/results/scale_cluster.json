@@ -1,0 +1,45 @@
+{
+  "stage": "cluster",
+  "seed": 42,
+  "generated_at": "2026-08-13",
+  "host": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.12",
+    "cpu_count": 8
+  },
+  "measurements": [
+    {
+      "n_sequences": 100,
+      "wall_seconds": 1.6850832090131007,
+      "peak_mb": 92.765625,
+      "throughput_per_sec": 59.34425045904219,
+      "extras": {
+        "n_predicted_clusters": 100.0,
+        "n_pairs_below_threshold": 0.0
+      }
+    },
+    {
+      "n_sequences": 200,
+      "wall_seconds": 1.7512305830023251,
+      "peak_mb": 92.765625,
+      "throughput_per_sec": 114.20540615337943,
+      "extras": {
+        "n_predicted_clusters": 200.0,
+        "n_pairs_below_threshold": 0.0
+      }
+    },
+    {
+      "n_sequences": 500,
+      "wall_seconds": 1.2575200419814792,
+      "peak_mb": 92.765625,
+      "throughput_per_sec": 397.60797705629255,
+      "extras": {
+        "n_predicted_clusters": 500.0,
+        "n_pairs_below_threshold": 0.0
+      }
+    }
+  ],
+  "schema_version": "0.1.0",
+  "notes": "tn93 Docker + connected-components at threshold=0.015"
+}
