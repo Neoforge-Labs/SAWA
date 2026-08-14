@@ -1,0 +1,81 @@
+{
+  "source": "Stanford HIVDB Surveillance Drug Resistance Mutation (SDRM) list",
+  "source_url": "https://hivdb.stanford.edu/pages/WHOResistanceList.html",
+  "algorithm_reference": "Bennett DE et al., PLoS ONE 4(3):e4724 (2009); updated 2019",
+  "algorithm_version_pinned": "SDRM-2019",
+  "notes": "Positions used as candidate features for the DR model. Amino-acid states listed are the SDRM-defined resistance-associated variants at each position. Feature engineering can key on position only (any non-consensus aa) or on specific (position, aa) pairs.",
+  "genes": {
+    "PR": {
+      "reference_length_aa": 99,
+      "positions": {
+        "23": ["I"],
+        "24": ["I"],
+        "30": ["N"],
+        "32": ["I"],
+        "33": ["F"],
+        "46": ["I", "L"],
+        "47": ["V", "A"],
+        "48": ["V", "M"],
+        "50": ["V", "L"],
+        "53": ["L", "Y"],
+        "54": ["V", "L", "M", "A", "T", "S"],
+        "73": ["S", "T", "C", "A"],
+        "76": ["V"],
+        "82": ["A", "T", "F", "S", "L", "M", "C"],
+        "83": ["D"],
+        "84": ["V", "A", "C"],
+        "85": ["V"],
+        "88": ["D", "S"],
+        "90": ["M"]
+      }
+    },
+    "RT_NRTI": {
+      "gene": "RT",
+      "positions": {
+        "41": ["L"],
+        "65": ["R", "N", "E"],
+        "67": ["N", "G", "E"],
+        "69": ["D", "ins"],
+        "70": ["R", "E", "G"],
+        "74": ["V", "I"],
+        "75": ["M", "T", "A", "S"],
+        "77": ["L"],
+        "115": ["F"],
+        "116": ["Y"],
+        "151": ["M"],
+        "184": ["V", "I"],
+        "210": ["W"],
+        "215": ["Y", "F", "I", "S", "C", "D", "V", "E"],
+        "219": ["Q", "E", "N", "R"]
+      }
+    },
+    "RT_NNRTI": {
+      "gene": "RT",
+      "positions": {
+        "100": ["I"],
+        "101": ["E", "P"],
+        "103": ["N", "S"],
+        "106": ["M", "A"],
+        "179": ["F"],
+        "181": ["C", "I", "V"],
+        "188": ["L", "H", "C"],
+        "190": ["A", "S", "E"],
+        "225": ["H"],
+        "230": ["L"]
+      }
+    },
+    "IN": {
+      "reference_length_aa": 288,
+      "positions": {
+        "66": ["I", "A", "K"],
+        "92": ["Q"],
+        "121": ["Y"],
+        "140": ["S", "A", "C"],
+        "143": ["R", "H", "C"],
+        "147": ["G"],
+        "148": ["H", "R", "K"],
+        "155": ["H"]
+      }
+    }
+  }
+}
