@@ -410,7 +410,13 @@ def parse_lanl_fasta(path: Path) -> dict[str, str]:
 
     def flush() -> None:
         if current_accession and buffer:
-            accession_to_seq[current_accession] = "".join(buffer).upper().replace("U", "T")
+            # LANL ships pre-aligned FASTAs (gaps as '-'), but this
+            # function is used as a raw-sequence source for
+            # `to_sequence_records()`; downstream we re-align to HXB2
+            # ourselves. Strip alignment gaps here so the SequenceRecord
+            # holds an ungapped nucleotide string.
+            seq = "".join(buffer).upper().replace("U", "T").replace("-", "")
+            accession_to_seq[current_accession] = seq
 
     with path.open("r", encoding="utf-8", errors="replace") as fh:
         for line in fh:
