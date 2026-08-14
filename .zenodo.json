@@ -22,7 +22,7 @@
   "upload_type": "software",
   "related_identifiers": [
     {
-      "identifier": "https://github.com/neoforge-labs/hiv-dr-watch",
+      "identifier": "https://github.com/Neoforge-Labs/SAWA",
       "relation": "isSupplementTo",
       "resource_type": "software"
     }

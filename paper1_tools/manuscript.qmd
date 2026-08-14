@@ -130,7 +130,7 @@ clustering as expected from tn93's pairwise-distance complexity.
 
 # Availability
 
-Source: <https://github.com/neoforge-labs/hiv-dr-watch>.
+Source: <https://github.com/Neoforge-Labs/SAWA>.
 Archived release (this paper): Zenodo DOI `10.xxxx/xxxxxxx`.
 License: MIT.
 

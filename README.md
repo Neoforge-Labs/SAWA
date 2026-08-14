@@ -1,8 +1,8 @@
 # SAWA — Sub-Saharan Africa Watch for Antiretroviral resistance
 
-[![test](https://github.com/neoforge-labs/hiv-dr-watch/actions/workflows/test.yml/badge.svg)](https://github.com/neoforge-labs/hiv-dr-watch/actions/workflows/test.yml)
-[![benchmarks](https://github.com/neoforge-labs/hiv-dr-watch/actions/workflows/benchmarks.yml/badge.svg)](https://github.com/neoforge-labs/hiv-dr-watch/actions/workflows/benchmarks.yml)
-[![figures](https://github.com/neoforge-labs/hiv-dr-watch/actions/workflows/figures.yml/badge.svg)](https://github.com/neoforge-labs/hiv-dr-watch/actions/workflows/figures.yml)
+[![test](https://github.com/Neoforge-Labs/SAWA/actions/workflows/test.yml/badge.svg)](https://github.com/Neoforge-Labs/SAWA/actions/workflows/test.yml)
+[![benchmarks](https://github.com/Neoforge-Labs/SAWA/actions/workflows/benchmarks.yml/badge.svg)](https://github.com/Neoforge-Labs/SAWA/actions/workflows/benchmarks.yml)
+[![figures](https://github.com/Neoforge-Labs/SAWA/actions/workflows/figures.yml/badge.svg)](https://github.com/Neoforge-Labs/SAWA/actions/workflows/figures.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
@@ -43,8 +43,8 @@ The immediate deliverable is a tools paper (*Paper 1, Virus Evolution*, in prepa
 **Bootstrap**
 
 ```bash
-git clone https://github.com/neoforge-labs/hiv-dr-watch
-cd hiv-dr-watch
+git clone https://github.com/Neoforge-Labs/SAWA
+cd SAWA
 make setup           # copies .env.example → .env, runs `uv sync`
 make images          # builds tn93, MAFFT, IQ-TREE, HIV-TRACE images (~5 min first time)
 make up              # docker compose up -d — starts postgres, minio, prefect, mlflow
@@ -178,7 +178,7 @@ Coverage on any module touched by a PR is required to stay above 70 %.
 
 ## Community guidelines
 
-- **Report a bug or request a feature:** open an issue at https://github.com/neoforge-labs/hiv-dr-watch/issues. Please include the SAWA version (`hivdrwatch version`), Python + OS, and a minimal reproduction.
+- **Report a bug or request a feature:** open an issue at https://github.com/Neoforge-Labs/SAWA/issues. Please include the SAWA version (`hivdrwatch version`), Python + OS, and a minimal reproduction.
 - **Contribute code:** fork, branch (`feat/<module>/<short-desc>` or `paper/<N>/<section>`), open a draft PR early. Rebase on `main` before requesting review. One reviewer minimum for anything under `src/hivdrwatch/` core or `causal/` core; docs-only PRs can self-merge.
 - **Code style:** Conventional Commits, type hints everywhere (`mypy --strict`), `ruff` clean. See `CLAUDE.md` for the full working conventions.
 - **Security:** report vulnerabilities to `security@neoforge.io` — please **do not** open a public issue for security matters.
@@ -213,7 +213,7 @@ If you use SAWA in research, please cite it. On tagged releases a Zenodo DOI is 
   publisher    = {Zenodo},
   version      = {v0.1.0-sawa},
   doi          = {10.5281/zenodo.XXXXXXX},
-  url          = {https://github.com/neoforge-labs/hiv-dr-watch}
+  url          = {https://github.com/Neoforge-Labs/SAWA}
 }
 ```
 

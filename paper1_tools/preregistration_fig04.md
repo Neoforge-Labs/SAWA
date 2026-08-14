@@ -2,7 +2,7 @@
 
 **Registered:** *pending OSF submission — locked here in git until then*
 **Analysis lead:** Kelyn Njeri (NeoForge Labs)
-**Repository:** https://github.com/neoforge-labs/hiv-dr-watch
+**Repository:** https://github.com/Neoforge-Labs/SAWA
 **Frozen analysis code:** `notebooks/fig04_dtg_case_study.py` at git SHA `<TAG_ON_SUBMISSION>`
 **Frozen data vintage:** DVC pointer `data/interim/dr_results.parquet.dvc` at same SHA
 

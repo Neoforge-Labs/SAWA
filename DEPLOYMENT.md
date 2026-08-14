@@ -15,7 +15,7 @@ That's it. Everything else (Postgres, MinIO, MLflow, Prefect, tn93, IQ-TREE, MAF
 ## Reviewer path — reproduce a paper
 
 ```bash
-git clone https://github.com/neoforge-labs/hiv-dr-watch
+git clone https://github.com/Neoforge-Labs/SAWA
 cd hiv-dr-watch
 git checkout paper1-v1.0.0             # pinned Zenodo-linked tag
 make setup                              # .env + uv sync

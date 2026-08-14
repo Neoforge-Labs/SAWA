@@ -18,8 +18,8 @@ authors:
     affiliation: "NeoForge Labs, Nairobi, Kenya"
     # orcid: "https://orcid.org/0000-0000-0000-0000"  # add when issued
 license: MIT
-repository-code: "https://github.com/neoforge-labs/hiv-dr-watch"
-url: "https://github.com/neoforge-labs/hiv-dr-watch"
+repository-code: "https://github.com/Neoforge-Labs/SAWA"
+url: "https://github.com/Neoforge-Labs/SAWA"
 version: "0.1.0"
 date-released: "2026-08-13"
 keywords:
