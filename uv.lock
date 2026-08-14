@@ -2151,7 +2151,10 @@ dvc = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "mypy" },
     { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-httpx" },
     { name = "ruff" },
 ]
 
@@ -2193,7 +2196,10 @@ provides-extras = ["dev", "dvc"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=9.1.1" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "pytest-httpx", specifier = ">=0.30" },
     { name = "ruff", specifier = ">=0.16.2" },
 ]
 
