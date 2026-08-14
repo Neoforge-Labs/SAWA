@@ -33,11 +33,12 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="HIV-DR-Watch API",
+        title="SAWA API",
         description=(
+            "SAWA — Sub-Saharan Africa Watch for Antiretroviral resistance. "
             "Open real-time HIV-1 drug-resistance surveillance for "
             "sub-Saharan Africa. Read-only in v1; writes gated behind the "
-            "KEMRI Data Sharing Agreement."
+            "KEMRI Data Sharing Agreement. (Python package: `hivdrwatch`.)"
         ),
         version="0.1.0",
         root_path=settings.root_path,
