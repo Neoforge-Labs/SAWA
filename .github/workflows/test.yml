@@ -1,0 +1,53 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Sync dependencies
+        run: uv sync --all-extras
+
+      - name: Ruff — lint
+        run: uv run ruff check .
+
+      - name: Ruff — format check
+        run: uv run ruff format --check .
+
+      - name: Pytest
+        env:
+          # Never talk to real Sierra/NCBI in CI — the resistance client
+          # honors this env var and returns cached fixtures only.
+          HIVDRWATCH_OFFLINE: "1"
+        run: uv run pytest tests/ -q --cov=hivdrwatch --cov=causal --cov-report=term-missing
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-py${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: ignore

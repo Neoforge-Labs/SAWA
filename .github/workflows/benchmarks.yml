@@ -1,0 +1,74 @@
+name: benchmarks
+
+on:
+  schedule:
+    # Weekly at 04:00 UTC Monday
+    - cron: "0 4 * * 1"
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "benchmarks/**"
+      - "src/hivdrwatch/**"
+      - ".github/workflows/benchmarks.yml"
+
+concurrency:
+  group: benchmarks-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  scale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync --all-extras
+
+      - name: Scale — ingest
+        run: uv run python -m benchmarks.scale_ingest
+             --sizes 100 500 1000 5000
+             --out benchmarks/results/scale_ingest.json
+
+      - name: Scale — align
+        run: uv run python -m benchmarks.scale_align
+             --sizes 100 200 500 1000
+             --out benchmarks/results/scale_align.json
+
+      # scale_cluster requires Docker for tn93; runs but no-ops if
+      # docker isn't on PATH. Ubuntu-latest has Docker preinstalled.
+      - name: Build tn93 image
+        run: docker build -t hivdrwatch/tn93:1.0.13 docker/hivtrace
+
+      - name: Scale — cluster
+        run: uv run python -m benchmarks.scale_cluster
+             --sizes 100 200 500
+             --out benchmarks/results/scale_cluster.json
+
+      - name: Commit updated benchmark results
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          set -eu
+          git config user.name "hivdrwatch-bot"
+          git config user.email "hivdrwatch-bot@users.noreply.github.com"
+          git add benchmarks/results/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(bench): refresh scale_* results
+
+          Automated via .github/workflows/benchmarks.yml"
+            git push
+          fi
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: scale-results
+          path: benchmarks/results/*.json

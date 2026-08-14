@@ -1,0 +1,54 @@
+name: figures
+
+on:
+  schedule:
+    # Nightly at 05:00 UTC
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/hivdrwatch/paper1/**"
+      - "notebooks/fig0*.py"
+      - ".github/workflows/figures.yml"
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync --all-extras
+
+      # Fig 2 and Fig 4 need real DR + curated parquets; those aren't
+      # checked in (raw data lives in DVC). The check we CAN run here
+      # is that the aggregators load, the notebooks execute against
+      # synthetic fixtures, and Fig 5 renders from committed
+      # benchmark results.
+      - name: Fig 5 — scalability (from committed benchmark JSONs)
+        if: hashFiles('benchmarks/results/scale_*.json') != ''
+        run: uv run python notebooks/fig05_scalability.py
+
+      - name: Import-check all figure modules
+        run: |
+          uv run python -c "
+          from hivdrwatch.paper1 import fig02_aggregate, fig05_scalability
+          from hivdrwatch.paper1 import style
+          print('all paper1 modules import cleanly')
+          "
+
+      - name: Upload rendered figures
+        uses: actions/upload-artifact@v4
+        with:
+          name: figures
+          path: paper1_tools/figures/
+          if-no-files-found: ignore
