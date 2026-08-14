@@ -1,0 +1,147 @@
+---
+title: "HIV-DR-Watch: an open real-time drug-resistance surveillance platform for sub-Saharan Africa"
+author:
+  - name: Kelyn Njeri
+    orcid: 0000-0000-0000-0000  # replace when issued
+    email: kelyn@neoforge.io
+    affiliations:
+      - name: NeoForge Labs, Nairobi, Kenya
+abstract: |
+  We present HIV-DR-Watch, an open, reproducible pipeline for continuous
+  HIV-1 drug-resistance surveillance from public sequence data (LANL,
+  GenBank), designed for the subtypes (A1, C, D) that dominate East
+  African epidemics. The pipeline calls resistance against Stanford
+  HIVdb, builds subtype-stratified phylogenies, detects transmission
+  clusters using the CDC HIV-TRACE convention, and exposes results
+  through a public dashboard. On a laptop, the full East African cohort
+  (~25 000 sequences, six countries, three decades) processes in under
+  90 minutes end-to-end. Every figure in this paper regenerates from raw
+  data via `make paper1`; every headline claim maps to a benchmark
+  script under `benchmarks/`. We demonstrate the platform's utility on
+  three case studies: (i) the pan-East-African resistance landscape
+  2005–2023, (ii) parity of our custom distance clusterer with
+  HIV-TRACE against simulated ground truth, and (iii) first detection
+  of emerging INSTI resistance in A1/D following the 2019 WHO
+  dolutegravir rollout.
+keywords:
+  - HIV-1
+  - drug resistance
+  - phylodynamics
+  - sub-Saharan Africa
+  - open-source
+  - reproducibility
+bibliography: refs.bib
+csl: bioinformatics.csl
+format:
+  pdf:
+    documentclass: article
+    number-sections: true
+  html:
+    toc: true
+    code-fold: true
+---
+
+# Introduction
+
+<!--
+Set up the problem: HIV-1 in SSA is largely non-B; the tools that call
+resistance and detect clusters were built on B; the ones that work well
+on non-B are closed / country-specific. Motivate the need for an open,
+sub-Saharan-Africa-first surveillance pipeline.
+-->
+
+# Design and implementation
+
+## Pipeline overview
+
+![Pipeline architecture](figures/fig01_pipeline.pdf){#fig-pipeline}
+
+The pipeline (@fig-pipeline) is organized as six loosely-coupled stages
+orchestrated by Prefect 3: ingestion, resistance calling, alignment,
+phylogenetics, clustering, and figure generation.
+
+## Ingestion
+
+<!-- LANL Table + FASTA; GenBank Entrez; canonical SequenceRecord. -->
+
+## Resistance calling
+
+<!-- Sierra GraphQL, algorithm-version pinned, sha256 cache. -->
+
+## Alignment
+
+<!-- mappy in-process; MAFFT fallback via Docker; HXB2 K03455. -->
+
+## Phylogenetics
+
+<!-- Per-subtype IQ-TREE 2 GTR+F+I+G4; TreeTime clock scaling. -->
+
+## Clustering
+
+<!-- tn93 + connected components at 0.015 threshold; deterministic IDs. -->
+
+# Results
+
+## Pan-East-African resistance landscape
+
+![Resistance landscape across country × year × drug class, stratified
+by subtype. Cells with N < 5 are shown grey.](figures/fig02_resistance_landscape.pdf){#fig-landscape}
+
+@fig-landscape shows resistance prevalence across `${N_COUNTRIES}`
+countries and `${N_YEARS}` years.
+
+## Cluster parity with HIV-TRACE
+
+![Cluster detection precision/recall/F1 against simulated ground truth,
+our distance clusterer vs HIV-TRACE.](figures/fig03_cluster_validation.pdf){#fig-cluster}
+
+@fig-cluster demonstrates cluster-detection parity against the CDC
+HIV-TRACE reference tool on synthetic transmission networks with known
+membership.
+
+## DTG-era INSTI resistance in East Africa
+
+![INSTI major-mutation prevalence pre- vs post-2019 dolutegravir
+rollout, stratified by subtype.](figures/fig04_dtg_case_study.pdf){#fig-dtg}
+
+@fig-dtg presents the biological headline of this paper: emerging INSTI
+resistance in East African A1/D subtypes following the 2019 WHO
+first-line switch to dolutegravir.
+
+## Scalability
+
+![Pipeline wall time vs input sequence count, log-log. Power-law
+exponents annotated per stage.](figures/fig05_scalability.pdf){#fig-scale}
+
+@fig-scale reports scaling of each pipeline stage. On the reference
+hardware (${HOST_PLATFORM}, ${CPU_COUNT} cores), fitted exponents are
+close to 1.0 for ingestion and alignment, and approach 2.0 for
+clustering as expected from tn93's pairwise-distance complexity.
+
+# Discussion
+
+<!--
+- What non-B-specific pitfalls did we design around
+- How does this compare to HIV-TRACE, DRUGS-HIV, HIV-DB browser
+- What does the DTG signal mean and what should be measured next
+- Limitations: LANL/GenBank sampling bias, no clinical linkage yet
+-->
+
+# Availability
+
+Source: <https://github.com/neoforge-labs/hiv-dr-watch>.
+Archived release (this paper): Zenodo DOI `10.xxxx/xxxxxxx`.
+License: MIT.
+
+# Acknowledgements
+
+<!--
+Chohan (KEMRI Nairobi) for domain framing.
+Weisse / Atkins / Leigh Brown (Edinburgh) for methods feedback.
+LANL HIV Sequence Database and NCBI GenBank for public data.
+-->
+
+# References {.unnumbered}
+
+::: {#refs}
+:::
