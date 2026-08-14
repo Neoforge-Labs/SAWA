@@ -1,16 +1,33 @@
 name: figures
 
 on:
-  schedule:
-    # Nightly at 05:00 UTC
-    - cron: "0 5 * * *"
-  workflow_dispatch: {}
+  # Fire on every push to main whose diff touches figure code / notebooks
+  # / benchmarks. Direct pushes to main were bypassing the pull_request
+  # trigger below and skipping this workflow entirely.
+  push:
+    branches: [main]
+    paths:
+      - "src/hivdrwatch/paper1/**"
+      - "notebooks/fig0*.py"
+      - "benchmarks/results/*.json"
+      - ".github/workflows/figures.yml"
   pull_request:
     branches: [main]
     paths:
       - "src/hivdrwatch/paper1/**"
       - "notebooks/fig0*.py"
+      - "benchmarks/results/*.json"
       - ".github/workflows/figures.yml"
+  # Nightly regen — GitHub only fires cron on the default branch, and
+  # only after the repo has recent activity, so this is a belt-and-
+  # suspenders trigger. `push` above is the primary one.
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: figures-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   regen:
@@ -29,22 +46,42 @@ jobs:
       - name: Sync dependencies
         run: uv sync --all-extras
 
-      # Fig 2 and Fig 4 need real DR + curated parquets; those aren't
-      # checked in (raw data lives in DVC). The check we CAN run here
-      # is that the aggregators load, the notebooks execute against
-      # synthetic fixtures, and Fig 5 renders from committed
-      # benchmark results.
+      # Import-check every Paper 1 figure module so a bad edit surfaces
+      # here, not only when someone runs `make paper1` locally.
+      - name: Import-check all Paper 1 figure modules
+        run: |
+          uv run python -c "
+          from hivdrwatch.paper1 import (
+              fig01_pipeline,
+              fig02_aggregate,
+              fig03_parity,
+              fig04_dtg,
+              fig05_scalability,
+              style,
+          )
+          print('all paper1 figure modules import cleanly')
+          "
+
+      # Fig 1 is deterministic — no data dependency, always renderable.
+      - name: Fig 1 — pipeline architecture
+        run: uv run python notebooks/fig01_pipeline_architecture.py
+
+      # Fig 5 needs committed benchmark JSONs. Skip cleanly if missing
+      # so a fresh repo without benchmarks still passes.
       - name: Fig 5 — scalability (from committed benchmark JSONs)
         if: hashFiles('benchmarks/results/scale_*.json') != ''
         run: uv run python notebooks/fig05_scalability.py
 
-      - name: Import-check all figure modules
+      # Fig 2 / Fig 3 / Fig 4 need real data (DVC-tracked; not in git).
+      # Their aggregators are covered by unit tests in the `test`
+      # workflow; here we just prove they import + the notebook syntax
+      # is valid via `python -m py_compile`.
+      - name: Compile-check data-dependent notebooks
         run: |
-          uv run python -c "
-          from hivdrwatch.paper1 import fig02_aggregate, fig05_scalability
-          from hivdrwatch.paper1 import style
-          print('all paper1 modules import cleanly')
-          "
+          uv run python -m py_compile \
+              notebooks/fig02_resistance_landscape.py \
+              notebooks/fig03_cluster_validation.py \
+              notebooks/fig04_dtg_case_study.py
 
       - name: Upload rendered figures
         uses: actions/upload-artifact@v4
