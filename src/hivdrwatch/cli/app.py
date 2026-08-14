@@ -24,8 +24,10 @@ import typer
 app = typer.Typer(
     name="hivdrwatch",
     help=(
-        "HIV-DR-Watch — open real-time HIV-1 drug-resistance surveillance "
-        "for sub-Saharan Africa. Every subcommand mirrors a pipeline stage."
+        "SAWA — Sub-Saharan Africa Watch for Antiretroviral resistance. "
+        "Open real-time HIV-1 drug-resistance surveillance. Every "
+        "subcommand mirrors a pipeline stage. "
+        "(CLI is `hivdrwatch`, brand is SAWA.)"
     ),
     no_args_is_help=True,
     add_completion=False,
