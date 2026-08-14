@@ -67,7 +67,11 @@ packages = ["src/hivdrwatch", "causal"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --strict-markers --cov=hivdrwatch --cov-report=term-missing"
+# `--import-mode=importlib` prevents the classic collision where an
+# empty `tests/<name>/__init__.py` shadows a top-level package of the
+# same name (e.g. `tests/causal/` was shadowing our real `causal/`).
+# See: https://docs.pytest.org/en/stable/explanation/pythonpath.html
+addopts = "-v --strict-markers --cov=hivdrwatch --cov=causal --cov-report=term-missing --import-mode=importlib"
 pythonpath = ["src", "."]
 
 [tool.ruff]
@@ -104,7 +108,14 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [dependency-groups]
+# uv installs from this group by default. Keep it in sync with the
+# `[project.optional-dependencies].dev` list above — the latter is
+# the pip-installable optional-extras name (e.g. `pip install .[dev]`),
+# this one is what `uv sync` reads.
 dev = [
     "pytest>=9.1.1",
+    "pytest-cov>=5.0",
+    "pytest-httpx>=0.30",
     "ruff>=0.16.2",
+    "mypy>=1.11",
 ]

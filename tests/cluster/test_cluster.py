@@ -1,14 +1,15 @@
-"""Unit tests for clustering: assembly, dynamics, and outbreak features."""
+"""Unit tests for clustering: assembly, dynamics, and graph construction.
+
+The `hivdrwatch.features.outbreak_features` module and its Naomi
+label-join helpers were deleted in the Phase 0 cleanup (see MODULES.md
+Phase 0 alignment note) — they were out-of-scope for Paper 1. Tests
+that covered those symbols were removed with them.
+"""
 
 from __future__ import annotations
 
 import polars as pl
 import pytest
-from hivdrwatch.features.outbreak_features import (
-    NaomiIncidenceLabels,
-    build_outbreak_features,
-    join_features_and_labels,
-)
 
 from hivdrwatch.cluster.assembly import (
     assign_clusters,
@@ -138,57 +139,6 @@ class TestClusterGeographicSpread:
         by_id = {r["cluster_id"]: r for r in spread.iter_rows(named=True)}
         assert by_id["C-1"]["n_countries"] == 1
         assert by_id["C-1"]["majority_country"] == "KE"
-
-
-# ---------- outbreak feature mart ----------
-
-
-class TestBuildOutbreakFeatures:
-    def test_shape_and_deposit_rate(self, toy_data) -> None:
-        metadata, cluster_df = toy_data
-        ts = cluster_time_series(cluster_df, metadata)
-        growth = cluster_growth_rate(ts, window_years=2)
-        subtypes = cluster_subtype_mix(cluster_df, metadata)
-
-        features = build_outbreak_features(
-            sequence_metadata=metadata,
-            cluster_assignments=cluster_df,
-            cluster_growth=growth,
-            cluster_subtypes=subtypes,
-        )
-        # 3 countries × varying years — smoke check core columns
-        assert "deposit_rate" in features.columns
-        assert "n_sequences_deposited" in features.columns
-        assert "subtype_a1_fraction" in features.columns
-        assert features.height > 0
-
-        ke_2019 = features.filter((pl.col("country") == "KE") & (pl.col("year") == 2019))
-        # KE 2018/2019/2020 → 1 seq each; mean=1 → deposit_rate=1.0
-        assert ke_2019["deposit_rate"][0] == pytest.approx(1.0)
-
-
-class TestNaomiJoin:
-    def test_inner_join_country_year(self, toy_data) -> None:
-        metadata, cluster_df = toy_data
-        ts = cluster_time_series(cluster_df, metadata)
-        growth = cluster_growth_rate(ts, window_years=2)
-        subtypes = cluster_subtype_mix(cluster_df, metadata)
-        features = build_outbreak_features(
-            sequence_metadata=metadata,
-            cluster_assignments=cluster_df,
-            cluster_growth=growth,
-            cluster_subtypes=subtypes,
-        )
-        labels = pl.DataFrame(
-            {
-                "country": ["KE", "KE", "UG"],
-                "year": [2019, 2020, 2019],
-                "incidence_per_1000": [1.2, 1.1, 0.8],
-            }
-        )
-        joined = join_features_and_labels(features, NaomiIncidenceLabels(labels))
-        assert "label_incidence" in joined.columns
-        assert joined.height == 3
 
 
 # ---------- graph builder ----------
