@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use HIV-DR-Watch in your research, please cite it as below."
+title: "SAWA (Sub-Saharan Africa Watch for Antiretroviral resistance): an open real-time antiretroviral-resistance surveillance platform"
+abstract: >-
+  SAWA is an open, reproducible pipeline for continuous
+  antiretroviral-resistance surveillance from public sequence data
+  (LANL, GenBank) with optional integration of partner clinical data.
+  It produces subtype-stratified phylogenies, Stanford HIVdb resistance
+  calls, and transmission-cluster estimates for sub-Saharan Africa,
+  starting with HIV-1 in East Africa (Kenya, Uganda, Tanzania, Rwanda,
+  Burundi, Ethiopia). The Python package is named `hivdrwatch`; the
+  project's short public name is SAWA.
+type: software
+authors:
+  - family-names: "Njeri"
+    given-names: "Kelyn"
+    email: "kelyn@neoforge.io"
+    affiliation: "NeoForge Labs, Nairobi, Kenya"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add when issued
+license: MIT
+repository-code: "https://github.com/neoforge-labs/hiv-dr-watch"
+url: "https://github.com/neoforge-labs/hiv-dr-watch"
+version: "0.1.0"
+date-released: "2026-08-13"
+keywords:
+  - HIV-1
+  - drug resistance
+  - phylodynamics
+  - Stanford HIVdb
+  - transmission clusters
+  - sub-Saharan Africa
+  - open science
+  - reproducible research
+preferred-citation:
+  type: article
+  title: "SAWA: an open real-time antiretroviral-resistance surveillance platform for sub-Saharan Africa"
+  authors:
+    - family-names: "Njeri"
+      given-names: "Kelyn"
+      affiliation: "NeoForge Labs, Nairobi, Kenya"
+  year: 2027
+  journal: "Virus Evolution"
+  # doi: "10.xxxx/xxxx"  # add on acceptance

@@ -1,0 +1,20 @@
+[core]
+    remote = minio
+    autostage = true
+    analytics = false
+
+# Local MinIO (from docker-compose.yml). For team use, point this at a
+# shared S3 bucket instead — same protocol, different endpoint.
+['remote "minio"']
+    url = s3://hivdrwatch-dvc/
+    endpointurl = http://localhost:9000
+    access_key_id = minioadmin
+    secret_access_key = minioadmin
+    use_ssl = false
+    # Enables listing without SigV4 quirks on MinIO.
+    listobjects = true
+
+# Optional: hosted remote for the archived Zenodo release (populated on
+# `paperN-vX.Y.Z` tag). Uncomment when the Zenodo integration is live.
+# ['remote "zenodo"']
+#     url = https://zenodo.org/api/records/<record_id>/files/

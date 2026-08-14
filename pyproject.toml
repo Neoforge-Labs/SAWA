@@ -1,0 +1,89 @@
+[project]
+name = "hivdrwatch"
+version = "0.1.0"
+description = "Real-time HIV drug-resistance surveillance for sub-Saharan Africa"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Kelyn", email = "kelyn@neoforge.io" }]
+
+dependencies = [
+    # --- Core scientific stack ---
+    "biopython>=1.84",
+    "dowhy>=0.14",
+    "httpx>=0.27",
+    "mappy>=2.28",
+    "marimo[recommended]>=0.23.16",
+    "mlflow>=2.16",
+    "matplotlib>=3.11.1",
+    "networkx>=3.6.1",
+    "polars>=1.10",
+    "prefect>=3.0",
+    "prefect-docker>=0.6",
+    "pyarrow>=25.0.1",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "pygraphviz>=2.0.1",
+    "scikit-learn>=1.9.0",
+    "tenacity>=9.0",
+    # --- CLI (Batch D) ---
+    "typer>=0.12",
+    # --- Storage layer (Batch E) ---
+    "alembic>=1.13",
+    "duckdb>=1.0",
+    "psycopg[binary]>=3.2",
+    "sqlalchemy>=2.0",
+    # --- API layer (Batch F) ---
+    "fastapi>=0.115",
+    "slowapi>=0.1.9",
+    "uvicorn[standard]>=0.32",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "pytest-httpx>=0.30",
+    "ruff>=0.7",
+    "mypy>=1.11",
+]
+dvc = [
+    "dvc[s3]>=3.55",
+]
+
+[project.scripts]
+# Unified entry point (Batch D). Old per-module scripts kept for
+# backwards compat while docs stabilize on `hivdrwatch <subcommand>`.
+hivdrwatch = "hivdrwatch.cli.__main__:main"
+hivdrwatch-ingest = "hivdrwatch.ingest.__main__:main"
+hivdrwatch-sierra = "hivdrwatch.resistance.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hivdrwatch", "causal"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --strict-markers --cov=hivdrwatch --cov-report=term-missing"
+pythonpath = ["src", "."]
+
+[tool.ruff]
+line-length = 95
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

@@ -1,0 +1,30 @@
+{
+  "title": "SAWA (Sub-Saharan Africa Watch for Antiretroviral resistance): an open real-time surveillance platform",
+  "description": "SAWA is an open, reproducible pipeline for continuous antiretroviral-resistance surveillance from public sequence data (LANL, GenBank) with optional integration of partner clinical data. It produces subtype-stratified phylogenies, Stanford HIVdb resistance calls, and transmission-cluster estimates for sub-Saharan Africa, starting with HIV-1 in East Africa. The Python package is named 'hivdrwatch'; the project's short public name is SAWA.",
+  "creators": [
+    {
+      "name": "Njeri, Kelyn",
+      "affiliation": "NeoForge Labs, Nairobi, Kenya"
+    }
+  ],
+  "keywords": [
+    "HIV-1",
+    "drug resistance",
+    "phylodynamics",
+    "Stanford HIVdb",
+    "transmission clusters",
+    "sub-Saharan Africa",
+    "reproducible research",
+    "open science"
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "upload_type": "software",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/neoforge-labs/hiv-dr-watch",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    }
+  ]
+}

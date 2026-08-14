@@ -1,0 +1,180 @@
+# HIV-DR-Watch dev services stack.
+#
+# One command dev environment:
+#   cp .env.example .env
+#   docker compose up -d
+#
+# Services on localhost:
+#   Prefect UI      → http://localhost:4200
+#   MLflow UI       → http://localhost:5000
+#   MinIO console   → http://localhost:9001    (S3 API on :9000)
+#   Postgres        → localhost:5432           (databases: prefect, mlflow)
+#
+# What's here:
+#   * postgres — shared metadata for Prefect + MLflow (separate databases)
+#   * minio — S3-compat artifact store for MLflow model bundles
+#   * minio-init — one-shot init container that creates the mlflow bucket
+#   * prefect-server — REST + UI, backed by postgres
+#   * mlflow-server — tracking + registry, backed by postgres + minio
+#
+# What's NOT here (intentional):
+#   * Prefect worker — runs on the host so `mafft` and `tn93` docker
+#     containers can be invoked without docker-in-docker gymnastics.
+#     Start it with `make worker` (see Makefile).
+#   * MAFFT / tn93 / IQ-TREE containers — those are batch containers spun
+#     up per Prefect task via `docker run --rm`, not always-on services.
+
+name: hivdrwatch
+
+x-postgres-env: &postgres-env
+  POSTGRES_USER: ${POSTGRES_USER:-hivdrwatch}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hivdrwatch}
+
+x-minio-env: &minio-env
+  MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+  MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      <<: *postgres-env
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-08T15-41-24Z
+    restart: unless-stopped
+    environment:
+      <<: *minio-env
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_S3_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-03T17-07-56Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      <<: *minio-env
+      MLFLOW_BUCKET: ${MLFLOW_BUCKET:-mlflow-artifacts}
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+        mc mb --ignore-existing local/$${MLFLOW_BUCKET} &&
+        mc anonymous set none local/$${MLFLOW_BUCKET} &&
+        echo 'MLflow bucket ready: '$${MLFLOW_BUCKET}
+      "
+    restart: "no"
+
+  prefect-server:
+    # Keep this in sync with the client Prefect version pinned in pyproject.
+    # The 3.x line's event-stream auth handshake shifted between 3.4 and 3.5+;
+    # a client on 3.8 talking to a server on 3.4 fails with
+    # "Unable to authenticate to the event stream." Pin to a recent 3.8+
+    # patch (or float on `3-python3.12` if you want auto-updates).
+    image: prefecthq/prefect:3.8.2-python3.12
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://${POSTGRES_USER:-hivdrwatch}:${POSTGRES_PASSWORD:-hivdrwatch}@postgres:5432/prefect
+      PREFECT_UI_URL: http://localhost:${PREFECT_PORT:-4200}
+      PREFECT_API_URL: http://localhost:${PREFECT_PORT:-4200}/api
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+    command: prefect server start --host 0.0.0.0
+    ports:
+      - "${PREFECT_PORT:-4200}:4200"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:4200/api/health\", timeout=2)'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mlflow-server:
+    image: ghcr.io/mlflow/mlflow:v2.22.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # Pin the boto3 region even for MinIO — the S3 SDK requires one.
+      AWS_DEFAULT_REGION: us-east-1
+    command: >
+      bash -c "
+        pip install --quiet psycopg2-binary boto3 &&
+        mlflow server
+          --host 0.0.0.0 --port 5000
+          --backend-store-uri postgresql://${POSTGRES_USER:-hivdrwatch}:${POSTGRES_PASSWORD:-hivdrwatch}@postgres:5432/mlflow
+          --default-artifact-root s3://${MLFLOW_BUCKET:-mlflow-artifacts}/
+      "
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/health\", timeout=2)'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    # Public read-only FastAPI service (Batch F). Bind-mounts the source
+    # so `--reload` picks up local edits without rebuilding the image.
+    image: python:3.12-slim
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    working_dir: /app
+    volumes:
+      - ./:/app:cached
+    environment:
+      HIVDRWATCH_API_HOST: 0.0.0.0
+      HIVDRWATCH_API_PORT: 8080
+      # Client-side DB URL — service names, not localhost, inside compose.
+      HIVDRWATCH_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-hivdrwatch}:${POSTGRES_PASSWORD:-hivdrwatch}@postgres:5432/${HIVDRWATCH_DATABASE_NAME:-hivdrwatch}
+      HIVDRWATCH_DATABASE_NAME: ${HIVDRWATCH_DATABASE_NAME:-hivdrwatch}
+    command: >
+      bash -c "
+        pip install --quiet --no-cache-dir -e '.[dvc]' &&
+        uvicorn hivdrwatch.api.main:app --host 0.0.0.0 --port 8080
+      "
+    ports:
+      - "${API_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8080/health\", timeout=2)'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  postgres_data:
+  minio_data:

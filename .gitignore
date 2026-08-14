@@ -1,0 +1,42 @@
+__pycache__
+.DS_Store
+*.pyc
+.coverage
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Virtualenvs
+.venv
+venv
+
+# Local env / secrets
+.env
+
+# --- Data (DVC-tracked; NEVER commit raw data) ---
+# Per CLAUDE.md: raw data never enters git. DVC pointers (`*.dvc`) DO
+# enter git; the actual data lives on the DVC remote (MinIO/S3).
+data/raw/
+data/interim/
+data/processed/
+data/gold/
+!data/raw/.gitignore
+!data/interim/.gitignore
+!data/processed/.gitignore
+!data/gold/.gitignore
+!data/**/*.dvc
+
+# DVC internals
+.dvc/tmp
+.dvc/cache
+.dvcignore-cache
+
+# Marimo runtime cache
+notebooks/__marimo__/
+
+# Build artifacts we don't want committed
+paper1_tools/figures/*.pdf
+paper1_tools/figures/*.png
+!paper1_tools/figures/.gitkeep
+
+# Benchmark result JSONs ARE committed (feed Fig 5), so no ignore.
