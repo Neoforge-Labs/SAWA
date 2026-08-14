@@ -95,9 +95,7 @@ def write_and_track(rows: list, manifest_path: Path) -> Path:
             run.log_metrics(
                 {
                     f"n_taxa_{r.subtype}_{r.kind.value}": float(r.n_taxa),
-                    f"wall_seconds_{r.subtype}_{r.kind.value}": float(
-                        r.wall_seconds or 0
-                    ),
+                    f"wall_seconds_{r.subtype}_{r.kind.value}": float(r.wall_seconds or 0),
                 }
             )
         if out.exists():

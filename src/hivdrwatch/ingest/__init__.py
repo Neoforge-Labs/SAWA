@@ -7,9 +7,9 @@ from .schema import SCHEMA_VERSION, SequenceRecord, Source, Subtype
 
 __all__ = [
     "EAST_AFRICA_COUNTRIES",
+    "SCHEMA_VERSION",
     "GenBankIngester",
     "LANLIngester",
-    "SCHEMA_VERSION",
     "SequenceRecord",
     "Source",
     "Subtype",

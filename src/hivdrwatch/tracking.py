@@ -72,7 +72,7 @@ class TrackedRun:
             return
         try:
             self._mlflow.log_params(_stringify(params))
-        except Exception as e:  # noqa: BLE001 — tracking must not break flows
+        except Exception as e:
             logger.warning("mlflow log_params failed: %s", e)
 
     def log_metrics(self, metrics: dict[str, float], *, step: int | None = None) -> None:
@@ -84,7 +84,7 @@ class TrackedRun:
                 self._mlflow.log_metrics(flat, step=step)
             else:
                 self._mlflow.log_metrics(flat)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning("mlflow log_metrics failed: %s", e)
 
     def log_artifact(self, path: Path, *, artifact_path: str | None = None) -> None:
@@ -92,7 +92,7 @@ class TrackedRun:
             return
         try:
             self._mlflow.log_artifact(str(path), artifact_path=artifact_path)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning("mlflow log_artifact failed for %s: %s", path, e)
 
     def log_dict(self, payload: dict[str, Any], filename: str) -> None:
@@ -100,7 +100,7 @@ class TrackedRun:
             return
         try:
             self._mlflow.log_dict(payload, filename)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning("mlflow log_dict failed for %s: %s", filename, e)
 
     def set_tags(self, tags: dict[str, str]) -> None:
@@ -108,7 +108,7 @@ class TrackedRun:
             return
         try:
             self._mlflow.set_tags({k: str(v) for k, v in tags.items()})
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning("mlflow set_tags failed: %s", e)
 
 
@@ -146,10 +146,12 @@ def tracked_run(
                 wrapper.set_tags(tags)
             wrapper.set_tags(_default_tags())
             yield wrapper
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning(
             "mlflow run setup failed (uri=%s experiment=%s): %s — running untracked",
-            uri, experiment, e,
+            uri,
+            experiment,
+            e,
         )
         yield TrackedRun(None)
 

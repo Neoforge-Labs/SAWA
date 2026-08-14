@@ -25,7 +25,6 @@ from hivdrwatch.resistance.sierra import (
     _parse_subtype,
 )
 
-
 # ---------- fixtures ----------
 
 
@@ -222,18 +221,14 @@ class TestParseDrResults:
 class TestParseSubtype:
     def test_yields_subtype(self) -> None:
         algo = AlgorithmVersion("9.6", None)
-        st = _parse_subtype(
-            ONE_SEQ_PAYLOAD, "AF004885", "a" * 64, algo, date(2026, 8, 11)
-        )
+        st = _parse_subtype(ONE_SEQ_PAYLOAD, "AF004885", "a" * 64, algo, date(2026, 8, 11))
         assert st is not None
         assert st.subtype == "A1"
 
     def test_none_when_missing(self) -> None:
         algo = AlgorithmVersion("9.6", None)
         assert (
-            _parse_subtype(
-                {"analysis": {}}, "AF004885", "a" * 64, algo, date(2026, 8, 11)
-            )
+            _parse_subtype({"analysis": {}}, "AF004885", "a" * 64, algo, date(2026, 8, 11))
             is None
         )
 
@@ -306,9 +301,7 @@ class TestSierraClientHTTP:
         assert cache.has(sequence_sha256("ACGT" * 60))
         assert cache.has(sequence_sha256("GGGG" * 60))
 
-    def test_dedups_same_sequence_across_accessions(
-        self, tmp_path: Path, httpx_mock
-    ) -> None:
+    def test_dedups_same_sequence_across_accessions(self, tmp_path: Path, httpx_mock) -> None:
         """Two accessions with the same sequence should only hit Sierra once."""
         single_response = {
             "data": {
@@ -316,13 +309,11 @@ class TestSierraClientHTTP:
                 "viewer": {"sequenceAnalysis": [ONE_SEQ_PAYLOAD["analysis"]]},
             }
         }
-        httpx_mock.add_response(
-            url="https://hivdb.stanford.edu/graphql", json=single_response
-        )
+        httpx_mock.add_response(url="https://hivdb.stanford.edu/graphql", json=single_response)
         cache = SierraCache(tmp_path)
         with httpx.Client() as http:
             client = SierraClient(cache=cache, client=http)
-            dr, subtypes = client.analyze_sequences(
+            dr, _subtypes = client.analyze_sequences(
                 [("AF004885", "ACGT" * 60), ("MK123456", "ACGT" * 60)]
             )
         # 2 drugs × 2 accessions expanded from 1 cached payload

@@ -19,11 +19,11 @@ import platform
 import resource
 import sys
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -125,9 +125,7 @@ def measure_block(n_sequences: int) -> Iterator[dict]:
         payload["n_sequences"] = n_sequences
         payload["wall_seconds"] = float(wall)
         payload["peak_mb"] = float(peak)
-        payload["throughput_per_sec"] = (
-            float(n_sequences) / wall if wall > 0 else float("inf")
-        )
+        payload["throughput_per_sec"] = float(n_sequences) / wall if wall > 0 else float("inf")
         payload.setdefault("extras", {})
 
 
@@ -156,7 +154,7 @@ def today_iso() -> str:
 
     Kept as a function so tests can monkeypatch.
     """
-    return datetime.now(timezone.utc).date().isoformat()
+    return datetime.now(UTC).date().isoformat()
 
 
 def parse_sizes(raw: list[str] | list[int]) -> tuple[int, ...]:

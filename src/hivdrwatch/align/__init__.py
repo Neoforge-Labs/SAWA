@@ -24,12 +24,12 @@ from .trim import coverage_fraction, slice_all_regions, slice_region
 
 __all__ = [
     "CURATE_SCHEMA_VERSION",
-    "CuratedSequence",
-    "HXB2Reference",
     "HXB2_POL_LENGTH",
     "HXB2_POL_START",
     "HXB2_POL_STOP",
     "POL_REGIONS",
+    "CuratedSequence",
+    "HXB2Reference",
     "QCFlag",
     "align_sequences",
     "ambiguity_fraction",

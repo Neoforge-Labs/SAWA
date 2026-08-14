@@ -103,7 +103,9 @@ def aggregate_resistance_landscape(
 
     logger.info(
         "resistance landscape: %d DR rows × %d curated rows → %d joined per-sequence-per-class rows",
-        n_dr, n_curated, joined.height,
+        n_dr,
+        n_curated,
+        joined.height,
     )
 
     landscape = (
@@ -129,6 +131,8 @@ def aggregate_resistance_landscape(
     )
     logger.info(
         "landscape: %d cells (%d above min_cell_n=%d)",
-        counts.n_output_cells, counts.n_cells_above_min, min_cell_n,
+        counts.n_output_cells,
+        counts.n_cells_above_min,
+        min_cell_n,
     )
     return landscape, counts

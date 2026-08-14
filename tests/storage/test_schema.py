@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import create_engine, select
@@ -52,7 +52,7 @@ class TestPipelineRun:
 
     def test_close(self, session: Session) -> None:
         run = _mk_run(session)
-        run.completed_at = datetime.now(timezone.utc)
+        run.completed_at = datetime.now(UTC)
         run.row_count = 12345
         session.commit()
         loaded = session.get(PipelineRun, run.id)
@@ -99,9 +99,11 @@ class TestSequenceUniqueness:
             s.raw_record_hash = "a" * 64
             session.add(s)
         session.commit()
-        count = session.execute(
-            select(Sequence).where(Sequence.accession == "AB123456")
-        ).scalars().all()
+        count = (
+            session.execute(select(Sequence).where(Sequence.accession == "AB123456"))
+            .scalars()
+            .all()
+        )
         assert len(count) == 2
 
 

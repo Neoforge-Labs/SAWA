@@ -45,9 +45,7 @@ from ..features import build_outbreak_features
 
 
 @task(retries=1)
-def run_distances(
-    aligned_fasta: Path, work_dir: Path, threshold: float
-) -> Path:
+def run_distances(aligned_fasta: Path, work_dir: Path, threshold: float) -> Path:
     log = get_run_logger()
     work_dir.mkdir(parents=True, exist_ok=True)
     output_csv = work_dir / "distances.csv"
@@ -65,9 +63,7 @@ def load_curated(path: Path) -> pl.DataFrame:
 
 
 @task
-def cluster(
-    distances_csv: Path, curated: pl.DataFrame, threshold: float
-) -> pl.DataFrame:
+def cluster(distances_csv: Path, curated: pl.DataFrame, threshold: float) -> pl.DataFrame:
     log = get_run_logger()
     dists = read_distances(distances_csv)
     all_accessions = curated["accession"].to_list()
@@ -78,11 +74,10 @@ def cluster(
 
 
 @task
-def outbreak_rollup(
-    curated: pl.DataFrame, cluster_df: pl.DataFrame
-) -> pl.DataFrame:
+def outbreak_rollup(curated: pl.DataFrame, cluster_df: pl.DataFrame) -> pl.DataFrame:
     metadata_cols = [
-        c for c in ("accession", "country", "collection_year", "subtype")
+        c
+        for c in ("accession", "country", "collection_year", "subtype")
         if c in curated.columns
     ]
     metadata = curated.select(metadata_cols)
@@ -135,7 +130,7 @@ def cluster_flow(
     cluster_path, features_path = write_gold(cluster_df, features_df, gold_dir)
 
     # Storage tail — never crashes the flow.
-    from ._storage_tail import storage_tail  # noqa: PLC0415
+    from ._storage_tail import storage_tail
 
     storage_tail("cluster", cluster_path, enabled=to_postgres)
 
@@ -161,7 +156,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--gold-dir", type=Path, default=Path("data/gold"))
     parser.add_argument(
-        "--threshold", type=float, default=DEFAULT_THRESHOLD,
+        "--threshold",
+        type=float,
+        default=DEFAULT_THRESHOLD,
         help="TN93 clustering threshold; CDC HIV-TRACE convention is 0.015 (1.5%)",
     )
     parser.add_argument(

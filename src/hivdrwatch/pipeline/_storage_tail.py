@@ -24,8 +24,9 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Literal
 
 from ..storage.loader import (
     LoadCounts,
@@ -51,8 +52,8 @@ def _env_enabled() -> bool:
 
 
 _LOADERS: dict[Stage, Callable[..., LoadCounts]] = {
-    "ingest":  load_sequences,
-    "sierra":  load_dr_calls,
+    "ingest": load_sequences,
+    "sierra": load_dr_calls,
     "cluster": load_cluster_memberships,
 }
 
@@ -77,9 +78,9 @@ def storage_tail(
         enabled = _env_enabled()
     if not enabled:
         logger.info(
-            "storage tail skipped for stage=%s "
-            "(pass --to-postgres or set %s=1 to enable)",
-            stage, ENV_ENABLE,
+            "storage tail skipped for stage=%s (pass --to-postgres or set %s=1 to enable)",
+            stage,
+            ENV_ENABLE,
         )
         return None
 
@@ -88,9 +89,7 @@ def storage_tail(
         return None
 
     if not parquet_path.exists():
-        logger.warning(
-            "storage tail skipped: parquet not found at %s", parquet_path
-        )
+        logger.warning("storage tail skipped: parquet not found at %s", parquet_path)
         return None
 
     if not require_postgres():
@@ -102,13 +101,16 @@ def storage_tail(
         with get_session() as sess:
             ensure_schema(sess)
             counts = loader(parquet_path, session=sess, git_sha=git_sha)
-    except Exception as e:  # noqa: BLE001 - never crash the flow
+    except Exception as e:
         logger.exception("storage tail failed for stage=%s: %s", stage, e)
         return None
 
     logger.info(
         "storage tail ok for stage=%s: inserted=%d skipped=%d run_id=%d",
-        stage, counts.inserted, counts.skipped, counts.pipeline_run_id,
+        stage,
+        counts.inserted,
+        counts.skipped,
+        counts.pipeline_run_id,
     )
     return counts
 

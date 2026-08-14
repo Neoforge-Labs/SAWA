@@ -45,7 +45,6 @@ from ..ingest.watermark import (
 )
 from ..tracking import tracked_run
 
-
 FIRST_EVER_PULL_FLOOR = date(1980, 1, 1)
 
 
@@ -169,9 +168,7 @@ def ingest_flow(
             raise ValueError("email is required for GenBank ingestion")
         watermarks = read_watermarks(genbank_dir)
         for country in countries:
-            eff_since = since or get_since(
-                watermarks, country, fallback=FIRST_EVER_PULL_FLOOR
-            )
+            eff_since = since or get_since(watermarks, country, fallback=FIRST_EVER_PULL_FLOOR)
             records = fetch_genbank_country(
                 country=country,
                 email=email,
@@ -218,7 +215,7 @@ def ingest_flow(
 
     # Storage tail — load bronze Parquet into Postgres if enabled.
     # Never crashes the flow; Parquet on disk remains source of truth.
-    from ._storage_tail import storage_tail  # noqa: PLC0415
+    from ._storage_tail import storage_tail
 
     storage_tail("ingest", out, enabled=to_postgres)
 
@@ -273,8 +270,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.skip_genbank and not args.email:
         parser.error(
-            "--email is required unless --skip-genbank is set "
-            "(also honors NCBI_EMAIL env var)"
+            "--email is required unless --skip-genbank is set (also honors NCBI_EMAIL env var)"
         )
 
     ingest_flow(

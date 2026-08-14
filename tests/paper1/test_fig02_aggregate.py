@@ -42,8 +42,13 @@ class TestAggregation:
         )
         landscape, _ = aggregate_resistance_landscape(dr, curated, min_cell_n=1)
         assert set(landscape.columns) >= {
-            "country", "collection_year", "drug_class", "subtype",
-            "n_sequences", "n_resistant", "frac_resistant",
+            "country",
+            "collection_year",
+            "drug_class",
+            "subtype",
+            "n_sequences",
+            "n_resistant",
+            "frac_resistant",
         }
         # 2 sequences × 2 drug classes (NRTI, NNRTI) = at most 2 rows
         # after per-seq-per-class dedup and one-country-year-subtype group
@@ -72,9 +77,7 @@ class TestAggregation:
         assert landscape["n_resistant"][0] == 1
 
     def test_intermediate_counts_as_resistant(self) -> None:
-        dr = _dr(
-            [{"accession": "A1", "drug_class": "NRTI", "level": "intermediate"}]
-        )
+        dr = _dr([{"accession": "A1", "drug_class": "NRTI", "level": "intermediate"}])
         curated = _curated(
             [{"accession": "A1", "country": "KE", "collection_year": 2020, "subtype": "A1"}]
         )
@@ -99,14 +102,16 @@ class TestAggregation:
     def test_min_cell_n_masks_frac_but_keeps_counts(self) -> None:
         # 3 sequences × 1 class → n=3, below MIN_CELL_N=5
         dr = _dr(
-            [
-                {"accession": f"A{i}", "drug_class": "NRTI", "level": "high"}
-                for i in range(3)
-            ]
+            [{"accession": f"A{i}", "drug_class": "NRTI", "level": "high"} for i in range(3)]
         )
         curated = _curated(
             [
-                {"accession": f"A{i}", "country": "KE", "collection_year": 2020, "subtype": "A1"}
+                {
+                    "accession": f"A{i}",
+                    "country": "KE",
+                    "collection_year": 2020,
+                    "subtype": "A1",
+                }
                 for i in range(3)
             ]
         )
@@ -130,7 +135,7 @@ class TestAggregation:
                 {"accession": "A2", "country": None, "collection_year": 2020, "subtype": "A1"},
             ]
         )
-        landscape, counts = aggregate_resistance_landscape(dr, curated, min_cell_n=1)
+        _landscape, counts = aggregate_resistance_landscape(dr, curated, min_cell_n=1)
         assert counts.n_joined_rows == 1  # A2 dropped for missing country
 
     def test_missing_required_columns_raises(self) -> None:
@@ -164,7 +169,7 @@ class TestAggregation:
 
 class TestConstants:
     def test_resistant_levels_pinned(self) -> None:
-        assert RESISTANT_LEVELS == frozenset({"high", "intermediate"})
+        assert frozenset({"high", "intermediate"}) == RESISTANT_LEVELS
 
     def test_min_cell_n_is_five(self) -> None:
         assert MIN_CELL_N == 5

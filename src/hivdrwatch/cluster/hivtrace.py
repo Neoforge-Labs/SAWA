@@ -32,8 +32,8 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 DEFAULT_IMAGE = "hivdrwatch/hivtrace:0.1"
-DEFAULT_THRESHOLD = 0.015          # HIV-TRACE convention
-DEFAULT_FORMAT = "plain"           # tn93's CSV output shape
+DEFAULT_THRESHOLD = 0.015  # HIV-TRACE convention
+DEFAULT_FORMAT = "plain"  # tn93's CSV output shape
 
 
 @dataclass(frozen=True)
@@ -111,15 +111,21 @@ def run_hivtrace(
     # cluster-membership parity — only for HIV-TRACE's own network
     # visualization — so skipping it removes a heavy dep with no cost.
     hn_args = (
-        "-i", f"/work/{distances_csv.name}",
-        "-t", str(threshold),
-        "-f", fmt,
+        "-i",
+        f"/work/{distances_csv.name}",
+        "-t",
+        str(threshold),
+        "-f",
+        fmt,
         "--no-degree-fit",
         "-J",
     )
     docker_cmd = [
-        "docker", "run", "--rm",
-        "-v", f"{work_dir}:/work",
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{work_dir}:/work",
         image,
         *hn_args,
     ]

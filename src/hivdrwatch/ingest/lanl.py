@@ -174,9 +174,7 @@ class LANLIngester:
     # SequenceRecord path — for LANL-only pipelines (no GenBank)
     # ------------------------------------------------------------------
 
-    def to_sequence_records(
-        self, *, min_length: int = 800
-    ) -> Iterator[SequenceRecord]:
+    def to_sequence_records(self, *, min_length: int = 800) -> Iterator[SequenceRecord]:
         """Yield canonical SequenceRecords built from LANL data alone.
 
         Uses the TSV `Sequence` column when present; falls back to the
@@ -280,9 +278,7 @@ class LANLIngester:
         return df
 
     @staticmethod
-    def _normalize_types(
-        df: pl.DataFrame, *, country_hint: str | None = None
-    ) -> pl.DataFrame:
+    def _normalize_types(df: pl.DataFrame, *, country_hint: str | None = None) -> pl.DataFrame:
         expressions = []
 
         if "subtype_lanl" in df.columns:
@@ -302,9 +298,7 @@ class LANLIngester:
             )
 
         if "collection_year" in df.columns:
-            expressions.append(
-                pl.col("collection_year").cast(pl.Int32, strict=False)
-            )
+            expressions.append(pl.col("collection_year").cast(pl.Int32, strict=False))
 
         if "is_drug_naive_raw" in df.columns:
             expressions.append(
@@ -342,9 +336,7 @@ class LANLIngester:
         if country_hint:
             if "country_code" in df.columns:
                 df = df.with_columns(
-                    pl.col("country_code")
-                    .fill_null(country_hint)
-                    .alias("country_code")
+                    pl.col("country_code").fill_null(country_hint).alias("country_code")
                 )
             else:
                 df = df.with_columns(country_code=pl.lit(country_hint))
@@ -370,13 +362,7 @@ def _rename_columns(df: pl.DataFrame) -> pl.DataFrame:
 
 def _normalize_col_key(col: str) -> str:
     """Lowercase and strip whitespace/underscore/hyphen/`#` for alias lookup."""
-    return (
-        col.lower()
-        .replace(" ", "")
-        .replace("_", "")
-        .replace("-", "")
-        .replace("#", "")
-    )
+    return col.lower().replace(" ", "").replace("_", "").replace("-", "").replace("#", "")
 
 
 def _preamble_row_count(path: Path) -> int:
@@ -424,9 +410,7 @@ def parse_lanl_fasta(path: Path) -> dict[str, str]:
 
     def flush() -> None:
         if current_accession and buffer:
-            accession_to_seq[current_accession] = "".join(buffer).upper().replace(
-                "U", "T"
-            )
+            accession_to_seq[current_accession] = "".join(buffer).upper().replace("U", "T")
 
     with path.open("r", encoding="utf-8", errors="replace") as fh:
         for line in fh:

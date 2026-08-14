@@ -41,9 +41,9 @@ HXB2_POL_LENGTH = HXB2_POL_STOP - HXB2_POL_START + 1  # 3012
 # All ranges below in **pol-relative** 1-based inclusive coordinates
 # (subtract HXB2_POL_START - 1 = 2084 from an HXB2 coordinate to convert).
 POL_REGIONS: dict[str, tuple[int, int]] = {
-    "PR": (169, 465),      # HXB2 2253..2549, 99 codons
-    "RT": (466, 1785),     # HXB2 2550..3869, 440 codons (polymerase domain)
-    "IN": (2146, 3012),    # HXB2 4230..5096, 288 codons
+    "PR": (169, 465),  # HXB2 2253..2549, 99 codons
+    "RT": (466, 1785),  # HXB2 2550..3869, 440 codons (polymerase domain)
+    "IN": (2146, 3012),  # HXB2 4230..5096, 288 codons
 }
 
 
@@ -51,11 +51,13 @@ POL_REGIONS: dict[str, tuple[int, int]] = {
 class HXB2Reference:
     """Extracted HXB2 pol reference sequence."""
 
-    sequence: str            # ungapped nucleotide sequence
-    length: int              # sequence length
-    source_path: Path        # where we extracted it from
+    sequence: str  # ungapped nucleotide sequence
+    length: int  # sequence length
+    source_path: Path  # where we extracted it from
 
-    def write_fasta(self, out_path: Path, *, header: str = "HXB2_pol_K03455_2085_5096") -> Path:
+    def write_fasta(
+        self, out_path: Path, *, header: str = "HXB2_pol_K03455_2085_5096"
+    ) -> Path:
         """Write as a single-record FASTA — used as MAFFT --add reference."""
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(f">{header}\n{self.sequence}\n", encoding="utf-8")
@@ -98,9 +100,7 @@ def extract_hxb2_from_lanl_fasta(lanl_fasta: Path) -> HXB2Reference:
     return HXB2Reference(sequence=ungapped, length=len(ungapped), source_path=lanl_fasta)
 
 
-def ensure_hxb2_reference(
-    reference_path: Path, lanl_raw_dir: Path
-) -> HXB2Reference:
+def ensure_hxb2_reference(reference_path: Path, lanl_raw_dir: Path) -> HXB2Reference:
     """Return the HXB2 pol reference, extracting it if not yet cached.
 
     Idempotent: if `reference_path` already exists, we read it back.
@@ -109,9 +109,7 @@ def ensure_hxb2_reference(
     """
     if reference_path.exists():
         seq = _read_single_fasta(reference_path)
-        return HXB2Reference(
-            sequence=seq, length=len(seq), source_path=reference_path
-        )
+        return HXB2Reference(sequence=seq, length=len(seq), source_path=reference_path)
 
     fasta_candidates = sorted(lanl_raw_dir.rglob("hiv-db.fasta"))
     if not fasta_candidates:

@@ -81,10 +81,7 @@ def load_scalability_frame(results_dir: Path) -> tuple[pl.DataFrame, Scalability
             "run `make benchmarks` to populate."
         )
 
-    frame = (
-        pl.from_dicts(rows)
-        .sort(["stage", "n_sequences"])
-    )
+    frame = pl.from_dicts(rows).sort(["stage", "n_sequences"])
 
     summary = ScalabilitySummary(
         n_stages=frame["stage"].n_unique(),
@@ -95,7 +92,9 @@ def load_scalability_frame(results_dir: Path) -> tuple[pl.DataFrame, Scalability
     )
     logger.info(
         "loaded scalability: %d stages, %d points, N up to %d",
-        summary.n_stages, summary.n_points, summary.max_n,
+        summary.n_stages,
+        summary.n_points,
+        summary.max_n,
     )
     return frame, summary
 

@@ -36,12 +36,8 @@ def cluster_time_series(
     required = {"accession", "cluster_id", "cluster_size"}
     if not required.issubset(cluster_assignments.columns):
         raise ValueError(f"cluster_assignments missing {required}")
-    if not {"accession", "country", "collection_year"}.issubset(
-        sequence_metadata.columns
-    ):
-        raise ValueError(
-            "sequence_metadata must have accession, country, collection_year"
-        )
+    if not {"accession", "country", "collection_year"}.issubset(sequence_metadata.columns):
+        raise ValueError("sequence_metadata must have accession, country, collection_year")
 
     joined = cluster_assignments.join(
         sequence_metadata.select("accession", "country", "collection_year"),
@@ -49,9 +45,7 @@ def cluster_time_series(
         how="inner",
     ).filter(pl.col("collection_year").is_not_null())
 
-    joined = joined.with_columns(
-        pl.col("country").fill_null("unknown").alias("country")
-    )
+    joined = joined.with_columns(pl.col("country").fill_null("unknown").alias("country"))
 
     return (
         joined.group_by("cluster_id", "country", "collection_year")
@@ -63,9 +57,7 @@ def cluster_time_series(
     )
 
 
-def cluster_growth_rate(
-    time_series: pl.DataFrame, *, window_years: int = 3
-) -> pl.DataFrame:
+def cluster_growth_rate(time_series: pl.DataFrame, *, window_years: int = 3) -> pl.DataFrame:
     """Compute the rolling growth rate per cluster per country.
 
     growth_rate = (n_new in last `window_years`) / max(1, n_new in prior window)
@@ -91,9 +83,7 @@ def cluster_growth_rate(
             recent_lo = anchor - window_years + 1
             prior_hi = recent_lo - 1
             prior_lo = prior_hi - window_years + 1
-            recent = sum(
-                year_to_n.get(y, 0) for y in range(recent_lo, anchor + 1)
-            )
+            recent = sum(year_to_n.get(y, 0) for y in range(recent_lo, anchor + 1))
             prior = sum(year_to_n.get(y, 0) for y in range(prior_lo, prior_hi + 1))
             rows.append(
                 {

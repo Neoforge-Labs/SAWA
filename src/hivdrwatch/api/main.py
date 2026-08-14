@@ -7,7 +7,7 @@ inheriting a real DB session or a locked rate-limiter state.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,7 +59,9 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
 
     # --- Rate limiter ---
-    limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit_default])
+    limiter = Limiter(
+        key_func=get_remote_address, default_limits=[settings.rate_limit_default]
+    )
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -82,7 +84,8 @@ def create_app() -> FastAPI:
 
     logger.info(
         "hivdrwatch api ready (cors=%s, rate_limit=%s)",
-        settings.cors_origins, settings.rate_limit_default,
+        settings.cors_origins,
+        settings.rate_limit_default,
     )
     return app
 
@@ -92,7 +95,7 @@ app = create_app()
 
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 __all__ = ["app", "create_app"]

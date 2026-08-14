@@ -15,7 +15,6 @@ across runs.
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -29,15 +28,13 @@ logger = logging.getLogger(__name__)
 class ClusterAssignments:
     """A cluster assignment result — one row per accession."""
 
-    df: pl.DataFrame       # cols: accession, cluster_id, cluster_size
+    df: pl.DataFrame  # cols: accession, cluster_id, cluster_size
     threshold: float
     n_clusters: int
     n_singletons: int
 
 
-def build_cluster_graph(
-    distances: pl.DataFrame, all_accessions: Iterable[str]
-) -> nx.Graph:
+def build_cluster_graph(distances: pl.DataFrame, all_accessions: Iterable[str]) -> nx.Graph:
     """Return the below-threshold adjacency graph with every accession as a node.
 
     All accessions are added as nodes even if they have no edges — this
@@ -47,9 +44,7 @@ def build_cluster_graph(
     g.add_nodes_from(all_accessions)
     for row in distances.iter_rows(named=True):
         g.add_edge(row["accession_a"], row["accession_b"], distance=row["distance"])
-    logger.info(
-        "cluster graph: %d nodes, %d edges", g.number_of_nodes(), g.number_of_edges()
-    )
+    logger.info("cluster graph: %d nodes, %d edges", g.number_of_nodes(), g.number_of_edges())
     return g
 
 

@@ -84,20 +84,18 @@ def _(
     summary,
 ):
     fig, axes = plt.subplots(
-        1, 2, figsize=(9.0, 3.6),
+        1,
+        2,
+        figsize=(9.0, 3.6),
         gridspec_kw={"width_ratios": [3, 1]},
         constrained_layout=True,
     )
     ax_metrics, ax_parity = axes
 
     clusterers_present = [
-        c for c in CLUSTERER_ORDER
-        if c in m_frame["clusterer"].unique().to_list()
+        c for c in CLUSTERER_ORDER if c in m_frame["clusterer"].unique().to_list()
     ]
-    metrics_present = [
-        m for m in FIG3_METRICS
-        if m in m_frame["metric"].unique().to_list()
-    ]
+    metrics_present = [m for m in FIG3_METRICS if m in m_frame["metric"].unique().to_list()]
 
     x = np.arange(len(metrics_present))
     bar_width = 0.8 / max(1, len(clusterers_present))
@@ -105,22 +103,26 @@ def _(
     for i, clust in enumerate(clusterers_present):
         vals = []
         for metric in metrics_present:
-            row = m_frame.filter(
-                (pl.col("clusterer") == clust) & (pl.col("metric") == metric)
-            )
+            row = m_frame.filter((pl.col("clusterer") == clust) & (pl.col("metric") == metric))
             vals.append(row["value"][0] if row.height else 0.0)
         offset = (i - (len(clusterers_present) - 1) / 2) * bar_width
         ax_metrics.bar(
-            x + offset, vals,
+            x + offset,
+            vals,
             width=bar_width,
             color=COLORBLIND_PALETTE[i % len(COLORBLIND_PALETTE)],
             label="ours" if clust.startswith("tn93") else "HIV-TRACE",
-            edgecolor="black", linewidth=0.4,
+            edgecolor="black",
+            linewidth=0.4,
         )
         for xi, v in zip(x + offset, vals, strict=True):
             ax_metrics.text(
-                xi, v + 0.02, f"{v:.2f}",
-                ha="center", va="bottom", fontsize=7,
+                xi,
+                v + 0.02,
+                f"{v:.2f}",
+                ha="center",
+                va="bottom",
+                fontsize=7,
             )
 
     ax_metrics.set_xticks(x)
@@ -137,15 +139,20 @@ def _(
     # Parity panel
     if summary.pair_agreement is not None:
         ax_parity.bar(
-            [0], [summary.pair_agreement],
+            [0],
+            [summary.pair_agreement],
             width=0.6,
             color=COLORBLIND_PALETTE[2],
-            edgecolor="black", linewidth=0.4,
+            edgecolor="black",
+            linewidth=0.4,
         )
         ax_parity.text(
-            0, summary.pair_agreement + 0.02,
+            0,
+            summary.pair_agreement + 0.02,
             f"{summary.pair_agreement:.3f}",
-            ha="center", va="bottom", fontsize=9,
+            ha="center",
+            va="bottom",
+            fontsize=9,
         )
         ax_parity.set_ylim(0, 1.1)
         ax_parity.set_xticks([0])
@@ -154,9 +161,13 @@ def _(
         ax_parity.grid(axis="y", linestyle="--", alpha=0.3)
     else:
         ax_parity.text(
-            0.5, 0.5,
+            0.5,
+            0.5,
             "HIV-TRACE not run\n(run `make cluster-validate WITH_HIVTRACE=1`)",
-            ha="center", va="center", fontsize=8, wrap=True,
+            ha="center",
+            va="center",
+            fontsize=8,
+            wrap=True,
         )
         ax_parity.set_axis_off()
 
@@ -172,7 +183,9 @@ def _(
 def _(fig_path_pdf, fig_path_png, summary):
     print("parity:")
     print(f"  clusterers: {summary.n_clusterers}")
-    print(f"  simulated: N={summary.n_sequences} across {summary.n_truth_clusters} truth clusters")
+    print(
+        f"  simulated: N={summary.n_sequences} across {summary.n_truth_clusters} truth clusters"
+    )
     print(f"  ours F1:      {summary.ours_f1:.3f}")
     if summary.hivtrace_f1 is not None:
         print(f"  HIV-TRACE F1: {summary.hivtrace_f1:.3f}")

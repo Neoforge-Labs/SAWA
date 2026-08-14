@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
+from hivdrwatch.features.outbreak_features import (
+    NaomiIncidenceLabels,
+    build_outbreak_features,
+    join_features_and_labels,
+)
 
 from hivdrwatch.cluster.assembly import (
     assign_clusters,
@@ -16,12 +21,6 @@ from hivdrwatch.cluster.dynamics import (
     cluster_subtype_mix,
     cluster_time_series,
 )
-from hivdrwatch.features.outbreak_features import (
-    NaomiIncidenceLabels,
-    build_outbreak_features,
-    join_features_and_labels,
-)
-
 
 # ---------- assembly ----------
 
@@ -70,7 +69,10 @@ class TestClusterAssembly:
             }
         )
         dist = cluster_size_distribution(assignments)
-        d = {int(row["cluster_size"]): int(row["n_clusters"]) for row in dist.iter_rows(named=True)}
+        d = {
+            int(row["cluster_size"]): int(row["n_clusters"])
+            for row in dist.iter_rows(named=True)
+        }
         assert d == {1: 2, 2: 1}
 
 
@@ -103,9 +105,9 @@ class TestClusterTimeSeries:
         metadata, cluster_df = toy_data
         ts = cluster_time_series(cluster_df, metadata)
         # C-1 KE 2018 → 1 new member; 2019 → 1; 2020 → 1
-        c1_ke = ts.filter(
-            (pl.col("cluster_id") == "C-1") & (pl.col("country") == "KE")
-        ).sort("collection_year")
+        c1_ke = ts.filter((pl.col("cluster_id") == "C-1") & (pl.col("country") == "KE")).sort(
+            "collection_year"
+        )
         assert c1_ke["n_new_members"].to_list() == [1, 1, 1]
 
 
@@ -160,9 +162,7 @@ class TestBuildOutbreakFeatures:
         assert "subtype_a1_fraction" in features.columns
         assert features.height > 0
 
-        ke_2019 = features.filter(
-            (pl.col("country") == "KE") & (pl.col("year") == 2019)
-        )
+        ke_2019 = features.filter((pl.col("country") == "KE") & (pl.col("year") == 2019))
         # KE 2018/2019/2020 → 1 seq each; mean=1 → deposit_rate=1.0
         assert ke_2019["deposit_rate"][0] == pytest.approx(1.0)
 

@@ -6,8 +6,6 @@ origins) lives here. Defaults are safe for local dev.
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,7 +26,7 @@ class APISettings(BaseSettings):
     root_path: str = Field(default="", description="ASGI root_path for reverse proxies")
 
     # CORS — permissive by default for local dev; lock down in prod.
-    cors_origins: List[str] = Field(default_factory=lambda: ["*"])
+    cors_origins: list[str] = Field(default_factory=lambda: ["*"])
     cors_allow_credentials: bool = False
 
     # Rate limit (per IP): N requests per M seconds → e.g. "100/minute"

@@ -22,9 +22,9 @@ from .treetime import TreetimeResult, build_tip_dates_csv, run_treetime
 __all__ = [
     "DEFAULT_MODEL",
     "DEFAULT_SEED",
-    "IqtreeResult",
     "MIN_TAXA_FOR_TREE",
     "PHYLO_SCHEMA_VERSION",
+    "IqtreeResult",
     "SubstitutionModel",
     "SubtypePartitionRow",
     "TreeKind",

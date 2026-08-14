@@ -86,8 +86,8 @@ class TestParseNetworkJsonLegacy:
         p = _write_network_legacy(
             tmp_path / "net.json",
             [
-                {"id": "S0"},              # no cluster
-                {"cluster": 1},              # no id
+                {"id": "S0"},  # no cluster
+                {"cluster": 1},  # no id
                 {"id": "S1", "cluster": 1},
             ],
         )
@@ -118,7 +118,7 @@ class TestParseNetworkJsonCompact:
     def test_singletons_added_back(self, tmp_path: Path) -> None:
         p = _write_network_compact(
             tmp_path / "net.json",
-            ids=["S0", "S1"],           # only these appear in Nodes
+            ids=["S0", "S1"],  # only these appear in Nodes
             keys_map={"0": 1},
             values=[0, 0],
         )
@@ -136,7 +136,7 @@ class TestParseNetworkJsonCompact:
                 {
                     "Nodes": {
                         "id": ["S0", "S1"],
-                        "cluster": {"values": [3, 3]},   # no `keys`
+                        "cluster": {"values": [3, 3]},  # no `keys`
                     },
                     "Edges": [],
                 }

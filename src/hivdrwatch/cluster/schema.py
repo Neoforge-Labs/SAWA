@@ -10,6 +10,7 @@ Two shapes:
 from __future__ import annotations
 
 from datetime import date
+
 from pydantic import BaseModel, Field
 
 from ..ingest.schema import AccessionStr
@@ -29,9 +30,9 @@ class ClusterMembership(BaseModel):
     """One sequence's cluster assignment."""
 
     accession: AccessionStr
-    cluster_id: str                     # deterministic, e.g. "C-0001"
+    cluster_id: str  # deterministic, e.g. "C-0001"
     cluster_size: int
-    tn93_threshold: float               # threshold used to define the cluster
+    tn93_threshold: float  # threshold used to define the cluster
 
     # --- provenance ---
     computed_at: date

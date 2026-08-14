@@ -67,8 +67,8 @@ class SimulationResult:
     """A generated synthetic dataset with ground-truth cluster labels."""
 
     accession_to_seq: dict[str, str]
-    ground_truth: dict[str, list[str]]     # cluster_id → [accessions]
-    singletons: list[str]                   # accessions with no cluster
+    ground_truth: dict[str, list[str]]  # cluster_id → [accessions]
+    singletons: list[str]  # accessions with no cluster
     n_clusters: int
     seq_length: int
     seed: int
@@ -143,7 +143,9 @@ def simulate_clusters(
     if isinstance(cluster_size, tuple):
         lo, hi = cluster_size
         if lo < 2 or hi < lo:
-            raise ValueError(f"cluster_size range must be lo>=2 and hi>=lo; got {cluster_size}")
+            raise ValueError(
+                f"cluster_size range must be lo>=2 and hi>=lo; got {cluster_size}"
+            )
         sizes = rng.integers(lo, hi + 1, size=n_clusters).tolist()
     else:
         if cluster_size < 2:
@@ -228,4 +230,4 @@ def _summarize_sizes(sizes: list[int]) -> str:
         return "[]"
     if min(sizes) == max(sizes):
         return f"[all {sizes[0]}]"
-    return f"[{min(sizes)}-{max(sizes)}, mean {sum(sizes)/len(sizes):.1f}]"
+    return f"[{min(sizes)}-{max(sizes)}, mean {sum(sizes) / len(sizes):.1f}]"

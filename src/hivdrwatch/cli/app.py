@@ -17,7 +17,7 @@ one entry point + discoverable subcommands.
 from __future__ import annotations
 
 import importlib
-from typing import Callable
+from collections.abc import Callable
 
 import typer
 
@@ -90,8 +90,7 @@ def _make_forwarder(module_path: str, help_text: str) -> Callable[..., None]:
         module = importlib.import_module(module_path)
         if not hasattr(module, "main"):
             raise typer.BadParameter(
-                f"underlying module {module_path!r} has no `main(argv)`; "
-                "please open an issue."
+                f"underlying module {module_path!r} has no `main(argv)`; please open an issue."
             )
         code = module.main(list(ctx.args))
         raise typer.Exit(code=int(code or 0))
@@ -120,7 +119,7 @@ def _safe_import_version(module_path: str, attr: str) -> str:
     try:
         module = importlib.import_module(module_path)
         return str(getattr(module, attr))
-    except Exception:  # noqa: BLE001 - defensive at report boundary
+    except Exception:
         return "unknown"
 
 
@@ -135,8 +134,12 @@ def version() -> None:
         pkg_version = "0.0.0+dev"
 
     ingest_version = _safe_import_version("hivdrwatch.ingest.schema", "SCHEMA_VERSION")
-    cluster_version = _safe_import_version("hivdrwatch.cluster.schema", "CLUSTER_SCHEMA_VERSION")
-    storage_version = _safe_import_version("hivdrwatch.storage.schema", "STORAGE_SCHEMA_VERSION")
+    cluster_version = _safe_import_version(
+        "hivdrwatch.cluster.schema", "CLUSTER_SCHEMA_VERSION"
+    )
+    storage_version = _safe_import_version(
+        "hivdrwatch.storage.schema", "STORAGE_SCHEMA_VERSION"
+    )
     bench_version = _safe_import_version("benchmarks", "BENCHMARK_SCHEMA_VERSION")
 
     lines = [

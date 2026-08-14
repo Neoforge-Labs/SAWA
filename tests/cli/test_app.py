@@ -19,7 +19,6 @@ from typer.testing import CliRunner
 
 from hivdrwatch.cli.app import _SUBCOMMANDS, app
 
-
 runner = CliRunner()
 
 
@@ -59,11 +58,22 @@ class TestArgForwarding:
 
         result = runner.invoke(
             app,
-            ["ingest", "--skip-genbank", "--lanl-dir", "data/raw/lanl", "--out", "out.parquet"],
+            [
+                "ingest",
+                "--skip-genbank",
+                "--lanl-dir",
+                "data/raw/lanl",
+                "--out",
+                "out.parquet",
+            ],
         )
         assert result.exit_code == 0
         assert calls.argv == [
-            "--skip-genbank", "--lanl-dir", "data/raw/lanl", "--out", "out.parquet"
+            "--skip-genbank",
+            "--lanl-dir",
+            "data/raw/lanl",
+            "--out",
+            "out.parquet",
         ]
 
     def test_exit_code_bubbles_up_from_module(self, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -46,7 +46,7 @@ def align_sequences_mappy(
     reference_fasta: Path,
     *,
     preset: str = DEFAULT_PRESET,
-    n_workers: int | None = None,   # kept for API parity; unused
+    n_workers: int | None = None,  # kept for API parity; unused
 ) -> dict[str, str]:
     """Align every (accession, sequence) pair to the HXB2 reference.
 
@@ -68,8 +68,7 @@ def align_sequences_mappy(
     aligner = mp.Aligner(str(reference_fasta), preset=preset)
     if aligner is None or not aligner.seq_names:
         raise RuntimeError(
-            f"mappy failed to index reference {reference_fasta}. "
-            f"Is it a valid FASTA?"
+            f"mappy failed to index reference {reference_fasta}. Is it a valid FASTA?"
         )
 
     logger.info(

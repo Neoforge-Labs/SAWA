@@ -111,7 +111,7 @@ class SierraClient:
         self._client = client
         self._owns_client = client is None
 
-    def __enter__(self) -> "SierraClient":
+    def __enter__(self) -> SierraClient:
         if self._client is None:
             self._client = httpx.Client(timeout=DEFAULT_TIMEOUT_S)
         return self
@@ -154,8 +154,7 @@ class SierraClient:
         if misses:
             if self.offline:
                 raise SierraError(
-                    f"offline mode but {len(misses)} cache misses; "
-                    f"first: {misses[0]}"
+                    f"offline mode but {len(misses)} cache misses; first: {misses[0]}"
                 )
             self._fetch_and_cache(misses, seq_of_sha)
 
@@ -185,9 +184,7 @@ class SierraClient:
                 publish_date=_maybe_date(cached.get("publish_date")),
             )
         # Send a trivial query with no sequences to get currentVersion.
-        payload = self._post(
-            "query { currentVersion { text publishDate } }", variables={}
-        )
+        payload = self._post("query { currentVersion { text publishDate } }", variables={})
         cur = payload["data"]["currentVersion"]
         algo = AlgorithmVersion(
             version=cur["text"], publish_date=_maybe_date(cur.get("publishDate"))
@@ -202,31 +199,20 @@ class SierraClient:
     # internals
     # ------------------------------------------------------------------
 
-    def _fetch_and_cache(
-        self, missing_shas: list[str], seq_of_sha: dict[str, str]
-    ) -> None:
+    def _fetch_and_cache(self, missing_shas: list[str], seq_of_sha: dict[str, str]) -> None:
         for batch in _chunked(missing_shas, self.batch_size):
-            inputs = [
-                {"header": sha, "sequence": seq_of_sha[sha]} for sha in batch
-            ]
+            inputs = [{"header": sha, "sequence": seq_of_sha[sha]} for sha in batch]
             payload = self._post(GRAPHQL_QUERY, {"sequences": inputs})
             self._split_and_cache(payload, batch)
 
-    def _split_and_cache(
-        self, payload: dict[str, Any], sha_order: list[str]
-    ) -> None:
+    def _split_and_cache(self, payload: dict[str, Any], sha_order: list[str]) -> None:
         """Sierra returns one analysis object per input, in order. We slice
         the batch response into per-sequence payloads so each cache entry
         stands alone and is replayable."""
-        analyses = (
-            payload.get("data", {})
-            .get("viewer", {})
-            .get("sequenceAnalysis", [])
-        )
+        analyses = payload.get("data", {}).get("viewer", {}).get("sequenceAnalysis", [])
         if len(analyses) != len(sha_order):
             raise SierraError(
-                f"Sierra returned {len(analyses)} analyses for "
-                f"{len(sha_order)} inputs"
+                f"Sierra returned {len(analyses)} analyses for {len(sha_order)} inputs"
             )
         current_version = payload.get("data", {}).get("currentVersion", {})
         for sha, analysis in zip(sha_order, analyses, strict=True):
@@ -239,9 +225,7 @@ class SierraClient:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=2, max=60),
-        retry=retry_if_exception_type(
-            (httpx.HTTPError, httpx.TimeoutException, SierraError)
-        ),
+        retry=retry_if_exception_type((httpx.HTTPError, httpx.TimeoutException, SierraError)),
         reraise=True,
     )
     def _post(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
@@ -251,15 +235,11 @@ class SierraClient:
         # Gentle client-side rate limit — Sierra doesn't publish a hard limit
         # but we've observed 429s at aggressive concurrencies.
         time.sleep(0.05)
-        resp = self._client.post(
-            self.endpoint, json={"query": query, "variables": variables}
-        )
+        resp = self._client.post(self.endpoint, json={"query": query, "variables": variables})
         if resp.status_code >= 500 or resp.status_code == 429:
             raise SierraError(f"Sierra transient error: {resp.status_code}")
         if resp.status_code != 200:
-            raise SierraError(
-                f"Sierra error {resp.status_code}: {resp.text[:400]}"
-            )
+            raise SierraError(f"Sierra error {resp.status_code}: {resp.text[:400]}")
         payload = resp.json()
         if "errors" in payload:
             raise SierraError(f"Sierra GraphQL errors: {payload['errors']}")

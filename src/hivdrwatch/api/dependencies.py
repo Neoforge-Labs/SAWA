@@ -7,7 +7,7 @@ engine as the rest of the application. Tests override it via
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
 from sqlalchemy.orm import Session
 

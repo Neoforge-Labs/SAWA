@@ -53,7 +53,7 @@ class TestDeriveConfig:
                     "data_scope": "DR/drug=3TC",
                     "estimate": 0.05,
                     "ci_low": -0.4,
-                    "ci_high": 0.5,   # width 0.9, |est| 0.05 << 0.45
+                    "ci_high": 0.5,  # width 0.9, |est| 0.05 << 0.45
                 },
             ]
         )

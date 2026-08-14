@@ -118,7 +118,9 @@ class TestLoadClusters:
         p = _write_cluster_parquet(tmp_path / "c.parquet", n=10)
         counts = load_cluster_memberships(p, session=session)
         assert counts.inserted == 10
-        assert session.execute(select(func.count()).select_from(ClusterMembership)).scalar() == 10
+        assert (
+            session.execute(select(func.count()).select_from(ClusterMembership)).scalar() == 10
+        )
 
     def test_second_run_ok_same_accession(self, session: Session, tmp_path: Path) -> None:
         # Two separate runs on the same accession set → both should

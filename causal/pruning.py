@@ -136,9 +136,7 @@ def derive_prune_config(
         n_failed = int(row.get("ref_fail", 0) or 0)
         ref_reason = None
         if n_failed >= MIN_FAILED_REFUTATIONS:
-            ref_reason = (
-                f"fails {n_failed}/3 refutations in {row['data_scope']}"
-            )
+            ref_reason = f"fails {n_failed}/3 refutations in {row['data_scope']}"
 
         if ci_reason or ref_reason:
             # First-observed reason wins to keep the config readable.

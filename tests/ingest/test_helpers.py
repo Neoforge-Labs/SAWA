@@ -159,7 +159,9 @@ class TestSequenceRecordValidation:
 class TestLANLPreambleDetection:
     def test_skips_number_of_records_preamble(self, tmp_path) -> None:
         p = tmp_path / "results.tsv"
-        p.write_text("Number of records retrieved: 42\n#\tAccession\tSubtype\n1\tAF004885\tA1\n")
+        p.write_text(
+            "Number of records retrieved: 42\n#\tAccession\tSubtype\n1\tAF004885\tA1\n"
+        )
         assert _preamble_row_count(p) == 1
 
     def test_no_preamble(self, tmp_path) -> None:

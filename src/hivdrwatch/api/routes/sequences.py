@@ -2,25 +2,26 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ...storage.schema import Sequence as SequenceRow
 from ..dependencies import get_db
-from ..schemas import Sequence as SequenceResp, SequenceListResponse
+from ..schemas import Sequence as SequenceResp
+from ..schemas import SequenceListResponse
 
 router = APIRouter(prefix="/sequences", tags=["sequences"])
 
 
 @router.get("", response_model=SequenceListResponse, summary="List sequences")
 def list_sequences(
-    country: Optional[str] = Query(None, min_length=2, max_length=2, description="ISO 3166-1 alpha-2"),
-    subtype: Optional[str] = Query(None, max_length=16),
-    collection_year: Optional[int] = Query(None, ge=1980, le=2100),
-    source: Optional[str] = Query(None, max_length=16),
+    country: str | None = Query(
+        None, min_length=2, max_length=2, description="ISO 3166-1 alpha-2"
+    ),
+    subtype: str | None = Query(None, max_length=16),
+    collection_year: int | None = Query(None, ge=1980, le=2100),
+    source: str | None = Query(None, max_length=16),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -36,7 +37,11 @@ def list_sequences(
         stmt = stmt.where(SequenceRow.source == source)
 
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
-    rows = db.execute(stmt.order_by(SequenceRow.accession).limit(limit).offset(offset)).scalars().all()
+    rows = (
+        db.execute(stmt.order_by(SequenceRow.accession).limit(limit).offset(offset))
+        .scalars()
+        .all()
+    )
 
     return SequenceListResponse(
         items=[

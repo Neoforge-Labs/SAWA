@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 REFUTATION_TOLERANCE = 0.20  # 20% shift → refutation fails
 
 DEFAULT_BOOTSTRAP_SAMPLES = 200
-DEFAULT_BOOTSTRAP_ALPHA = 0.05        # 95% CI
+DEFAULT_BOOTSTRAP_ALPHA = 0.05  # 95% CI
 
 
 # ------------------------------------------------------------------
@@ -143,9 +143,7 @@ def estimate_dr_effects_per_subtype(
             continue
         sub_df = df.filter(pl.col(subtype_col) == subtype)
         if sub_df.height < min_samples:
-            logger.info(
-                "skipping subtype=%s (n=%d < %d)", subtype, sub_df.height, min_samples
-            )
+            logger.info("skipping subtype=%s (n=%d < %d)", subtype, sub_df.height, min_samples)
             continue
         eff = estimate_dr_effect(
             sub_df,
@@ -180,17 +178,27 @@ def _run_dowhy(
     """Run identify → estimate → refute. Returns CausalEffect either way."""
     if treatment not in df.columns or outcome not in df.columns:
         return _unidentified_row(
-            treatment, outcome, adjustment, data_scope, method,
+            treatment,
+            outcome,
+            adjustment,
+            data_scope,
+            method,
             reason=f"missing column ({treatment} or {outcome})",
         )
 
-    pandas_df = df.select(
-        [treatment, outcome] + [c for c in adjustment if c in df.columns]
-    ).drop_nulls().to_pandas()
+    pandas_df = (
+        df.select([treatment, outcome] + [c for c in adjustment if c in df.columns])
+        .drop_nulls()
+        .to_pandas()
+    )
 
     if len(pandas_df) < 30:
         return _unidentified_row(
-            treatment, outcome, adjustment, data_scope, method,
+            treatment,
+            outcome,
+            adjustment,
+            data_scope,
+            method,
             reason=f"insufficient rows: {len(pandas_df)}",
         )
 
@@ -199,7 +207,11 @@ def _run_dowhy(
     except ImportError:
         logger.warning("dowhy not installed; skipping causal estimation")
         return _unidentified_row(
-            treatment, outcome, adjustment, data_scope, method,
+            treatment,
+            outcome,
+            adjustment,
+            data_scope,
+            method,
             reason="dowhy not installed",
         )
 
@@ -213,10 +225,14 @@ def _run_dowhy(
             graph=gml,
         )
         identified = model.identify_effect(proceed_when_unidentifiable=False)
-    except Exception as e:  # noqa: BLE001 — dowhy raises on unidentifiable graphs
+    except Exception as e:
         logger.warning("identify_effect failed for %s → %s: %s", treatment, outcome, e)
         return _unidentified_row(
-            treatment, outcome, adjustment, data_scope, method,
+            treatment,
+            outcome,
+            adjustment,
+            data_scope,
+            method,
             reason=f"unidentifiable: {e}",
         )
 
@@ -225,11 +241,16 @@ def _run_dowhy(
             identified,
             method_name=method.value,
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning("estimate_effect failed for %s → %s: %s", treatment, outcome, e)
         return _unidentified_row(
-            treatment, outcome, adjustment, data_scope, method,
-            reason=f"estimation error: {e}", identified=True,
+            treatment,
+            outcome,
+            adjustment,
+            data_scope,
+            method,
+            reason=f"estimation error: {e}",
+            identified=True,
         )
 
     point = float(getattr(estimate, "value", 0.0) or 0.0)
@@ -307,15 +328,13 @@ def _bootstrap_ci(
         if boot_df[treatment].nunique() < 2 or boot_df[outcome].nunique() < 2:
             continue
         try:
-            m = CausalModel(
-                data=boot_df, treatment=treatment, outcome=outcome, graph=gml
-            )
+            m = CausalModel(data=boot_df, treatment=treatment, outcome=outcome, graph=gml)
             ident = m.identify_effect(proceed_when_unidentifiable=True)
             est = m.estimate_effect(ident, method_name=method.value)
             v = getattr(est, "value", None)
             if v is not None:
                 estimates.append(float(v))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug("bootstrap resample failed: %s", e)
 
     if len(estimates) < max(20, n_samples // 5):
@@ -365,9 +384,7 @@ def _run_refutations(
             p_val: float | None = None
             if isinstance(p, dict):
                 p_val = p.get("p_value")
-            verdict = _score_refutation(
-                original=original_estimate, new=new_val, method=label
-            )
+            verdict = _score_refutation(original=original_estimate, new=new_val, method=label)
             out.append(
                 RefutationResult(
                     method=label,
@@ -377,7 +394,7 @@ def _run_refutations(
                     verdict=verdict,
                 )
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug("refuter %s failed: %s", label, e)
             out.append(
                 RefutationResult(
@@ -391,9 +408,7 @@ def _run_refutations(
     return out
 
 
-def _score_refutation(
-    *, original: float, new: float, method: str
-) -> RefutationVerdict:
+def _score_refutation(*, original: float, new: float, method: str) -> RefutationVerdict:
     """Bucket a refuter's numeric result into pass/fail/inconclusive.
 
     Rules:
@@ -405,7 +420,9 @@ def _score_refutation(
     if original == 0:
         # Zero estimate — placebo passes trivially; others inconclusive.
         if method == "placebo_treatment_refuter":
-            return RefutationVerdict.PASSES if abs(new) < 1e-6 else RefutationVerdict.INCONCLUSIVE
+            return (
+                RefutationVerdict.PASSES if abs(new) < 1e-6 else RefutationVerdict.INCONCLUSIVE
+            )
         return RefutationVerdict.INCONCLUSIVE
 
     if method == "placebo_treatment_refuter":
@@ -516,9 +533,7 @@ def estimate_all_dr_effects(
                 if drug and not eff.data_scope.startswith(f"DR/drug={drug}"):
                     eff = eff.model_copy(
                         update={
-                            "data_scope": eff.data_scope.replace(
-                                "DR/", f"DR/drug={drug}/"
-                            )
+                            "data_scope": eff.data_scope.replace("DR/", f"DR/drug={drug}/")
                         }
                     )
                 effects.append(eff)

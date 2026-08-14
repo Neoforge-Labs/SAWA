@@ -39,7 +39,7 @@ INSTI_CLASS: str = "INSTI"
 # implementation-year buffer (WHO DTG guidance issued mid-2019 and
 # rollout was staggered across countries through 2020).
 PRE_YEARS: tuple[int, int] = (2010, 2018)
-POST_YEARS: tuple[int, int] = (2020, 9999)   # "latest" — no upper bound in data
+POST_YEARS: tuple[int, int] = (2020, 9999)  # "latest" — no upper bound in data
 ROLLOUT_YEAR: int = 2019
 
 # Minimum N per stratum before we score prevalence. Preregistered:
@@ -154,9 +154,7 @@ def aggregate_dtg_landscape(
 
     # Assign epoch.
     joined = joined.with_columns(
-        pl.col("collection_year")
-        .map_elements(_epoch, return_dtype=pl.Utf8)
-        .alias("epoch")
+        pl.col("collection_year").map_elements(_epoch, return_dtype=pl.Utf8).alias("epoch")
     ).filter(pl.col("epoch").is_not_null())
 
     # Per-(country, subtype, epoch) aggregation.
@@ -211,23 +209,27 @@ def aggregate_dtg_landscape(
                 "signal": signal,
             }
         )
-    delta = pl.from_dicts(delta_rows) if delta_rows else pl.DataFrame(
-        schema={
-            "country": pl.Utf8, "subtype": pl.Utf8,
-            "n_pre": pl.Int64, "n_post": pl.Int64,
-            "prev_pre": pl.Float64, "prev_post": pl.Float64,
-            "delta_prev": pl.Float64,
-            "delta_ci_low": pl.Float64, "delta_ci_high": pl.Float64,
-            "signal": pl.Boolean,
-        }
+    delta = (
+        pl.from_dicts(delta_rows)
+        if delta_rows
+        else pl.DataFrame(
+            schema={
+                "country": pl.Utf8,
+                "subtype": pl.Utf8,
+                "n_pre": pl.Int64,
+                "n_post": pl.Int64,
+                "prev_pre": pl.Float64,
+                "prev_post": pl.Float64,
+                "delta_prev": pl.Float64,
+                "delta_ci_low": pl.Float64,
+                "delta_ci_high": pl.Float64,
+                "signal": pl.Boolean,
+            }
+        )
     )
 
-    n_pre_seqs = int(
-        joined.filter(pl.col("epoch") == "pre").height
-    )
-    n_post_seqs = int(
-        joined.filter(pl.col("epoch") == "post").height
-    )
+    n_pre_seqs = int(joined.filter(pl.col("epoch") == "pre").height)
+    n_post_seqs = int(joined.filter(pl.col("epoch") == "post").height)
     n_signal = int(delta.filter(pl.col("signal")).height) if delta.height else 0
 
     summary = DTGSummary(
@@ -238,7 +240,10 @@ def aggregate_dtg_landscape(
     )
     logger.info(
         "DTG landscape: pre=%d, post=%d, %d strata scored, %d with signal",
-        n_pre_seqs, n_post_seqs, delta.height, n_signal,
+        n_pre_seqs,
+        n_post_seqs,
+        delta.height,
+        n_signal,
     )
     return per_epoch, delta, summary
 

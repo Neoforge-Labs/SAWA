@@ -95,9 +95,8 @@ def assign_patient_groups(
         # first_year is derived from the group, so we build a preliminary key
         # without it, then refine.
         group_key = (country or "?", cohort, token)
-        if year is not None:
-            if group_key not in first_year or year < first_year[group_key]:
-                first_year[group_key] = year
+        if year is not None and (group_key not in first_year or year < first_year[group_key]):
+            first_year[group_key] = year
         keys_by_row.append(
             PatientKey(country=country, cohort=cohort, patient_token=token, first_year=None)
         )
@@ -128,7 +127,5 @@ def assign_patient_groups(
         row["is_earliest_per_patient"] = rank_key == earliest_seen[group_id]
 
     n_groups = len(earliest_seen)
-    logger.info(
-        "patient dedup: %d sequences → %d patient groups", len(materialized), n_groups
-    )
+    logger.info("patient dedup: %d sequences → %d patient groups", len(materialized), n_groups)
     return materialized

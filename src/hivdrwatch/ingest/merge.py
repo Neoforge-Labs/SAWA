@@ -60,9 +60,7 @@ def merge_sources(
 # ---- internals ----
 
 
-def _join_genbank_with_lanl(
-    genbank_df: pl.DataFrame, lanl_df: pl.DataFrame
-) -> pl.DataFrame:
+def _join_genbank_with_lanl(genbank_df: pl.DataFrame, lanl_df: pl.DataFrame) -> pl.DataFrame:
     if "accession" not in genbank_df.columns:
         raise ValueError("genbank_df missing 'accession' column")
 
@@ -109,11 +107,7 @@ def _join_genbank_with_lanl(
         joined = joined.with_columns(coalesce_exprs)
 
     joined = joined.drop(
-        [
-            c
-            for c in ["subtype_lanl", "country_code", "pubmed_id_lanl"]
-            if c in joined.columns
-        ]
+        [c for c in ["subtype_lanl", "country_code", "pubmed_id_lanl"] if c in joined.columns]
     )
     return joined
 

@@ -91,7 +91,10 @@ def run_align_benchmark(
             measurements.append(BenchmarkMeasurement(**m))
             logger.info(
                 "align n=%d wall=%.2fs throughput=%.1f/s peak=%.1fMB",
-                n, m["wall_seconds"], m["throughput_per_sec"], m["peak_mb"],
+                n,
+                m["wall_seconds"],
+                m["throughput_per_sec"],
+                m["peak_mb"],
             )
     return measurements
 

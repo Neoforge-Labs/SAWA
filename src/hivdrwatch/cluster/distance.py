@@ -20,8 +20,8 @@ import polars as pl
 logger = logging.getLogger(__name__)
 
 DEFAULT_IMAGE = "hivdrwatch/tn93:1.0.13"
-DEFAULT_THRESHOLD = 0.015           # HIV-TRACE convention (1.5%)
-DEFAULT_AMBIGUITY_HANDLING = "resolve"   # tn93 flag
+DEFAULT_THRESHOLD = 0.015  # HIV-TRACE convention (1.5%)
+DEFAULT_AMBIGUITY_HANDLING = "resolve"  # tn93 flag
 
 
 @dataclass(frozen=True)
@@ -62,14 +62,20 @@ def run_tn93(
     # HIV-TRACE's tutorial invokes and what the previous successful
     # cluster-validate run used.
     tn93_args = (
-        "-t", str(threshold),
-        "-a", ambiguity_handling,
-        "-o", f"/work/{output_csv.name}",
+        "-t",
+        str(threshold),
+        "-a",
+        ambiguity_handling,
+        "-o",
+        f"/work/{output_csv.name}",
         f"/work/{aligned_fasta.name}",
     )
     docker_cmd = [
-        "docker", "run", "--rm",
-        "-v", f"{work_dir}:/work",
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{work_dir}:/work",
         image,
         *tn93_args,
     ]
@@ -95,18 +101,14 @@ def run_tn93(
         logger.info("tn93 stderr:\n%s", stderr_tail)
     if stdout_tail.strip():
         logger.info("tn93 stdout:\n%s", stdout_tail)
-    logger.info(
-        "tn93 complete → %s (%d bytes)", output_csv, output_csv.stat().st_size
-    )
+    logger.info("tn93 complete → %s (%d bytes)", output_csv, output_csv.stat().st_size)
 
     # Diagnostic: if the primary run returned no pairs, re-run with
     # t=1.0 to see what distances tn93 actually computed. This tells us
     # whether the sequences are genuinely all above threshold (fix the
     # simulator) or tn93 is silently rejecting pairs (fix tn93 flags).
     if output_csv.stat().st_size < 100:
-        _diagnostic_tn93_all_pairs(
-            aligned_fasta, output_csv.parent, image, ambiguity_handling
-        )
+        _diagnostic_tn93_all_pairs(aligned_fasta, output_csv.parent, image, ambiguity_handling)
     return TN93Invocation(
         image=image,
         args=tn93_args,
@@ -133,12 +135,18 @@ def _diagnostic_tn93_all_pairs(
     )
     diag_csv = work_dir / "distances.diag.csv"
     docker_cmd = [
-        "docker", "run", "--rm",
-        "-v", f"{work_dir}:/work",
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{work_dir}:/work",
         image,
-        "-t", "1.0",
-        "-a", ambiguity_handling,
-        "-o", f"/work/{diag_csv.name}",
+        "-t",
+        "1.0",
+        "-a",
+        ambiguity_handling,
+        "-o",
+        f"/work/{diag_csv.name}",
         f"/work/{aligned_fasta.name}",
     ]
     try:
@@ -179,8 +187,14 @@ def _diagnostic_tn93_all_pairs(
         "If median is near 0.75, sequences are essentially unrelated (mutation "
         "rate too high or founder-sharing broken). If min is well above 0.015 "
         "but well below 0.75, bump the threshold or lower mutation_rate.",
-        df.height, d.min(), d.quantile(0.25), d.median(), d.quantile(0.75), d.max(),
-        int((d <= 0.015).sum()), int((d <= 0.100).sum()),
+        df.height,
+        d.min(),
+        d.quantile(0.25),
+        d.median(),
+        d.quantile(0.75),
+        d.max(),
+        int((d <= 0.015).sum()),
+        int((d <= 0.100).sum()),
     )
 
 
@@ -213,7 +227,7 @@ def compute_pairwise_distances_python(
     Emits a CSV with the same header (`ID1,ID2,Distance`) as tn93 so
     `read_distances` consumes it identically.
     """
-    import numpy as np  # noqa: PLC0415
+    import numpy as np
 
     fasta_path = fasta_path.resolve()
     output_csv = output_csv.resolve()
@@ -276,14 +290,14 @@ def compute_pairwise_distances_python(
             below = np.where(distances <= threshold)[0]
             for j_off in below:
                 j = i + 1 + int(j_off)
-                fh.write(
-                    f"{accessions[i]},{accessions[j]},{float(distances[j_off]):.6f}\n"
-                )
+                fh.write(f"{accessions[i]},{accessions[j]},{float(distances[j_off]):.6f}\n")
                 n_written += 1
 
     logger.info(
         "in-process distances → %s (%d pairs at or below threshold=%.4f)",
-        output_csv, n_written, threshold,
+        output_csv,
+        n_written,
+        threshold,
     )
     return output_csv
 

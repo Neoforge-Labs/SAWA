@@ -8,7 +8,6 @@ never leak internal columns like `pipeline_run_id`).
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -29,16 +28,16 @@ class VersionResponse(BaseModel):
 class Sequence(BaseModel):
     accession: str
     source: str
-    country: Optional[str] = None
-    collection_year: Optional[int] = None
+    country: str | None = None
+    collection_year: int | None = None
     subtype: str
     length: int
     gene_region: str
-    is_drug_naive: Optional[bool] = None
+    is_drug_naive: bool | None = None
 
 
 class SequenceListResponse(BaseModel):
-    items: List[Sequence]
+    items: list[Sequence]
     total: int
     limit: int
     offset: int
@@ -54,7 +53,7 @@ class DRCall(BaseModel):
 
 
 class DRCallListResponse(BaseModel):
-    items: List[DRCall]
+    items: list[DRCall]
     total: int
     limit: int
     offset: int
@@ -69,7 +68,7 @@ class ClusterMember(BaseModel):
 
 
 class ClusterListResponse(BaseModel):
-    items: List[ClusterMember]
+    items: list[ClusterMember]
     total: int
     limit: int
     offset: int

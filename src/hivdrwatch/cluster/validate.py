@@ -96,9 +96,7 @@ def score_clusters(
 
     if len(scored_accessions) < len(predicted):
         n_dropped = len(predicted) - len(scored_accessions)
-        logger.info(
-            "dropped %d predicted accessions not in ground truth", n_dropped
-        )
+        logger.info("dropped %d predicted accessions not in ground truth", n_dropped)
 
     tp = fp = fn = tn = 0
     for a, b in combinations(scored_accessions, 2):
@@ -125,8 +123,13 @@ def score_clusters(
     result = ClusterValidationResult(
         n_sequences=len(scored_accessions),
         n_pairs=n_pairs,
-        tp=tp, fp=fp, fn=fn, tn=tn,
-        precision=precision, recall=recall, f1=f1,
+        tp=tp,
+        fp=fp,
+        fn=fn,
+        tn=tn,
+        precision=precision,
+        recall=recall,
+        f1=f1,
         adjusted_rand_index=ari,
         n_predicted_clusters=n_pred,
         n_truth_clusters=n_true,
@@ -134,8 +137,13 @@ def score_clusters(
     logger.info(
         "cluster validation: n=%d, P=%.3f, R=%.3f, F1=%.3f, ARI=%.3f "
         "(pred %d clusters, truth %d clusters)",
-        result.n_sequences, precision, recall, f1, ari or float("nan"),
-        n_pred, n_true,
+        result.n_sequences,
+        precision,
+        recall,
+        f1,
+        ari or float("nan"),
+        n_pred,
+        n_true,
     )
     return result
 
@@ -173,7 +181,9 @@ def _adjusted_rand_index(
 
         n = len(accessions)
         row_sums = [sum(row) for row in table]
-        col_sums = [sum(table[i][j] for i in range(len(table))) for j in range(len(truth_labels))]
+        col_sums = [
+            sum(table[i][j] for i in range(len(table))) for j in range(len(truth_labels))
+        ]
 
         sum_comb_cells = sum(comb2(cell) for row in table for cell in row)
         sum_comb_rows = sum(comb2(rs) for rs in row_sums)
@@ -188,7 +198,7 @@ def _adjusted_rand_index(
         if denom == 0:
             return None
         return (sum_comb_cells - expected) / denom
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning("ARI computation failed: %s", e)
         return None
 

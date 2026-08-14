@@ -67,13 +67,9 @@ def build_tip_dates_csv(
     if missing:
         raise ValueError(f"curated parquet missing columns: {missing}")
 
-    subset = (
-        curated_parquet.filter(
-            pl.col("accession").is_in(accessions)
-            & pl.col("collection_year").is_not_null()
-        )
-        .select(["accession", "collection_year"])
-    )
+    subset = curated_parquet.filter(
+        pl.col("accession").is_in(accessions) & pl.col("collection_year").is_not_null()
+    ).select(["accession", "collection_year"])
 
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     with out_csv.open("w", encoding="utf-8") as fh:
@@ -121,31 +117,35 @@ def run_treetime(
     # All three inputs must be under a shared parent so /work maps cleanly.
     parents = {treefile.parent, aln_fasta.parent, dates_csv.parent}
     if len(parents) != 1:
-        raise ValueError(
-            f"treetime inputs must share a parent dir; got {parents}"
-        )
+        raise ValueError(f"treetime inputs must share a parent dir; got {parents}")
     work_dir = parents.pop()
     if not str(out_dir).startswith(str(work_dir)):
-        raise ValueError(
-            f"out_dir {out_dir} must be under work_dir {work_dir}"
-        )
+        raise ValueError(f"out_dir {out_dir} must be under work_dir {work_dir}")
     out_dir.mkdir(parents=True, exist_ok=True)
     out_rel = out_dir.relative_to(work_dir)
 
     args = [
         "treetime",
-        "--tree", f"/work/{treefile.name}",
-        "--aln", f"/work/{aln_fasta.name}",
-        "--dates", f"/work/{dates_csv.name}",
-        "--outdir", f"/work/{out_rel}",
+        "--tree",
+        f"/work/{treefile.name}",
+        "--aln",
+        f"/work/{aln_fasta.name}",
+        "--dates",
+        f"/work/{dates_csv.name}",
+        "--outdir",
+        f"/work/{out_rel}",
         # No reconstructed ancestral sequences — we don't need them and
         # they add non-trivial runtime.
         "--keep-root",
     ]
     docker_cmd = [
-        "docker", "run", "--rm",
-        "--memory", memory_limit,
-        "-v", f"{work_dir}:/work",
+        "docker",
+        "run",
+        "--rm",
+        "--memory",
+        memory_limit,
+        "-v",
+        f"{work_dir}:/work",
         image,
         *args,
     ]

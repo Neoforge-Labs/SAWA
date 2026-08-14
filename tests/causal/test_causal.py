@@ -33,7 +33,6 @@ from causal.schema import (
     RefutationVerdict,
 )
 
-
 # ---------- DR DAG ----------
 
 
@@ -115,9 +114,7 @@ class TestGML:
 
 class TestEstimateDR:
     def test_missing_column_returns_unidentified(self) -> None:
-        df = pl.DataFrame(
-            {"label_binary": [0, 1] * 20, "subtype": ["A1"] * 40}
-        )
+        df = pl.DataFrame({"label_binary": [0, 1] * 20, "subtype": ["A1"] * 40})
         eff = estimate_dr_effect(df, "RT_184_V")
         assert eff.identified is False
         assert eff.n_observations == 0
@@ -140,9 +137,7 @@ class TestEstimateDR:
 
 class TestEstimateOutbreak:
     def test_missing_feature_returns_unidentified(self) -> None:
-        df = pl.DataFrame(
-            {"label_incidence": [1.0] * 40, "country": ["KE"] * 40}
-        )
+        df = pl.DataFrame({"label_incidence": [1.0] * 40, "country": ["KE"] * 40})
         eff = estimate_outbreak_effect(df, "mean_growth_rate")
         assert eff.identified is False
 

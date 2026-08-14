@@ -25,7 +25,7 @@ PHYLO_SCHEMA_VERSION = "0.1.0"
 class TreeKind(StrEnum):
     """The two flavors of tree we build per subtype."""
 
-    ML = "ml"                  # maximum-likelihood, IQ-TREE 2
+    ML = "ml"  # maximum-likelihood, IQ-TREE 2
     TIME_SCALED = "time_scaled"  # dated, TreeTime
 
 
@@ -60,13 +60,13 @@ class TreeMetadata(BaseModel):
     bootstrap_replicates: int | None = None
 
     # --- TreeTime specifics ---
-    clock_rate: float | None = None       # substitutions per site per year
+    clock_rate: float | None = None  # substitutions per site per year
     clock_rate_stddev: float | None = None
-    time_span_years: float | None = None   # tip-date range
+    time_span_years: float | None = None  # tip-date range
 
     # --- reproducibility ---
     random_seed: int
-    tool_version: str                     # from `iqtree2 --version` etc.
+    tool_version: str  # from `iqtree2 --version` etc.
     wall_seconds: float | None = None
 
     # --- provenance ---

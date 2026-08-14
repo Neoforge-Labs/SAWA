@@ -20,13 +20,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 # --- Helpers ---
 
 
 def _make_parquet(tmp_path: Path, name: str) -> Path:
     p = tmp_path / name
-    p.write_bytes(b"parquet-magic-placeholder")   # loader is mocked; content doesn't matter
+    p.write_bytes(b"parquet-magic-placeholder")  # loader is mocked; content doesn't matter
     return p
 
 
@@ -66,11 +65,15 @@ def patch_storage_tail(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(tail, "require_postgres", ns.require_postgres)
     monkeypatch.setattr(tail, "get_session", get_session_mock)
     monkeypatch.setattr(tail, "ensure_schema", ns.ensure_schema)
-    monkeypatch.setattr(tail, "_LOADERS", {
-        "ingest": ns.load_sequences,
-        "sierra": ns.load_dr_calls,
-        "cluster": ns.load_cluster_memberships,
-    })
+    monkeypatch.setattr(
+        tail,
+        "_LOADERS",
+        {
+            "ingest": ns.load_sequences,
+            "sierra": ns.load_dr_calls,
+            "cluster": ns.load_cluster_memberships,
+        },
+    )
     # Reset env var so tests control it explicitly.
     monkeypatch.delenv("HIVDRWATCH_LOAD_TO_POSTGRES", raising=False)
     return ns
@@ -80,9 +83,7 @@ def patch_storage_tail(monkeypatch: pytest.MonkeyPatch):
 
 
 class TestEnableGate:
-    def test_disabled_by_default(
-        self, patch_storage_tail, tmp_path: Path
-    ) -> None:
+    def test_disabled_by_default(self, patch_storage_tail, tmp_path: Path) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         p = _make_parquet(tmp_path, "x.parquet")
@@ -91,9 +92,7 @@ class TestEnableGate:
         assert patch_storage_tail.require_postgres.call_count == 0
         assert patch_storage_tail.load_sequences.call_count == 0
 
-    def test_enabled_via_arg(
-        self, patch_storage_tail, tmp_path: Path
-    ) -> None:
+    def test_enabled_via_arg(self, patch_storage_tail, tmp_path: Path) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         p = _make_parquet(tmp_path, "x.parquet")
@@ -128,18 +127,14 @@ class TestEnableGate:
 
 
 class TestSkipPaths:
-    def test_missing_parquet_skips_cleanly(
-        self, patch_storage_tail, tmp_path: Path
-    ) -> None:
+    def test_missing_parquet_skips_cleanly(self, patch_storage_tail, tmp_path: Path) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         result = storage_tail("ingest", tmp_path / "does_not_exist.parquet", enabled=True)
         assert result is None
         assert patch_storage_tail.require_postgres.call_count == 0
 
-    def test_db_unreachable_skips_cleanly(
-        self, patch_storage_tail, tmp_path: Path
-    ) -> None:
+    def test_db_unreachable_skips_cleanly(self, patch_storage_tail, tmp_path: Path) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         patch_storage_tail.require_postgres.return_value = False
@@ -159,9 +154,7 @@ class TestSkipPaths:
         result = storage_tail("ingest", p, enabled=True)
         assert result is None
 
-    def test_unknown_stage_skips_cleanly(
-        self, patch_storage_tail, tmp_path: Path
-    ) -> None:
+    def test_unknown_stage_skips_cleanly(self, patch_storage_tail, tmp_path: Path) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         p = _make_parquet(tmp_path, "x.parquet")
@@ -172,9 +165,7 @@ class TestSkipPaths:
 
 
 class TestLoaderDispatch:
-    def test_ingest_calls_load_sequences(
-        self, patch_storage_tail, tmp_path: Path
-    ) -> None:
+    def test_ingest_calls_load_sequences(self, patch_storage_tail, tmp_path: Path) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         p = _make_parquet(tmp_path, "seqs.parquet")
@@ -189,9 +180,7 @@ class TestLoaderDispatch:
         assert kwargs["session"] is patch_storage_tail.session
         assert kwargs["git_sha"] == "abc123"
 
-    def test_sierra_calls_load_dr_calls(
-        self, patch_storage_tail, tmp_path: Path
-    ) -> None:
+    def test_sierra_calls_load_dr_calls(self, patch_storage_tail, tmp_path: Path) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         p = _make_parquet(tmp_path, "dr.parquet")
@@ -209,9 +198,7 @@ class TestLoaderDispatch:
 
 
 class TestReturnedCounts:
-    def test_forwards_loader_result_shape(
-        self, patch_storage_tail, tmp_path: Path
-    ) -> None:
+    def test_forwards_loader_result_shape(self, patch_storage_tail, tmp_path: Path) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         p = _make_parquet(tmp_path, "x.parquet")

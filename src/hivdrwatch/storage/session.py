@@ -13,17 +13,15 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DATABASE_URL = (
-    "postgresql+psycopg://{user}:{pw}@{host}:{port}/{db}"
-)
+DEFAULT_DATABASE_URL = "postgresql+psycopg://{user}:{pw}@{host}:{port}/{db}"
 
 
 def _default_url() -> str:
@@ -100,7 +98,7 @@ def require_postgres(*, timeout_seconds: float = 3.0) -> bool:
     means the Parquet still lands on disk but no DB load happens.
     Logs one WARNING with a redacted URL so operators can see why.
     """
-    from sqlalchemy import text as _text  # noqa: PLC0415
+    from sqlalchemy import text as _text
 
     url = database_url()
     try:
@@ -115,10 +113,12 @@ def require_postgres(*, timeout_seconds: float = 3.0) -> bool:
         with engine.connect() as conn:
             conn.execute(_text("SELECT 1"))
         return True
-    except Exception as e:  # noqa: BLE001 - defensive at boundary
+    except Exception as e:
         logger.warning(
             "database not reachable → %s (%s: %s); skipping storage tail",
-            _redact(url), type(e).__name__, e,
+            _redact(url),
+            type(e).__name__,
+            e,
         )
         return False
 

@@ -87,14 +87,22 @@ class DRDag:
         default_factory=lambda: (
             # The mutation columns that drive resistance for common drugs.
             # Not exhaustive — extend as candidate-effect list grows.
-            "RT_184_V", "RT_103_N", "RT_181_C", "RT_190_A",
-            "PR_46_L", "PR_82_A", "PR_90_M",
-            "IN_148_H", "IN_155_H",
+            "RT_184_V",
+            "RT_103_N",
+            "RT_181_C",
+            "RT_190_A",
+            "PR_46_L",
+            "PR_82_A",
+            "PR_90_M",
+            "IN_148_H",
+            "IN_155_H",
         )
     )
     covariates: tuple[str, ...] = field(
         default_factory=lambda: (
-            "subtype", "country", "collection_year",
+            "subtype",
+            "country",
+            "collection_year",
         )
     )
 
@@ -178,11 +186,16 @@ class OutbreakDag:
 
         # Observed covariates & features from outbreak_features.parquet.
         for node in (
-            "country", "year",
+            "country",
+            "year",
             "n_sequences_deposited",
-            "n_new_cluster_members", "n_active_clusters", "top_cluster_size",
+            "n_new_cluster_members",
+            "n_active_clusters",
+            "top_cluster_size",
             "mean_growth_rate",
-            "subtype_a1_fraction", "subtype_c_fraction", "subtype_d_fraction",
+            "subtype_a1_fraction",
+            "subtype_c_fraction",
+            "subtype_d_fraction",
             "mean_subtype_entropy",
             "deposit_rate",
         ):
@@ -205,8 +218,8 @@ class OutbreakDag:
         # True incidence → sequenced cases → cluster signal.
         g.add_edge("U_true_incidence", "n_new_cluster_members")
         g.add_edge("U_true_incidence", "mean_growth_rate")
-        g.add_edge("U_true_incidence", "incidence")   # incidence label reflects
-                                                       # U_true_incidence (Naomi is a model)
+        g.add_edge("U_true_incidence", "incidence")  # incidence label reflects
+        # U_true_incidence (Naomi is a model)
 
         # Healthcare system affects both sequencing AND label quality.
         g.add_edge("U_healthcare_system", "U_sequencing_effort")
@@ -266,7 +279,5 @@ def observed_subgraph(graph: nx.DiGraph) -> nx.DiGraph:
     Useful for the report layer where you want a clean picture of the
     edges you can actually estimate against.
     """
-    observed = [
-        n for n, d in graph.nodes(data=True) if d.get("observed", False)
-    ]
+    observed = [n for n, d in graph.nodes(data=True) if d.get("observed", False)]
     return graph.subgraph(observed).copy()

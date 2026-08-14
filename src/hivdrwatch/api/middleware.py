@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -41,8 +41,11 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         response.headers["X-Response-Time-ms"] = f"{elapsed_ms:.1f}"
         logger.info(
             "http %s %s %d %.1fms rid=%s",
-            request.method, request.url.path,
-            response.status_code, elapsed_ms, request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+            request_id,
         )
         return response
 

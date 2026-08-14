@@ -24,8 +24,8 @@ DR_SCHEMA_VERSION = "0.1.0"
 class DrugClass(StrEnum):
     """HIV drug classes we currently score."""
 
-    PI = "PI"       # protease inhibitor
-    NRTI = "NRTI"   # nucleoside RT inhibitor
+    PI = "PI"  # protease inhibitor
+    NRTI = "NRTI"  # nucleoside RT inhibitor
     NNRTI = "NNRTI"  # non-nucleoside RT inhibitor
     INSTI = "INSTI"  # integrase strand-transfer inhibitor
 
@@ -34,13 +34,13 @@ class ResistanceLevel(StrEnum):
     """Stanford's 5-level interpretation scale."""
 
     SUSCEPTIBLE = "susceptible"
-    POTENTIAL_LOW = "potential_low"      # potential low-level resistance
-    LOW = "low"                          # low-level
+    POTENTIAL_LOW = "potential_low"  # potential low-level resistance
+    LOW = "low"  # low-level
     INTERMEDIATE = "intermediate"
     HIGH = "high"
 
     @classmethod
-    def from_sierra_text(cls, text: str) -> "ResistanceLevel":
+    def from_sierra_text(cls, text: str) -> ResistanceLevel:
         """Sierra returns strings like 'Susceptible', 'High-Level Resistance'."""
         norm = text.strip().lower()
         return _SIERRA_LEVEL_MAP.get(norm, cls.SUSCEPTIBLE)
@@ -69,13 +69,13 @@ class DRResult(BaseModel):
 
     # --- drug scoring ---
     drug_class: DrugClass
-    drug: str                    # short name, e.g. "3TC", "DTG"
+    drug: str  # short name, e.g. "3TC", "DTG"
     drug_display: str | None = None  # long name, e.g. "lamivudine"
-    score: float                 # Stanford's numeric score (higher = more resistant)
+    score: float  # Stanford's numeric score (higher = more resistant)
     level: ResistanceLevel
 
     # --- mutation context ---
-    gene: str                    # "PR", "RT", or "IN"
+    gene: str  # "PR", "RT", or "IN"
     mutations: list[str] = Field(default_factory=list)  # e.g. ["M184V", "K103N"]
 
     # --- ingestion trail ---
@@ -89,7 +89,7 @@ class SubtypeCall(BaseModel):
 
     accession: AccessionStr
     sequence_sha256: str = Field(..., min_length=64, max_length=64)
-    subtype: str                # Sierra's free-form subtype text
+    subtype: str  # Sierra's free-form subtype text
     algorithm_version: str
     called_at: date
     schema_version: str = DR_SCHEMA_VERSION

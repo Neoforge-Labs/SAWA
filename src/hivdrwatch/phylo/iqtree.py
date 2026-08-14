@@ -89,11 +89,16 @@ def run_iqtree(
 
     args = [
         "iqtree2",
-        "-s", f"/in/{input_fasta.name}",
-        "-m", model.value,
-        "--seed", str(seed),
-        "-T", threads,
-        "--prefix", f"/out/{prefix}",
+        "-s",
+        f"/in/{input_fasta.name}",
+        "-m",
+        model.value,
+        "--seed",
+        str(seed),
+        "-T",
+        threads,
+        "--prefix",
+        f"/out/{prefix}",
         # `-redo` makes re-runs idempotent. Without it, IQ-TREE detects
         # a checkpoint from a prior successful run and refuses with
         # "previous run successfully finished". Prefect task caching
@@ -109,10 +114,15 @@ def run_iqtree(
         args.extend(["-B", str(bootstrap)])
 
     docker_cmd = [
-        "docker", "run", "--rm",
-        "--memory", memory_limit,
-        "-v", f"{input_fasta.parent}:/in:ro",
-        "-v", f"{out_dir}:/out",
+        "docker",
+        "run",
+        "--rm",
+        "--memory",
+        memory_limit,
+        "-v",
+        f"{input_fasta.parent}:/in:ro",
+        "-v",
+        f"{out_dir}:/out",
         image,
         *args,
     ]
@@ -139,9 +149,7 @@ def run_iqtree(
     treefile = out_dir / f"{prefix}.treefile"
     log_file = out_dir / f"{prefix}.log"
     if not treefile.exists():
-        raise RuntimeError(
-            f"iqtree2 exit 0 but no {treefile.name} produced; check {log_file}"
-        )
+        raise RuntimeError(f"iqtree2 exit 0 but no {treefile.name} produced; check {log_file}")
 
     logger.info(
         "iqtree2 complete in %.1fs → %s (%d bytes)",

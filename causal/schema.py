@@ -34,13 +34,13 @@ class RefutationVerdict(StrEnum):
     dowhy returns numeric p-values; we bucket for readability.
     """
 
-    PASSES = "passes"          # estimate survives the challenge (real signal)
-    FAILS = "fails"            # estimate changes meaningfully → spurious
+    PASSES = "passes"  # estimate survives the challenge (real signal)
+    FAILS = "fails"  # estimate changes meaningfully → spurious
     INCONCLUSIVE = "inconclusive"  # refuter couldn't decide (small n, degenerate)
 
 
 class RefutationResult(BaseModel):
-    method: str                                   # "placebo_treatment_refuter", etc.
+    method: str  # "placebo_treatment_refuter", etc.
     original_estimate: float
     new_estimate: float
     p_value: float | None = None
@@ -69,7 +69,7 @@ class CausalEffect(BaseModel):
 
     # --- identification ---
     identified: bool
-    identification_criterion: str | None = None   # "backdoor" / "iv" / "frontdoor"
+    identification_criterion: str | None = None  # "backdoor" / "iv" / "frontdoor"
 
     # --- refutation ---
     refutations: list[RefutationResult] = Field(default_factory=list)

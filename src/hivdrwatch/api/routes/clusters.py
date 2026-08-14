@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -17,9 +15,9 @@ router = APIRouter(prefix="/clusters", tags=["clusters"])
 
 @router.get("", response_model=ClusterListResponse, summary="List cluster memberships")
 def list_clusters(
-    cluster_id: Optional[str] = Query(None, max_length=32),
-    accession: Optional[str] = Query(None, max_length=20),
-    min_cluster_size: Optional[int] = Query(None, ge=1),
+    cluster_id: str | None = Query(None, max_length=32),
+    accession: str | None = Query(None, max_length=20),
+    min_cluster_size: int | None = Query(None, ge=1),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -33,11 +31,15 @@ def list_clusters(
         stmt = stmt.where(ClusterRow.cluster_size >= min_cluster_size)
 
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
-    rows = db.execute(
-        stmt.order_by(ClusterRow.cluster_id, ClusterRow.accession)
-        .limit(limit)
-        .offset(offset)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            stmt.order_by(ClusterRow.cluster_id, ClusterRow.accession)
+            .limit(limit)
+            .offset(offset)
+        )
+        .scalars()
+        .all()
+    )
 
     return ClusterListResponse(
         items=[

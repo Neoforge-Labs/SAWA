@@ -68,8 +68,7 @@ class TestConnectivity:
         row_of = {b.key: b.row for b in d.blocks}
         for e in d.edges:
             assert row_of[e.dst] >= row_of[e.src], (
-                f"edge {e.src} → {e.dst} goes upward (rows "
-                f"{row_of[e.src]} → {row_of[e.dst]})"
+                f"edge {e.src} → {e.dst} goes upward (rows {row_of[e.src]} → {row_of[e.dst]})"
             )
 
     def test_ingest_is_the_only_bronze_producer(self) -> None:
@@ -77,9 +76,7 @@ class TestConnectivity:
         d = pipeline_diagram()
         for e in d.edges:
             if e.tier == "bronze":
-                assert e.src == "ingest", (
-                    f"bronze edge from non-ingest block: {e.src}"
-                )
+                assert e.src == "ingest", f"bronze edge from non-ingest block: {e.src}"
 
     def test_every_non_source_block_is_reachable_from_a_source(self) -> None:
         d = pipeline_diagram()
@@ -117,8 +114,12 @@ class TestConstants:
     def test_block_is_hashable(self) -> None:
         # frozen dataclass → usable as dict key / set member
         b = Block(
-            key="k", label="L", module="m", phase="source",
-            row=0, col=0.0,
+            key="k",
+            label="L",
+            module="m",
+            phase="source",
+            row=0,
+            col=0.0,
         )
         assert b in {b}
 

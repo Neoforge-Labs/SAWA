@@ -34,8 +34,8 @@ from prefect.tasks import task_input_hash
 
 from ..align import (
     CURATE_SCHEMA_VERSION,
-    ensure_hxb2_reference,
     align_sequences,
+    ensure_hxb2_reference,
 )
 from ..align.dedup import assign_patient_groups
 from ..align.qc import (
@@ -47,7 +47,6 @@ from ..align.qc import (
 )
 from ..align.trim import coverage_fraction, slice_all_regions
 from ..resistance.cache import sequence_sha256
-
 
 # ------------------------------------------------------------------
 # Tasks
@@ -85,7 +84,10 @@ def align(
     records = list(zip(df["accession"].to_list(), df["sequence"].to_list(), strict=True))
     log.info(
         "aligner=%s for %d input records (chunk_size=%d, chunk_concurrency=%d)",
-        aligner, len(records), chunk_size, chunk_concurrency,
+        aligner,
+        len(records),
+        chunk_size,
+        chunk_concurrency,
     )
     aligned = align_sequences(
         records,
@@ -106,7 +108,9 @@ def curate_rows(
     """Assemble the per-sequence curated row: trim + QC + provenance."""
     log = get_run_logger()
 
-    ref_seq = _read_reference_ungapped_padded(reference_fasta, len(next(iter(aligned.values()), "")))
+    ref_seq = _read_reference_ungapped_padded(
+        reference_fasta, len(next(iter(aligned.values()), ""))
+    )
     today = date.today()
     rows: list[dict] = []
 
@@ -199,13 +203,13 @@ def curate_flow(
     chunk_concurrency: int = 2,
     aligner: str = "mappy",
 ) -> Path:
-    reference_path = reference_path or (
-        Path("data/reference") / "hxb2_pol.fasta"
-    )
+    reference_path = reference_path or (Path("data/reference") / "hxb2_pol.fasta")
     df = load_ingest_parquet(input_parquet)
     ref_fasta = ensure_reference(reference_path, lanl_dir)
     aligned = align(
-        df, ref_fasta, work_dir,
+        df,
+        ref_fasta,
+        work_dir,
         chunk_size=chunk_size,
         chunk_concurrency=chunk_concurrency,
         aligner=aligner,
@@ -276,22 +280,22 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=1000,
         help="MAFFT --add chunk size — smaller = less memory, more chunks. "
-             "1000 fits comfortably in 6 GB Docker; drop to 500 on tight boxes.",
+        "1000 fits comfortably in 6 GB Docker; drop to 500 on tight boxes.",
     )
     parser.add_argument(
         "--chunk-concurrency",
         type=int,
         default=2,
         help="How many MAFFT chunks run in parallel. Each uses ~memory_limit "
-             "memory. Default 2 assumes 16 GB Docker Desktop; bump to 4 with 32 GB.",
+        "memory. Default 2 assumes 16 GB Docker Desktop; bump to 4 with 32 GB.",
     )
     parser.add_argument(
         "--aligner",
         choices=["mappy", "biopython", "mafft"],
         default="mappy",
         help="'mappy' (default): in-process minimap2, ~700 seq/s. "
-             "'biopython': pure Python fallback, ~5 seq/s. "
-             "'mafft': Docker MAFFT --add for joint MSA (slow, rare).",
+        "'biopython': pure Python fallback, ~5 seq/s. "
+        "'mafft': Docker MAFFT --add for joint MSA (slow, rare).",
     )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)

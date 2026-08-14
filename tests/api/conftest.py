@@ -6,8 +6,8 @@ session with the schema created, so tests never touch a live Postgres.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Iterator
+from collections.abc import Iterator
+from datetime import UTC, datetime
 
 import pytest
 from fastapi import FastAPI
@@ -89,7 +89,7 @@ def seeded_session(db_session: Session) -> Session:
         d.level = "high" if i % 2 == 0 else "susceptible"
         d.algorithm_version = "9.6.1"
         d.pipeline_run_id = run.id
-        d.called_at = datetime.now(timezone.utc)
+        d.called_at = datetime.now(UTC)
         db_session.add(d)
 
     for i in range(4):
@@ -99,7 +99,7 @@ def seeded_session(db_session: Session) -> Session:
         c.cluster_size = 2
         c.tn93_threshold = 0.015
         c.pipeline_run_id = run.id
-        c.computed_at = datetime.now(timezone.utc)
+        c.computed_at = datetime.now(UTC)
         db_session.add(c)
 
     db_session.commit()

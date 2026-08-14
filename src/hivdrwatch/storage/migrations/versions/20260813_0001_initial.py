@@ -7,22 +7,27 @@ Create Date: 2026-08-13 17:00:00.000000
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0001_initial"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     op.create_table(
         "pipeline_runs",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column("started_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "started_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("stage", sa.String(length=32), nullable=False),
         sa.Column("schema_version", sa.String(length=16), nullable=False),
@@ -55,8 +60,15 @@ def upgrade() -> None:
         sa.Column("study_accession", sa.String(length=32), nullable=True),
         sa.Column("pipeline_run_id", sa.Integer(), nullable=False),
         sa.Column("raw_record_hash", sa.String(length=64), nullable=False),
-        sa.Column("ingested_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.UniqueConstraint("schema_version", "accession", name="uq_sequences_schema_accession"),
+        sa.Column(
+            "ingested_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.UniqueConstraint(
+            "schema_version", "accession", name="uq_sequences_schema_accession"
+        ),
     )
     op.create_index("ix_sequences_accession", "sequences", ["accession"])
     op.create_index("ix_sequences_country", "sequences", ["country"])
@@ -74,9 +86,17 @@ def upgrade() -> None:
         sa.Column("mutations", sa.JSON(), nullable=True),
         sa.Column("algorithm_version", sa.String(length=16), nullable=False),
         sa.Column("pipeline_run_id", sa.Integer(), nullable=False),
-        sa.Column("called_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "called_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.UniqueConstraint(
-            "accession", "drug_class", "drug", "algorithm_version",
+            "accession",
+            "drug_class",
+            "drug",
+            "algorithm_version",
             name="uq_dr_calls_seq_drug_algo",
         ),
     )
@@ -93,15 +113,23 @@ def upgrade() -> None:
         sa.Column("cluster_size", sa.Integer(), nullable=False),
         sa.Column("tn93_threshold", sa.Float(), nullable=False),
         sa.Column("pipeline_run_id", sa.Integer(), nullable=False),
-        sa.Column("computed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "computed_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.UniqueConstraint(
-            "accession", "pipeline_run_id",
+            "accession",
+            "pipeline_run_id",
             name="uq_cluster_memberships_seq_run",
         ),
     )
     op.create_index("ix_cluster_memberships_accession", "cluster_memberships", ["accession"])
     op.create_index("ix_cluster_memberships_cluster_id", "cluster_memberships", ["cluster_id"])
-    op.create_index("ix_cluster_memberships_pipeline_run_id", "cluster_memberships", ["pipeline_run_id"])
+    op.create_index(
+        "ix_cluster_memberships_pipeline_run_id", "cluster_memberships", ["pipeline_run_id"]
+    )
 
 
 def downgrade() -> None:

@@ -30,7 +30,6 @@ from hivdrwatch.align.reference import (
 from hivdrwatch.align.schema import QCFlag
 from hivdrwatch.align.trim import coverage_fraction, slice_region
 
-
 # ---------- reference extraction ----------
 
 
@@ -154,7 +153,7 @@ class TestApobecSignatureRatio:
 class TestQCFlags:
     def test_flags_combine(self) -> None:
         flags = qc_flags(
-            ambiguity=0.10,   # > 0.05 threshold
+            ambiguity=0.10,  # > 0.05 threshold
             apobec_ratio=5.0,  # > 2.0 threshold
             region_coverage={"PR": 1.0, "RT": 0.5, "IN": 1.0},  # RT flags SHORT
             region_stops={"PR": True, "RT": False, "IN": False},  # PR flags STOP
@@ -188,9 +187,7 @@ class TestExtractPatientToken:
             ("Q23_17", ("Q23", "Q23")),
         ],
     )
-    def test_matches_known_cohorts(
-        self, name: str, expected: tuple[str, str]
-    ) -> None:
+    def test_matches_known_cohorts(self, name: str, expected: tuple[str, str]) -> None:
         assert extract_patient_token(name) == expected
 
     def test_unknown_falls_back(self) -> None:
@@ -226,8 +223,18 @@ class TestAssignPatientGroups:
 
     def test_different_patients_different_groups(self) -> None:
         rows = [
-            {"accession": "A1", "sequence_name": "RV217_1", "country": "KE", "collection_year": 2015},
-            {"accession": "A2", "sequence_name": "RV217_2", "country": "KE", "collection_year": 2015},
+            {
+                "accession": "A1",
+                "sequence_name": "RV217_1",
+                "country": "KE",
+                "collection_year": 2015,
+            },
+            {
+                "accession": "A2",
+                "sequence_name": "RV217_2",
+                "country": "KE",
+                "collection_year": 2015,
+            },
         ]
         out = assign_patient_groups(rows)
         assert out[0]["patient_group_id"] != out[1]["patient_group_id"]
@@ -237,8 +244,18 @@ class TestAssignPatientGroups:
 
     def test_same_year_ties_broken_by_accession(self) -> None:
         rows = [
-            {"accession": "B", "sequence_name": "RV217_1", "country": "KE", "collection_year": 2020},
-            {"accession": "A", "sequence_name": "RV217_1", "country": "KE", "collection_year": 2020},
+            {
+                "accession": "B",
+                "sequence_name": "RV217_1",
+                "country": "KE",
+                "collection_year": 2020,
+            },
+            {
+                "accession": "A",
+                "sequence_name": "RV217_1",
+                "country": "KE",
+                "collection_year": 2020,
+            },
         ]
         out = assign_patient_groups(rows)
         by_acc = {r["accession"]: r for r in out}

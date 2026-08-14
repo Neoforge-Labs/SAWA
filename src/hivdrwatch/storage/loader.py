@@ -20,15 +20,14 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Iterable
 
 import polars as pl
 from sqlalchemy import inspect
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from .schema import STORAGE_SCHEMA_VERSION, ClusterMembership, DRCall, PipelineRun, Sequence
@@ -49,8 +48,8 @@ def _iso(v: date | datetime | None) -> datetime | None:
     if v is None:
         return None
     if isinstance(v, datetime):
-        return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
-    return datetime(v.year, v.month, v.day, tzinfo=timezone.utc)
+        return v if v.tzinfo else v.replace(tzinfo=UTC)
+    return datetime(v.year, v.month, v.day, tzinfo=UTC)
 
 
 def _config_hash(config: dict) -> str:
@@ -80,7 +79,7 @@ def _open_run(
 
 
 def _close_run(session: Session, run: PipelineRun, row_count: int) -> None:
-    run.completed_at = datetime.now(timezone.utc)
+    run.completed_at = datetime.now(UTC)
     run.row_count = row_count
     session.add(run)
     session.flush()
@@ -141,7 +140,9 @@ def load_sequences(
         logger.warning("empty sequences parquet: %s", parquet_path)
         return LoadCounts(0, 0, -1)
 
-    schema_version = str(df["schema_version"][0]) if "schema_version" in df.columns else "unknown"
+    schema_version = (
+        str(df["schema_version"][0]) if "schema_version" in df.columns else "unknown"
+    )
     run = _open_run(
         session,
         stage=stage,
@@ -149,7 +150,7 @@ def load_sequences(
         git_sha=git_sha,
         config={"parquet": str(parquet_path)},
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rows: list[dict] = []
     for row in df.iter_rows(named=True):
         rows.append(
@@ -194,7 +195,9 @@ def load_dr_calls(
         logger.warning("empty dr_calls parquet: %s", parquet_path)
         return LoadCounts(0, 0, -1)
 
-    schema_version = str(df["algorithm_version"][0]) if "algorithm_version" in df.columns else "unknown"
+    schema_version = (
+        str(df["algorithm_version"][0]) if "algorithm_version" in df.columns else "unknown"
+    )
     run = _open_run(
         session,
         stage=stage,
@@ -202,7 +205,7 @@ def load_dr_calls(
         git_sha=git_sha,
         config={"parquet": str(parquet_path)},
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rows: list[dict] = []
     for row in df.iter_rows(named=True):
         rows.append(
@@ -236,7 +239,9 @@ def load_cluster_memberships(
     if df.is_empty():
         return LoadCounts(0, 0, -1)
 
-    schema_version = str(df["schema_version"][0]) if "schema_version" in df.columns else "unknown"
+    schema_version = (
+        str(df["schema_version"][0]) if "schema_version" in df.columns else "unknown"
+    )
     run = _open_run(
         session,
         stage=stage,
@@ -244,7 +249,7 @@ def load_cluster_memberships(
         git_sha=git_sha,
         config={"parquet": str(parquet_path)},
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rows: list[dict] = []
     for row in df.iter_rows(named=True):
         rows.append(

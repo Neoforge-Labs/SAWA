@@ -32,13 +32,16 @@ from hivdrwatch.phylo import (
 )
 from hivdrwatch.phylo.iqtree import (
     _extract_log_likelihood,
+)
+from hivdrwatch.phylo.iqtree import (
     _extract_version as _iqtree_version,
 )
 from hivdrwatch.phylo.treetime import (
     _extract_clock_rate,
+)
+from hivdrwatch.phylo.treetime import (
     _extract_version as _treetime_version,
 )
-
 
 # ---------- partition_by_subtype ----------
 
@@ -73,8 +76,10 @@ class TestPartitionBySubtype:
 
     def test_qc_gate_applied(self) -> None:
         df = pl.from_dicts(
-            [{"accession": f"A{i}", "subtype": "A1", "passes_qc": i % 2 == 0}
-             for i in range(60)]
+            [
+                {"accession": f"A{i}", "subtype": "A1", "passes_qc": i % 2 == 0}
+                for i in range(60)
+            ]
         )
         parts = partition_by_subtype(df, min_taxa=20)
         # Only 30 pass QC — still ≥ 20 so should survive
@@ -82,12 +87,8 @@ class TestPartitionBySubtype:
 
     def test_drops_null_subtype(self) -> None:
         rows = [
-            {"accession": f"A{i}", "subtype": "A1", "passes_qc": True}
-            for i in range(30)
-        ] + [
-            {"accession": f"X{i}", "subtype": None, "passes_qc": True}
-            for i in range(30)
-        ]
+            {"accession": f"A{i}", "subtype": "A1", "passes_qc": True} for i in range(30)
+        ] + [{"accession": f"X{i}", "subtype": None, "passes_qc": True} for i in range(30)]
         df = pl.from_dicts(rows)
         parts = partition_by_subtype(df, min_taxa=20)
         assert set(parts) == {"A1"}
@@ -112,17 +113,13 @@ class TestWriteSubtypeAlignment:
         assert "ACGTACGTACGT" in text
 
     def test_falls_back_to_sequence_column(self, tmp_path: Path) -> None:
-        df = pl.DataFrame(
-            {"accession": ["A1"], "sequence": ["ACGT" * 5]}
-        )
+        df = pl.DataFrame({"accession": ["A1"], "sequence": ["ACGT" * 5]})
         out = tmp_path / "x.fasta"
         write_subtype_alignment(df, out, seq_col="aligned_pol")
         assert ">A1\n" in out.read_text()
 
     def test_skips_null_sequences(self, tmp_path: Path) -> None:
-        df = pl.DataFrame(
-            {"accession": ["A", "B"], "aligned_pol": ["ACGT" * 3, None]}
-        )
+        df = pl.DataFrame({"accession": ["A", "B"], "aligned_pol": ["ACGT" * 3, None]})
         out = tmp_path / "x.fasta"
         write_subtype_alignment(df, out)
         assert out.read_text().count(">") == 1
@@ -160,9 +157,7 @@ class TestBuildTipDatesCsv:
         assert "OTHER" not in out.read_text()
 
     def test_drops_null_year_rows(self, tmp_path: Path) -> None:
-        df = pl.DataFrame(
-            {"accession": ["A", "B"], "collection_year": [2020, None]}
-        )
+        df = pl.DataFrame({"accession": ["A", "B"], "collection_year": [2020, None]})
         out = tmp_path / "dates.csv"
         build_tip_dates_csv(df, ["A", "B"], out)
         assert out.read_text().count("\n") == 2  # header + 1 row + trailing
@@ -179,9 +174,7 @@ class TestBuildTipDatesCsv:
 class TestIqtreeParsers:
     def test_log_likelihood_extraction(self, tmp_path: Path) -> None:
         log = tmp_path / "run.log"
-        log.write_text(
-            "Some preamble\nBEST SCORE FOUND : -12345.6789\nMore text\n"
-        )
+        log.write_text("Some preamble\nBEST SCORE FOUND : -12345.6789\nMore text\n")
         assert _extract_log_likelihood(log) == pytest.approx(-12345.6789)
 
     def test_log_likelihood_missing_returns_none(self, tmp_path: Path) -> None:

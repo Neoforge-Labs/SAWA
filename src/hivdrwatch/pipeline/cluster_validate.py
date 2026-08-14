@@ -29,7 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import date
 from itertools import combinations
 from pathlib import Path
@@ -39,7 +39,6 @@ from prefect import flow, get_run_logger, task
 from ..cluster import (
     DEFAULT_MUTATION_RATE,
     DEFAULT_THRESHOLD,
-    ClusterValidationResult,
     HIVTraceNotAvailable,
     SimulationResult,
     assign_clusters,
@@ -98,7 +97,9 @@ def simulate(
     )
     log.info(
         "simulated %d sequences in %d clusters (+ %d singletons)",
-        sim.n_sequences, sim.n_clusters, len(sim.singletons),
+        sim.n_sequences,
+        sim.n_clusters,
+        len(sim.singletons),
     )
     return sim
 
@@ -142,14 +143,18 @@ def compute_distances(sim: SimulationResult, work_dir: Path, threshold: float) -
     n_lines = sum(1 for _ in distances_csv.open("r")) if n_bytes else 0
     log.info(
         "distances → %s (%d bytes, %d lines including header)",
-        distances_csv, n_bytes, n_lines,
+        distances_csv,
+        n_bytes,
+        n_lines,
     )
     if n_lines <= 1:
         log.warning(
             "0 pairs below threshold t=%s. Either every within-cluster "
             "pair diverged beyond threshold (bump the simulator's "
             "mutation_rate down) or the simulator is broken. Peek at "
-            "%s to sanity-check the sequences.", threshold, aln,
+            "%s to sanity-check the sequences.",
+            threshold,
+            aln,
         )
     return distances_csv
 
@@ -162,18 +167,21 @@ def cluster_ours(
     dists = read_distances(distances_csv)
     log.info(
         "ours: loaded %d below-threshold pairs from %s",
-        len(dists), distances_csv.name,
+        len(dists),
+        distances_csv.name,
     )
     all_accessions = list(sim.accession_to_seq.keys())
     result = assign_clusters(dists, all_accessions, threshold=threshold)
     membership = {
-        row["accession"]: row["cluster_id"]
-        for row in result.df.iter_rows(named=True)
+        row["accession"]: row["cluster_id"] for row in result.df.iter_rows(named=True)
     }
     metrics = score_clusters(membership, sim.truth_membership())
     log.info(
         "ours: %d clusters, P=%.3f R=%.3f F1=%.3f",
-        result.n_clusters, metrics.precision, metrics.recall, metrics.f1,
+        result.n_clusters,
+        metrics.precision,
+        metrics.recall,
+        metrics.f1,
     )
     return ClustererResult(
         clusterer="tn93+connected_components",
@@ -202,7 +210,10 @@ def cluster_hivtrace(
     n_pred_clusters = len({v for v in membership.values() if not v.startswith("SINGLETON_")})
     log.info(
         "HIV-TRACE: %d clusters, P=%.3f R=%.3f F1=%.3f",
-        n_pred_clusters, metrics.precision, metrics.recall, metrics.f1,
+        n_pred_clusters,
+        metrics.precision,
+        metrics.recall,
+        metrics.f1,
     )
     return ClustererResult(
         clusterer="hivtrace-hivnetworkcsv",
@@ -323,14 +334,17 @@ def cluster_validate_flow(
     with_hivtrace: bool = False,
 ) -> Path:
     sim = simulate(
-        n_clusters, cluster_size_lo, cluster_size_hi,
-        n_singletons, seq_length, mutation_rate, seed,
+        n_clusters,
+        cluster_size_lo,
+        cluster_size_hi,
+        n_singletons,
+        seq_length,
+        mutation_rate,
+        seed,
     )
     distances_csv = compute_distances(sim, work_dir, threshold)
     ours = cluster_ours(sim, distances_csv, threshold)
-    hivtrace = (
-        cluster_hivtrace(sim, distances_csv, threshold) if with_hivtrace else None
-    )
+    hivtrace = cluster_hivtrace(sim, distances_csv, threshold) if with_hivtrace else None
     return write_results(ours, hivtrace, sim, out_path, threshold)
 
 

@@ -38,6 +38,7 @@ def _default_thread_count() -> int:
     n = os.cpu_count() or 4
     return max(4, n - 2)
 
+
 # Tag is `latest` (not a version pin) because the arm64 build path
 # uses Debian's apt package (7.505) while amd64 uses the pinned 7.526 .deb.
 # The exact version baked in is recorded at /mafft.version inside the image
@@ -183,12 +184,18 @@ def run_mafft(
         f"/ref/{reference_fasta.name}",
     )
     docker_cmd = [
-        "docker", "run", "--rm",
-        "--memory", memory_limit,
+        "docker",
+        "run",
+        "--rm",
+        "--memory",
+        memory_limit,
         # Match CPU quota to thread_count so MAFFT can't oversubscribe.
-        "--cpus", str(thread_count),
-        "-v", f"{work_dir}:/work",
-        "-v", f"{ref_dir}:/ref:ro",
+        "--cpus",
+        str(thread_count),
+        "-v",
+        f"{work_dir}:/work",
+        "-v",
+        f"{ref_dir}:/ref:ro",
         image,
         *mafft_args,
     ]
@@ -210,9 +217,7 @@ def run_mafft(
                 f"Try a smaller --chunk-size or raise DEFAULT_MEMORY_LIMIT in "
                 f"curate/align.py."
             )
-        raise RuntimeError(
-            f"MAFFT failed (exit {result.returncode}):\n{stderr}{hint}"
-        )
+        raise RuntimeError(f"MAFFT failed (exit {result.returncode}):\n{stderr}{hint}")
 
     logger.info("MAFFT complete → %s (%d bytes)", output_fasta, output_fasta.stat().st_size)
     return MafftInvocation(
@@ -362,7 +367,7 @@ def _align_sequences_mafft(
     total_start = time.monotonic()
 
     def _run_one(job: tuple[int, Path, Path, int]) -> tuple[int, dict[str, str], float]:
-        chunk_ix, input_fasta, output_fasta, n_seqs = job
+        chunk_ix, input_fasta, output_fasta, _n_seqs = job
         t0 = time.monotonic()
         run_mafft(
             input_fasta=input_fasta,
@@ -402,8 +407,7 @@ def _align_sequences_mafft(
             overlap = set(aligned) & set(chunk_aligned)
             if overlap:
                 raise RuntimeError(
-                    f"chunk {chunk_ix} produced duplicate accessions: "
-                    f"{sorted(overlap)[:5]}"
+                    f"chunk {chunk_ix} produced duplicate accessions: {sorted(overlap)[:5]}"
                 )
             aligned.update(chunk_aligned)
 
@@ -429,9 +433,7 @@ def _is_reference_header(header: str) -> bool:
     return "HXB2" in u or u.startswith("K03455")
 
 
-def _concatenate_chunk_fastas(
-    work_dir: Path, combined_path: Path, n_chunks: int
-) -> None:
+def _concatenate_chunk_fastas(work_dir: Path, combined_path: Path, n_chunks: int) -> None:
     """Merge per-chunk aligned FASTAs into one file, keeping the reference
     from chunk 0 only. Chunk files are left in place for debugging."""
     with combined_path.open("wb") as out_fh:

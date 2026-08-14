@@ -109,12 +109,18 @@ def _(
         yi = matching[0]
         color = COLORBLIND_PALETTE[0 if row["epoch"] == "pre" else 1]
         ax_pair.errorbar(
-            row["prev"], yi,
-            xerr=[[row["prev"] - row["prev_ci_low"]],
-                  [row["prev_ci_high"] - row["prev"]]],
-            fmt="o", color=color, markersize=5, capsize=3,
-            label="pre" if row["epoch"] == "pre" and yi == 0 else
-                  "post" if row["epoch"] == "post" and yi == 0 else None,
+            row["prev"],
+            yi,
+            xerr=[[row["prev"] - row["prev_ci_low"]], [row["prev_ci_high"] - row["prev"]]],
+            fmt="o",
+            color=color,
+            markersize=5,
+            capsize=3,
+            label="pre"
+            if row["epoch"] == "pre" and yi == 0
+            else "post"
+            if row["epoch"] == "post" and yi == 0
+            else None,
         )
 
     ax_pair.set_yticks(y)
@@ -126,10 +132,12 @@ def _(
     ax_pair.grid(axis="x", linestyle="--", alpha=0.3)
 
     handles = [
-        plt.Line2D([0], [0], marker="o", color=COLORBLIND_PALETTE[0],
-                   linestyle="", label="pre"),
-        plt.Line2D([0], [0], marker="o", color=COLORBLIND_PALETTE[1],
-                   linestyle="", label="post"),
+        plt.Line2D(
+            [0], [0], marker="o", color=COLORBLIND_PALETTE[0], linestyle="", label="pre"
+        ),
+        plt.Line2D(
+            [0], [0], marker="o", color=COLORBLIND_PALETTE[1], linestyle="", label="post"
+        ),
     ]
     ax_pair.legend(handles=handles, loc="lower right")
 
@@ -137,16 +145,24 @@ def _(
     for i, s in enumerate(strata):
         color = COLORBLIND_PALETTE[2] if s["signal"] else "#888888"
         ax_delta.errorbar(
-            s["delta_prev"], i,
-            xerr=[[s["delta_prev"] - s["delta_ci_low"]],
-                  [s["delta_ci_high"] - s["delta_prev"]]],
-            fmt="o", color=color, markersize=5, capsize=3,
+            s["delta_prev"],
+            i,
+            xerr=[
+                [s["delta_prev"] - s["delta_ci_low"]],
+                [s["delta_ci_high"] - s["delta_prev"]],
+            ],
+            fmt="o",
+            color=color,
+            markersize=5,
+            capsize=3,
         )
     ax_delta.axvline(0, color="black", linewidth=0.7, linestyle="--")
     ax_delta.set_yticks(y)
     ax_delta.set_yticklabels([])
     ax_delta.set_xlabel("Δ prevalence (post − pre, 95% CI)")
-    ax_delta.set_title(f"{summary.n_strata_with_signal}/{summary.n_strata_scored} strata with signal")
+    ax_delta.set_title(
+        f"{summary.n_strata_with_signal}/{summary.n_strata_scored} strata with signal"
+    )
     ax_delta.grid(axis="x", linestyle="--", alpha=0.3)
 
     fig.suptitle(

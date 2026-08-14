@@ -28,8 +28,10 @@ from .dynamics import (
 from .hivtrace import (
     HIVTraceInvocation,
     HIVTraceNotAvailable,
-    is_available as hivtrace_is_available,
     run_hivtrace,
+)
+from .hivtrace import (
+    is_available as hivtrace_is_available,
 )
 from .schema import CLUSTER_SCHEMA_VERSION, ClusterMembership, PairwiseDistance
 from .simulate import (
@@ -42,12 +44,12 @@ from .validate import ClusterValidationResult, score_clusters
 
 __all__ = [
     "CLUSTER_SCHEMA_VERSION",
-    "ClusterAssignments",
-    "ClusterMembership",
-    "ClusterValidationResult",
     "DEFAULT_MUTATION_RATE",
     "DEFAULT_SEQ_LENGTH",
     "DEFAULT_THRESHOLD",
+    "ClusterAssignments",
+    "ClusterMembership",
+    "ClusterValidationResult",
     "HIVTraceInvocation",
     "HIVTraceNotAvailable",
     "PairwiseDistance",
@@ -55,12 +57,12 @@ __all__ = [
     "TN93Invocation",
     "assign_clusters",
     "build_cluster_graph",
-    "compute_pairwise_distances_python",
     "cluster_geographic_spread",
     "cluster_growth_rate",
     "cluster_size_distribution",
     "cluster_subtype_mix",
     "cluster_time_series",
+    "compute_pairwise_distances_python",
     "hivtrace_is_available",
     "read_distances",
     "run_hivtrace",

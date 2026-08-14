@@ -35,15 +35,30 @@ class TestLoadFrame:
             tmp_path / "scale_align.json",
             "align",
             [
-                {"n_sequences": 100, "wall_seconds": 0.5, "peak_mb": 30.0, "throughput_per_sec": 200.0},
-                {"n_sequences": 200, "wall_seconds": 1.0, "peak_mb": 40.0, "throughput_per_sec": 200.0},
+                {
+                    "n_sequences": 100,
+                    "wall_seconds": 0.5,
+                    "peak_mb": 30.0,
+                    "throughput_per_sec": 200.0,
+                },
+                {
+                    "n_sequences": 200,
+                    "wall_seconds": 1.0,
+                    "peak_mb": 40.0,
+                    "throughput_per_sec": 200.0,
+                },
             ],
         )
         _write_bench(
             tmp_path / "scale_cluster.json",
             "cluster",
             [
-                {"n_sequences": 100, "wall_seconds": 2.0, "peak_mb": 50.0, "throughput_per_sec": 50.0},
+                {
+                    "n_sequences": 100,
+                    "wall_seconds": 2.0,
+                    "peak_mb": 50.0,
+                    "throughput_per_sec": 50.0,
+                },
             ],
         )
         frame, summary = load_scalability_frame(tmp_path)
@@ -65,7 +80,14 @@ class TestLoadFrame:
         _write_bench(
             tmp_path / "scale_align.json",
             "align",
-            [{"n_sequences": 100, "wall_seconds": 0.5, "peak_mb": 30.0, "throughput_per_sec": 200.0}],
+            [
+                {
+                    "n_sequences": 100,
+                    "wall_seconds": 0.5,
+                    "peak_mb": 30.0,
+                    "throughput_per_sec": 200.0,
+                }
+            ],
         )
         frame, _ = load_scalability_frame(tmp_path)
         assert frame.height == 1
@@ -75,9 +97,16 @@ class TestLoadFrame:
         _write_bench(
             tmp_path / "scale_align.json",
             "align",
-            [{"n_sequences": 100, "wall_seconds": 0.5, "peak_mb": 30.0, "throughput_per_sec": 200.0}],
+            [
+                {
+                    "n_sequences": 100,
+                    "wall_seconds": 0.5,
+                    "peak_mb": 30.0,
+                    "throughput_per_sec": 200.0,
+                }
+            ],
         )
-        frame, summary = load_scalability_frame(tmp_path)
+        _frame, summary = load_scalability_frame(tmp_path)
         assert summary.n_stages == 1
 
 
@@ -88,9 +117,24 @@ class TestPowerLawFit:
             tmp_path / "scale_align.json",
             "align",
             [
-                {"n_sequences": 100, "wall_seconds": 1.0, "peak_mb": 10, "throughput_per_sec": 100},
-                {"n_sequences": 200, "wall_seconds": 2.0, "peak_mb": 10, "throughput_per_sec": 100},
-                {"n_sequences": 400, "wall_seconds": 4.0, "peak_mb": 10, "throughput_per_sec": 100},
+                {
+                    "n_sequences": 100,
+                    "wall_seconds": 1.0,
+                    "peak_mb": 10,
+                    "throughput_per_sec": 100,
+                },
+                {
+                    "n_sequences": 200,
+                    "wall_seconds": 2.0,
+                    "peak_mb": 10,
+                    "throughput_per_sec": 100,
+                },
+                {
+                    "n_sequences": 400,
+                    "wall_seconds": 4.0,
+                    "peak_mb": 10,
+                    "throughput_per_sec": 100,
+                },
             ],
         )
         frame, _ = load_scalability_frame(tmp_path)
@@ -105,9 +149,24 @@ class TestPowerLawFit:
             tmp_path / "scale_cluster.json",
             "cluster",
             [
-                {"n_sequences": 100, "wall_seconds": 1e4, "peak_mb": 10, "throughput_per_sec": 100},
-                {"n_sequences": 200, "wall_seconds": 4e4, "peak_mb": 10, "throughput_per_sec": 100},
-                {"n_sequences": 400, "wall_seconds": 16e4, "peak_mb": 10, "throughput_per_sec": 100},
+                {
+                    "n_sequences": 100,
+                    "wall_seconds": 1e4,
+                    "peak_mb": 10,
+                    "throughput_per_sec": 100,
+                },
+                {
+                    "n_sequences": 200,
+                    "wall_seconds": 4e4,
+                    "peak_mb": 10,
+                    "throughput_per_sec": 100,
+                },
+                {
+                    "n_sequences": 400,
+                    "wall_seconds": 16e4,
+                    "peak_mb": 10,
+                    "throughput_per_sec": 100,
+                },
             ],
         )
         frame, _ = load_scalability_frame(tmp_path)
@@ -120,7 +179,14 @@ class TestPowerLawFit:
         _write_bench(
             tmp_path / "scale_ingest.json",
             "ingest",
-            [{"n_sequences": 100, "wall_seconds": 0.5, "peak_mb": 10, "throughput_per_sec": 200}],
+            [
+                {
+                    "n_sequences": 100,
+                    "wall_seconds": 0.5,
+                    "peak_mb": 10,
+                    "throughput_per_sec": 200,
+                }
+            ],
         )
         frame, _ = load_scalability_frame(tmp_path)
         assert fit_power_law(frame, "ingest") is None

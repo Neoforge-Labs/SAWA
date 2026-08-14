@@ -6,8 +6,8 @@ from .schema import DR_SCHEMA_VERSION, DRResult, DrugClass, ResistanceLevel, Sub
 from .sierra import AlgorithmVersion, SierraClient, SierraError
 
 __all__ = [
-    "AlgorithmVersion",
     "DR_SCHEMA_VERSION",
+    "AlgorithmVersion",
     "DRResult",
     "DrugClass",
     "ResistanceLevel",

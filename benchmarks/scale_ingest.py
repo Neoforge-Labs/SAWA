@@ -75,14 +75,14 @@ def _write_synthetic_lanl_dir(n: int, root: Path, seed: int) -> Path:
         # Use "BE1234567" style — 2 letters + 7 digits.
         for i, seq in enumerate(seqs):
             row = [
-                f"BE{i:07d}",        # Accession
-                f"KE.BENCH.{i}",     # Name
-                "A1",                # Subtype
-                "Kenya",             # Country (name; the parser maps to KE)
-                "2020",              # Sampling Year
-                "pol",               # Genomic Region
-                str(len(seq)),       # Sequence Length
-                seq,                 # Sequence
+                f"BE{i:07d}",  # Accession
+                f"KE.BENCH.{i}",  # Name
+                "A1",  # Subtype
+                "Kenya",  # Country (name; the parser maps to KE)
+                "2020",  # Sampling Year
+                "pol",  # Genomic Region
+                str(len(seq)),  # Sequence Length
+                seq,  # Sequence
             ]
             fh.write("\t".join(row) + "\n")
     return root
@@ -103,7 +103,10 @@ def run_ingest_benchmark(
             measurements.append(BenchmarkMeasurement(**m))
             logger.info(
                 "ingest n=%d wall=%.3fs throughput=%.1f/s peak=%.1fMB",
-                n, m["wall_seconds"], m["throughput_per_sec"], m["peak_mb"],
+                n,
+                m["wall_seconds"],
+                m["throughput_per_sec"],
+                m["peak_mb"],
             )
     return measurements
 

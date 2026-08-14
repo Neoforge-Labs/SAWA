@@ -76,7 +76,27 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
-ignore = ["E501"]  # line length handled by formatter
+ignore = [
+    "E501",   # line length handled by formatter
+    "RUF001", # ambiguous unicode in string — we use × and — deliberately
+    "RUF002", # same, in docstrings
+    "RUF003", # same, in comments
+    "N818",   # exception naming — HIVTraceNotAvailable reads better than HIVTraceNotAvailableError
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Marimo notebooks use module-level constants (UPPERCASE) inside cell
+# functions, and drop bare tuples like `fig02, counts` at the end of a
+# cell as the cell's return value. That looks like N806/N803/B018 to
+# ruff but is idiomatic marimo.
+"notebooks/**/*.py" = ["N806", "N803", "B018", "F841"]
+# Benchmarks use analysis-style UPPERCASE locals for scientific constants.
+"benchmarks/**/*.py" = ["N806"]
+# FastAPI routes use `= Depends(get_db)` and `= Query(...)` as arg
+# defaults — that's the framework's canonical dep-injection pattern.
+"src/hivdrwatch/api/routes/**/*.py" = ["B008"]
+# Test fixtures often build many small objects with capitalised aliases.
+"tests/**/*.py" = ["N803", "N806"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -86,4 +106,5 @@ plugins = ["pydantic.mypy"]
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.16.2",
 ]

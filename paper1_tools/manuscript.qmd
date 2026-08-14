@@ -1,5 +1,5 @@
 ---
-title: "HIV-DR-Watch: an open real-time drug-resistance surveillance platform for sub-Saharan Africa"
+title: "SAWA: an open real-time antiretroviral-resistance surveillance platform for sub-Saharan Africa"
 author:
   - name: Kelyn Njeri
     orcid: 0000-0000-0000-0000  # replace when issued
@@ -7,8 +7,9 @@ author:
     affiliations:
       - name: NeoForge Labs, Nairobi, Kenya
 abstract: |
-  We present HIV-DR-Watch, an open, reproducible pipeline for continuous
-  HIV-1 drug-resistance surveillance from public sequence data (LANL,
+  We present SAWA (Sub-Saharan Africa Watch for Antiretroviral
+  resistance), an open, reproducible pipeline for continuous HIV-1
+  drug-resistance surveillance from public sequence data (LANL,
   GenBank), designed for the subtypes (A1, C, D) that dominate East
   African epidemics. The pipeline calls resistance against Stanford
   HIVdb, builds subtype-stratified phylogenies, detects transmission

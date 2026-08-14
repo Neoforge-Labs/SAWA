@@ -101,9 +101,7 @@ def align_sequences_biopython(
     n_failed = 0
 
     # Split into batches for ProcessPoolExecutor.
-    batches = [
-        records[i : i + batch_size] for i in range(0, n, batch_size)
-    ]
+    batches = [records[i : i + batch_size] for i in range(0, n, batch_size)]
 
     # If we only have one core or one batch, skip the process pool
     # overhead and run in the calling process.
@@ -118,12 +116,9 @@ def align_sequences_biopython(
     else:
         with ProcessPoolExecutor(max_workers=n_workers) as pool:
             futures = {
-                pool.submit(_align_batch, batch, ref_seq): i
-                for i, batch in enumerate(batches)
+                pool.submit(_align_batch, batch, ref_seq): i for i, batch in enumerate(batches)
             }
-            completed = 0
-            for future in as_completed(futures):
-                completed += 1
+            for completed, future in enumerate(as_completed(futures), start=1):
                 for acc, aln in future.result():
                     if aln is None:
                         n_failed += 1
@@ -176,7 +171,7 @@ def _align_batch(
         try:
             alignments = aligner.align(ref_upper, query)
             best = alignments[0]
-        except (ValueError, Exception):  # noqa: BLE001
+        except (ValueError, Exception):
             out.append((accession, None))
             continue
         if best.score < threshold:

@@ -89,8 +89,12 @@ def run_dr_effects(
                 per_subtype=per_subtype,
             )
         )
-    log.info("DR effects estimated: %d (bootstrap=%d per_subtype=%s)",
-             len(effects), bootstrap_samples, per_subtype)
+    log.info(
+        "DR effects estimated: %d (bootstrap=%d per_subtype=%s)",
+        len(effects),
+        bootstrap_samples,
+        per_subtype,
+    )
     return effects
 
 
@@ -100,8 +104,7 @@ def run_outbreak_effects(df: pl.DataFrame, bootstrap_samples: int) -> list:
     if df.is_empty():
         return []
     effects = estimate_all_outbreak_effects(df, bootstrap_samples=bootstrap_samples)
-    log.info("outbreak effects estimated: %d (bootstrap=%d)",
-             len(effects), bootstrap_samples)
+    log.info("outbreak effects estimated: %d (bootstrap=%d)", len(effects), bootstrap_samples)
     return effects
 
 
@@ -123,10 +126,12 @@ def write_outputs(
         frame.write_parquet(parquet_path, compression="zstd", compression_level=6)
         write_html_report(all_effects, html_path)
         # Emit per-domain prune configs — trainers can consume these.
-        derive_prune_config(frame, dag_version=DAG_VERSION, scope_prefix="DR").write(dr_prune_path)
-        derive_prune_config(
-            frame, dag_version=DAG_VERSION, scope_prefix="outbreak"
-        ).write(outbreak_prune_path)
+        derive_prune_config(frame, dag_version=DAG_VERSION, scope_prefix="DR").write(
+            dr_prune_path
+        )
+        derive_prune_config(frame, dag_version=DAG_VERSION, scope_prefix="outbreak").write(
+            outbreak_prune_path
+        )
     else:
         pl.DataFrame().write_parquet(parquet_path)
         html_path.write_text("<html><body><h1>no effects</h1></body></html>")
@@ -153,10 +158,7 @@ def write_outputs(
         # High-level metrics: identified / passed-refutation counts.
         identified = sum(1 for e in all_effects if e.identified)
         passing = sum(
-            1
-            for e in all_effects
-            for r in e.refutations
-            if r.verdict.value == "passes"
+            1 for e in all_effects for r in e.refutations if r.verdict.value == "passes"
         )
         run.log_metrics(
             {
@@ -196,9 +198,7 @@ def causal_flow(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="causal.flows.causal")
-    parser.add_argument(
-        "--dr-gold", type=Path, default=Path("data/gold/dr_features.parquet")
-    )
+    parser.add_argument("--dr-gold", type=Path, default=Path("data/gold/dr_features.parquet"))
     parser.add_argument(
         "--outbreak-gold",
         type=Path,

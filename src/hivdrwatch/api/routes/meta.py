@@ -25,7 +25,7 @@ def _try_version(module_path: str, attr: str) -> str:
     try:
         module = importlib.import_module(module_path)
         return str(getattr(module, attr))
-    except Exception as e:  # noqa: BLE001 - defensive at import boundary
+    except Exception as e:
         logger.warning("could not load %s.%s: %s", module_path, attr, e)
         return "unknown"
 

@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +42,9 @@ class DuckDBAnalytics:
 
     def __init__(self, database: str = ":memory:") -> None:
         try:
-            import duckdb  # noqa: PLC0415
+            import duckdb
         except ImportError as e:  # pragma: no cover
-            raise ImportError(
-                "duckdb not installed; add `duckdb>=1.0` to dependencies"
-            ) from e
+            raise ImportError("duckdb not installed; add `duckdb>=1.0` to dependencies") from e
         self._duckdb = duckdb
         self._con = duckdb.connect(database=database)
 
@@ -94,7 +91,7 @@ class DuckDBAnalytics:
     def sql(self, query: str):
         """Run `query`, return the result as a Polars DataFrame."""
         try:
-            import polars as pl  # noqa: PLC0415
+            import polars as pl
         except ImportError as e:  # pragma: no cover
             raise ImportError("polars required for sql()") from e
         arrow = self._con.execute(query).arrow()
@@ -114,7 +111,7 @@ class DuckDBAnalytics:
         return f'"{ident}"'
 
 
-def open_analytics(database: Optional[str] = None) -> DuckDBAnalytics:
+def open_analytics(database: str | None = None) -> DuckDBAnalytics:
     """Convenience factory — returns an in-memory DuckDB by default."""
     return DuckDBAnalytics(database or ":memory:")
 

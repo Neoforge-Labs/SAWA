@@ -10,16 +10,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from hivdrwatch.cluster import (
     ClusterValidationResult,
-    simulate_clusters,
     score_clusters,
+    simulate_clusters,
 )
 from hivdrwatch.cluster.simulate import _mutate, _random_sequence
-import numpy as np
-
 
 # ---------- simulate ----------
 
@@ -27,8 +26,11 @@ import numpy as np
 class TestSimulateClusters:
     def test_shape(self) -> None:
         sim = simulate_clusters(
-            n_clusters=5, cluster_size=(3, 3),
-            n_singletons=4, seq_length=100, seed=1,
+            n_clusters=5,
+            cluster_size=(3, 3),
+            n_singletons=4,
+            seq_length=100,
+            seed=1,
         )
         assert sim.n_clusters == 5
         assert len(sim.singletons) == 4
@@ -41,12 +43,18 @@ class TestSimulateClusters:
 
     def test_deterministic(self) -> None:
         a = simulate_clusters(
-            n_clusters=3, cluster_size=(4, 4),
-            n_singletons=2, seq_length=50, seed=7,
+            n_clusters=3,
+            cluster_size=(4, 4),
+            n_singletons=2,
+            seq_length=50,
+            seed=7,
         )
         b = simulate_clusters(
-            n_clusters=3, cluster_size=(4, 4),
-            n_singletons=2, seq_length=50, seed=7,
+            n_clusters=3,
+            cluster_size=(4, 4),
+            n_singletons=2,
+            seq_length=50,
+            seed=7,
         )
         assert a.accession_to_seq == b.accession_to_seq
         assert a.ground_truth == b.ground_truth
@@ -58,9 +66,7 @@ class TestSimulateClusters:
         assert a.accession_to_seq != b.accession_to_seq
 
     def test_truth_membership_shape(self) -> None:
-        sim = simulate_clusters(
-            n_clusters=2, cluster_size=(3, 3), n_singletons=2, seed=1
-        )
+        sim = simulate_clusters(n_clusters=2, cluster_size=(3, 3), n_singletons=2, seed=1)
         truth = sim.truth_membership()
         assert len(truth) == 2 * 3 + 2
         # Members of the same simulated cluster share a truth label
@@ -73,9 +79,7 @@ class TestSimulateClusters:
         assert len(singleton_labels) == len(sim.singletons)
 
     def test_write_fasta_roundtrip(self, tmp_path: Path) -> None:
-        sim = simulate_clusters(
-            n_clusters=2, cluster_size=(3, 3), n_singletons=2, seed=1
-        )
+        sim = simulate_clusters(n_clusters=2, cluster_size=(3, 3), n_singletons=2, seed=1)
         fasta = sim.write_fasta(tmp_path / "sim.fasta")
         text = fasta.read_text()
         # Every accession appears as a header line
@@ -104,7 +108,7 @@ class TestSimulateClusters:
         founder = _random_sequence(rng, 3000)
         member = _mutate(rng, founder, rate=0.005)
         # ~0.5% mutation → sequences share most positions
-        diffs = sum(1 for a, b in zip(founder, member) if a != b)
+        diffs = sum(1 for a, b in zip(founder, member, strict=True) if a != b)
         assert 5 < diffs < 40
 
 
@@ -169,9 +173,7 @@ class TestScoreClusters:
 
     def test_end_to_end_simulator_then_scorer(self) -> None:
         # Score the simulator's truth against itself — perfect result
-        sim = simulate_clusters(
-            n_clusters=5, cluster_size=(4, 4), n_singletons=5, seed=42
-        )
+        sim = simulate_clusters(n_clusters=5, cluster_size=(4, 4), n_singletons=5, seed=42)
         truth = sim.truth_membership()
         r = score_clusters(truth, truth)
         assert r.f1 == 1.0
@@ -185,12 +187,19 @@ class TestScoreClusters:
 class TestClusterValidationResult:
     def test_as_dict(self) -> None:
         r = ClusterValidationResult(
-            n_sequences=10, n_pairs=45,
-            tp=10, fp=2, fn=3, tn=30,
-            precision=10/12, recall=10/13, f1=0.75,
+            n_sequences=10,
+            n_pairs=45,
+            tp=10,
+            fp=2,
+            fn=3,
+            tn=30,
+            precision=10 / 12,
+            recall=10 / 13,
+            f1=0.75,
             adjusted_rand_index=0.8,
-            n_predicted_clusters=3, n_truth_clusters=4,
+            n_predicted_clusters=3,
+            n_truth_clusters=4,
         )
         d = r.as_dict()
-        assert d["precision"] == 10/12
+        assert d["precision"] == 10 / 12
         assert d["adjusted_rand_index"] == 0.8

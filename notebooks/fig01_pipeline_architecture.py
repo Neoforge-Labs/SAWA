@@ -66,10 +66,10 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
     # --- Layout constants — tuned generously for a two-column journal figure ---
     BOX_WIDTH = 2.4
     BOX_HEIGHT = 1.05
-    ROW_SPACING = 2.4      # vertical distance between row centers
-    COL_SPACING = 3.2      # horizontal distance per col unit
-    BAND_PAD_X = 0.6       # extra background band width beyond outermost boxes
-    BAND_PAD_Y = 0.35      # band half-height beyond box half-height
+    ROW_SPACING = 2.4  # vertical distance between row centers
+    COL_SPACING = 3.2  # horizontal distance per col unit
+    BAND_PAD_X = 0.6  # extra background band width beyond outermost boxes
+    BAND_PAD_Y = 0.35  # band half-height beyond box half-height
 
     n_rows = max(b.row for b in diagram.blocks) + 1
     all_cols = [b.col for b in diagram.blocks]
@@ -134,7 +134,8 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
         # Subtle drop shadow via path effects on a same-shape shadow patch.
         shadow = mpatches.FancyBboxPatch(
             (x - BOX_WIDTH / 2 + 0.06, y - BOX_HEIGHT / 2 - 0.08),
-            BOX_WIDTH, BOX_HEIGHT,
+            BOX_WIDTH,
+            BOX_HEIGHT,
             boxstyle="round,pad=0.04,rounding_size=0.15",
             facecolor="#000000",
             edgecolor="none",
@@ -145,7 +146,8 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
 
         rect = mpatches.FancyBboxPatch(
             (x - BOX_WIDTH / 2, y - BOX_HEIGHT / 2),
-            BOX_WIDTH, BOX_HEIGHT,
+            BOX_WIDTH,
+            BOX_HEIGHT,
             boxstyle="round,pad=0.04,rounding_size=0.15",
             facecolor="white",
             edgecolor=color,
@@ -159,7 +161,8 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
         bar_h = 0.14
         top_bar = mpatches.FancyBboxPatch(
             (x - BOX_WIDTH / 2, y + BOX_HEIGHT / 2 - bar_h),
-            BOX_WIDTH, bar_h,
+            BOX_WIDTH,
+            bar_h,
             boxstyle="round,pad=0.0,rounding_size=0.15",
             facecolor=color,
             edgecolor="none",
@@ -174,9 +177,11 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
         subtitle = parts[1] if len(parts) > 1 else ""
 
         ax.text(
-            x, y + 0.10,
+            x,
+            y + 0.10,
             title,
-            ha="center", va="center",
+            ha="center",
+            va="center",
             fontsize=9.5,
             fontweight="bold",
             color="#1a1a1a",
@@ -184,9 +189,11 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
         )
         if subtitle:
             ax.text(
-                x, y - 0.22,
+                x,
+                y - 0.22,
                 subtitle,
-                ha="center", va="center",
+                ha="center",
+                va="center",
                 fontsize=7.5,
                 color="#555555",
                 zorder=5,
@@ -227,9 +234,10 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
         connection = f"arc3,rad={rad}"
 
         arrow = mpatches.FancyArrowPatch(
-            (sx, sy), (ex, ey),
+            (sx, sy),
+            (ex, ey),
             arrowstyle="-|>,head_length=0.55,head_width=0.42",
-            mutation_scale=18,          # bigger overall arrow, incl. head
+            mutation_scale=18,  # bigger overall arrow, incl. head
             linewidth=1.1,
             color="#3a3a3a",
             connectionstyle=connection,
@@ -253,11 +261,13 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
             mx = sx + t * (ex - sx)
             my = sy + t * (ey - sy)
             ax.text(
-                mx, my,
+                mx,
+                my,
                 e.tier,
                 fontsize=6.5,
                 color="#333333",
-                ha="center", va="center",
+                ha="center",
+                va="center",
                 bbox={
                     "boxstyle": "round,pad=0.28",
                     "facecolor": "white",
@@ -305,7 +315,9 @@ def _(OUT_DIR, PHASE_COLORS, diagram, mpatches, pe, plt):
 @app.cell
 def _(diagram, fig_path_pdf, fig_path_png, summary):
     print("pipeline:")
-    print(f"  {len(diagram.blocks)} blocks · {len(diagram.edges)} edges · {len(diagram.row_labels)} rows")
+    print(
+        f"  {len(diagram.blocks)} blocks · {len(diagram.edges)} edges · {len(diagram.row_labels)} rows"
+    )
     print("  per-phase counts:")
     for phase, count in summary.items():
         print(f"    {phase:8s} {count}")

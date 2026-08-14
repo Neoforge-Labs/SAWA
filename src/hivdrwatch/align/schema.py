@@ -24,11 +24,11 @@ CURATE_SCHEMA_VERSION = "0.1.0"
 class QCFlag(StrEnum):
     """Reasons a sequence might be flagged (multiple can co-occur)."""
 
-    HIGH_AMBIGUITY = "high_ambiguity"       # >5% non-ACGT
-    APOBEC_HYPERMUT = "apobec_hypermut"     # G→A hypermutation signature
-    STOP_CODON = "stop_codon"                # premature stop in PR/RT/IN
-    SHORT_COVERAGE = "short_coverage"        # region missing >20% of sites
-    LOW_COMPLEXITY = "low_complexity"        # >80% single nt
+    HIGH_AMBIGUITY = "high_ambiguity"  # >5% non-ACGT
+    APOBEC_HYPERMUT = "apobec_hypermut"  # G→A hypermutation signature
+    STOP_CODON = "stop_codon"  # premature stop in PR/RT/IN
+    SHORT_COVERAGE = "short_coverage"  # region missing >20% of sites
+    LOW_COMPLEXITY = "low_complexity"  # >80% single nt
 
 
 class CuratedSequence(BaseModel):
@@ -39,8 +39,8 @@ class CuratedSequence(BaseModel):
     sequence_sha256: str = Field(..., min_length=64, max_length=64)
 
     # --- alignment ---
-    aligned_pol: str        # gap-preserving alignment to HXB2 pol (3012 nt)
-    aligned_length: int     # should equal HXB2_POL_LENGTH after --keeplength
+    aligned_pol: str  # gap-preserving alignment to HXB2 pol (3012 nt)
+    aligned_length: int  # should equal HXB2_POL_LENGTH after --keeplength
 
     # --- gene-region slices (aligned, gap-preserving; empty string if uncovered) ---
     pr_nt: str
@@ -57,7 +57,7 @@ class CuratedSequence(BaseModel):
     passes_qc: bool
 
     # --- dedup ---
-    patient_group_id: str            # sha256(country + patient_token + first_year)[:16]
+    patient_group_id: str  # sha256(country + patient_token + first_year)[:16]
     is_earliest_per_patient: bool
 
     # --- provenance ---

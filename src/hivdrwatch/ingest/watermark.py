@@ -53,9 +53,7 @@ def read_watermarks(genbank_raw_dir: Path) -> dict[str, date]:
     return out
 
 
-def write_watermarks(
-    genbank_raw_dir: Path, watermarks: dict[str, date]
-) -> Path:
+def write_watermarks(genbank_raw_dir: Path, watermarks: dict[str, date]) -> Path:
     p = watermark_path(genbank_raw_dir)
     p.parent.mkdir(parents=True, exist_ok=True)
     payload = {cc.upper(): d.isoformat() for cc, d in watermarks.items()}

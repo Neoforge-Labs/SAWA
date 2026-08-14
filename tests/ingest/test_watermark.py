@@ -29,9 +29,7 @@ class TestReadWrite:
         assert read_watermarks(tmp_path) == {}
 
     def test_bad_date_skipped(self, tmp_path: Path) -> None:
-        (tmp_path / WATERMARK_FILENAME).write_text(
-            '{"KE": "not-a-date", "UG": "2026-08-11"}'
-        )
+        (tmp_path / WATERMARK_FILENAME).write_text('{"KE": "not-a-date", "UG": "2026-08-11"}')
         result = read_watermarks(tmp_path)
         assert result == {"UG": date(2026, 8, 11)}
 

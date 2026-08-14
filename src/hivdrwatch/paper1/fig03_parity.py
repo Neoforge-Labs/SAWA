@@ -62,9 +62,7 @@ def load_parity_payload(json_path: Path) -> dict:
         {
             "clusterer": payload["clusterer"],
             "threshold": payload.get("threshold"),
-            "n_predicted_clusters": payload.get("metrics", {}).get(
-                "n_predicted_clusters", 0
-            ),
+            "n_predicted_clusters": payload.get("metrics", {}).get("n_predicted_clusters", 0),
             "metrics": payload["metrics"],
         }
     ]

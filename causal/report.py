@@ -80,8 +80,12 @@ def write_html_report(effects: list[CausalEffect], out_path: Path) -> Path:
         )
         parts.append("<table><thead><tr>")
         headers = [
-            "treatment", "outcome", "n", "estimate",
-            "adjust", "criterion",
+            "treatment",
+            "outcome",
+            "n",
+            "estimate",
+            "adjust",
+            "criterion",
             "ref: pass / fail / inc",
         ]
         for h in headers:

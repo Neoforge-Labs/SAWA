@@ -57,7 +57,11 @@ def _make_payload(
                 "metrics": _mk_metrics(hivtrace_f1),
             }
         )
-        parity = {"n_pairs": 19900, "n_agree": int(19900 * agreement), "fraction_agree": agreement}
+        parity = {
+            "n_pairs": 19900,
+            "n_agree": int(19900 * agreement),
+            "fraction_agree": agreement,
+        }
 
     return {
         "clusterer": "tn93+connected_components",
@@ -89,12 +93,23 @@ class TestLoadPayload:
             "clusterer": "tn93+connected_components",
             "threshold": 0.015,
             "metrics": {
-                "precision": 0.9, "recall": 0.9, "f1": 0.9,
+                "precision": 0.9,
+                "recall": 0.9,
+                "f1": 0.9,
                 "adjusted_rand_index": 0.8,
-                "tp": 10, "fp": 1, "fn": 1, "tn": 100,
+                "tp": 10,
+                "fp": 1,
+                "fn": 1,
+                "tn": 100,
                 "n_predicted_clusters": 5,
             },
-            "sim": {"n_clusters": 5, "n_sequences": 50, "n_singletons": 10, "seq_length": 3012, "seed": 42},
+            "sim": {
+                "n_clusters": 5,
+                "n_sequences": 50,
+                "n_singletons": 10,
+                "seq_length": 3012,
+                "seed": 42,
+            },
         }
         p = tmp_path / "cv.json"
         p.write_text(json.dumps(legacy))
@@ -135,7 +150,9 @@ class TestConfusionFrame:
 
 class TestSummarize:
     def test_with_hivtrace(self) -> None:
-        payload = _make_payload(with_hivtrace=True, ours_f1=0.95, hivtrace_f1=0.93, agreement=0.99)
+        payload = _make_payload(
+            with_hivtrace=True, ours_f1=0.95, hivtrace_f1=0.93, agreement=0.99
+        )
         s = summarize(payload)
         assert s.n_clusterers == 2
         assert s.ours_f1 == pytest.approx(0.95)

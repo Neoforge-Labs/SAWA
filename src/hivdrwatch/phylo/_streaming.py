@@ -66,9 +66,7 @@ def stream_subprocess(
     stdout_chars = [0]  # mutable counter for the closure
     stderr_chars = [0]
 
-    def _drain(
-        stream, buf: deque[str], counter: list[int], line_prefix: str
-    ) -> None:
+    def _drain(stream, buf: deque[str], counter: list[int], line_prefix: str) -> None:
         for line in stream:
             line = line.rstrip("\n")
             if not line:

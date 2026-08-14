@@ -75,7 +75,9 @@ def run_cluster_benchmark(
             with measure_block(n_sequences=n) as m:
                 run_tn93(fasta, csv, threshold=threshold)
                 dists = read_distances(csv)
-                result = assign_clusters(dists, list(sim.accession_to_seq), threshold=threshold)
+                result = assign_clusters(
+                    dists, list(sim.accession_to_seq), threshold=threshold
+                )
                 m["extras"] = {
                     "n_predicted_clusters": float(result.n_clusters),
                     "n_pairs_below_threshold": float(len(dists)),
@@ -83,7 +85,10 @@ def run_cluster_benchmark(
             measurements.append(BenchmarkMeasurement(**m))
             logger.info(
                 "cluster n=%d wall=%.2fs throughput=%.1f/s peak=%.1fMB",
-                n, m["wall_seconds"], m["throughput_per_sec"], m["peak_mb"],
+                n,
+                m["wall_seconds"],
+                m["throughput_per_sec"],
+                m["peak_mb"],
             )
     return measurements
 

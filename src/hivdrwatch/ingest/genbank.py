@@ -38,7 +38,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from .schema import Source, SequenceRecord, Subtype
+from .schema import SequenceRecord, Source, Subtype
 
 logger = logging.getLogger(__name__)
 
@@ -128,9 +128,7 @@ class GenBankIngester:
         logger.info("found %d matching accessions for %s", len(ids), country_code)
 
         n_batches = (len(ids) + self.batch_size - 1) // self.batch_size
-        for batch_ix, start in enumerate(
-            range(0, len(ids), self.batch_size)
-        ):
+        for batch_ix, start in enumerate(range(0, len(ids), self.batch_size)):
             batch = ids[start : start + self.batch_size]
             logger.info(
                 "%s batch %d/%d (%d ids)",
@@ -290,18 +288,12 @@ class GenBankIngester:
                 with raw_path.open() as fh:
                     yield from SeqIO.parse(fh, "genbank")
                 return
-            logger.warning(
-                "cache file %s looks truncated; re-fetching", raw_path.name
-            )
+            logger.warning("cache file %s looks truncated; re-fetching", raw_path.name)
             raw_path.unlink(missing_ok=True)
 
         self._rate_limit()
-        logger.info(
-            "fetching batch of %d (first id=%s)", len(ids), ids[0]
-        )
-        handle = Entrez.efetch(
-            db="nucleotide", id=",".join(ids), rettype="gb", retmode="text"
-        )
+        logger.info("fetching batch of %d (first id=%s)", len(ids), ids[0])
+        handle = Entrez.efetch(db="nucleotide", id=",".join(ids), rettype="gb", retmode="text")
         raw_text = handle.read()
         handle.close()
 
@@ -322,9 +314,7 @@ class GenBankIngester:
         with raw_path.open() as fh:
             yield from SeqIO.parse(fh, "genbank")
 
-    def _parse(
-        self, record: SeqRecord, requested_country: str
-    ) -> SequenceRecord | None:
+    def _parse(self, record: SeqRecord, requested_country: str) -> SequenceRecord | None:
         try:
             metadata = _extract_source_features(record)
             collection_date = _parse_collection_date(metadata.get("collection_date"))
@@ -351,7 +341,7 @@ class GenBankIngester:
         except ValidationError as e:
             logger.warning("dropping %s: schema validation failed: %s", record.id, e)
             return None
-        except Exception as e:  # noqa: BLE001 — one bad record must not stop the run
+        except Exception as e:
             logger.exception("unexpected parse failure on %s: %s", record.id, e)
             return None
 

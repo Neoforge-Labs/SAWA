@@ -50,7 +50,12 @@ def _mk_stratum(
             level = "high" if i < r_count else "susceptible"
             dr_rows.append({"accession": acc, "drug_class": INSTI_CLASS, "level": level})
             curated_rows.append(
-                {"accession": acc, "country": country, "collection_year": year, "subtype": subtype}
+                {
+                    "accession": acc,
+                    "country": country,
+                    "collection_year": year,
+                    "subtype": subtype,
+                }
             )
 
     _add("PRE", pre_year, n_pre, n_pre_r)
@@ -60,7 +65,7 @@ def _mk_stratum(
 
 class TestConstants:
     def test_resistant_levels(self) -> None:
-        assert RESISTANT_LEVELS == frozenset({"high", "intermediate"})
+        assert frozenset({"high", "intermediate"}) == RESISTANT_LEVELS
 
     def test_insti_class(self) -> None:
         assert INSTI_CLASS == "INSTI"
@@ -109,12 +114,20 @@ class TestEpochAssignment:
 class TestResistanceCounting:
     def test_intermediate_counts(self) -> None:
         dr_rows, curated_rows = _mk_stratum(
-            country="KE", subtype="A1",
-            pre_year=2015, post_year=2021,
-            n_pre=1, n_pre_r=0,
-            n_post=1, n_post_r=0,
+            country="KE",
+            subtype="A1",
+            pre_year=2015,
+            post_year=2021,
+            n_pre=1,
+            n_pre_r=0,
+            n_post=1,
+            n_post_r=0,
         )
-        dr_rows[1] = {"accession": dr_rows[1]["accession"], "drug_class": INSTI_CLASS, "level": "intermediate"}
+        dr_rows[1] = {
+            "accession": dr_rows[1]["accession"],
+            "drug_class": INSTI_CLASS,
+            "level": "intermediate",
+        }
         per_epoch, _, _ = aggregate_dtg_landscape(
             _dr(dr_rows), _curated(curated_rows), min_epoch_n=1
         )
@@ -156,9 +169,14 @@ class TestMinEpochN:
     def test_signal_flagged_when_ci_excludes_zero(self) -> None:
         # Big jump with enough N: pre 0/100, post 20/100 → CI clearly > 0.
         dr_rows, curated_rows = _mk_stratum(
-            "KE", "A1", 2015, 2021,
-            n_pre=100, n_pre_r=0,
-            n_post=100, n_post_r=20,
+            "KE",
+            "A1",
+            2015,
+            2021,
+            n_pre=100,
+            n_pre_r=0,
+            n_post=100,
+            n_post_r=20,
         )
         _, delta, summary = aggregate_dtg_landscape(
             _dr(dr_rows), _curated(curated_rows), min_epoch_n=30
@@ -173,9 +191,14 @@ class TestMinEpochN:
     def test_no_signal_when_ci_spans_zero(self) -> None:
         # Small change with enough N: pre 5/100, post 6/100 → CI spans 0.
         dr_rows, curated_rows = _mk_stratum(
-            "KE", "A1", 2015, 2021,
-            n_pre=100, n_pre_r=5,
-            n_post=100, n_post_r=6,
+            "KE",
+            "A1",
+            2015,
+            2021,
+            n_pre=100,
+            n_pre_r=5,
+            n_post=100,
+            n_post_r=6,
         )
         _, delta, summary = aggregate_dtg_landscape(
             _dr(dr_rows), _curated(curated_rows), min_epoch_n=30
@@ -192,8 +215,14 @@ class TestSubtypeStratification:
         curated_rows: list[dict] = []
         for subtype in ("A1", "C"):
             d, c = _mk_stratum(
-                "KE", subtype, 2015, 2021,
-                n_pre=50, n_pre_r=0, n_post=50, n_post_r=10,
+                "KE",
+                subtype,
+                2015,
+                2021,
+                n_pre=50,
+                n_pre_r=0,
+                n_post=50,
+                n_post_r=10,
             )
             dr_rows.extend(d)
             curated_rows.extend(c)
@@ -212,9 +241,7 @@ class TestNonInstiIgnored:
         curated = _curated(
             [{"accession": "A1", "country": "KE", "collection_year": 2021, "subtype": "A1"}]
         )
-        per_epoch, _, _ = aggregate_dtg_landscape(
-            _dr(dr_rows), curated, min_epoch_n=1
-        )
+        per_epoch, _, _ = aggregate_dtg_landscape(_dr(dr_rows), curated, min_epoch_n=1)
         post = per_epoch.filter(pl.col("epoch") == "post").to_dicts()[0]
         # NRTI row must not count as INSTI resistance.
         assert post["n_insti_resistant"] == 0

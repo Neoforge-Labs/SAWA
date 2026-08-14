@@ -23,24 +23,24 @@ on first connect).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
-    UniqueConstraint,
     DateTime,
     Float,
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column
 
 
 def _utcnow() -> datetime:
     """Portable timestamp default — works on Postgres, SQLite, DuckDB."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
+
 
 STORAGE_SCHEMA_VERSION = "0.1.0"
 
@@ -58,18 +58,22 @@ class PipelineRun(Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    stage: Mapped[str] = mapped_column(String(32), nullable=False)  # ingest, sierra, curate, ...
+    stage: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # ingest, sierra, curate, ...
     schema_version: Mapped[str] = mapped_column(String(16), nullable=False)
     storage_schema_version: Mapped[str] = mapped_column(
         String(16), nullable=False, default=STORAGE_SCHEMA_VERSION
     )
-    git_sha: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
-    config_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # sha256 of run config
-    row_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    git_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    config_hash: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )  # sha256 of run config
+    row_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class Sequence(Base):
@@ -88,21 +92,23 @@ class Sequence(Base):
     gene_region: Mapped[str] = mapped_column(String(8), nullable=False, default="pol")
 
     # Provenance
-    country: Mapped[Optional[str]] = mapped_column(String(2), nullable=True, index=True)
-    latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    collection_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
-    subtype: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown", index=True)
-    subtype_source: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(2), nullable=True, index=True)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    collection_year: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    subtype: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="unknown", index=True
+    )
+    subtype_source: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     # Clinical (rarely available)
-    is_drug_naive: Mapped[Optional[bool]] = mapped_column(nullable=True)
-    risk_group: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    patient_id_hashed: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    is_drug_naive: Mapped[bool | None] = mapped_column(nullable=True)
+    risk_group: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    patient_id_hashed: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Publication
-    pubmed_id: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
-    study_accession: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    pubmed_id: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    study_accession: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # Ingestion trail
     pipeline_run_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
@@ -123,10 +129,14 @@ class DRCall(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     accession: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
-    drug_class: Mapped[str] = mapped_column(String(8), nullable=False, index=True)  # PI/NRTI/NNRTI/INSTI
+    drug_class: Mapped[str] = mapped_column(
+        String(8), nullable=False, index=True
+    )  # PI/NRTI/NNRTI/INSTI
     drug: Mapped[str] = mapped_column(String(16), nullable=False)
-    level: Mapped[str] = mapped_column(String(16), nullable=False, index=True)  # susceptible..high
-    mutations: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # {position: mutation}
+    level: Mapped[str] = mapped_column(
+        String(16), nullable=False, index=True
+    )  # susceptible..high
+    mutations: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # {position: mutation}
     algorithm_version: Mapped[str] = mapped_column(String(16), nullable=False)
 
     pipeline_run_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
@@ -136,7 +146,10 @@ class DRCall(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "accession", "drug_class", "drug", "algorithm_version",
+            "accession",
+            "drug_class",
+            "drug",
+            "algorithm_version",
             name="uq_dr_calls_seq_drug_algo",
         ),
     )
@@ -160,7 +173,8 @@ class ClusterMembership(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "accession", "pipeline_run_id",
+            "accession",
+            "pipeline_run_id",
             name="uq_cluster_memberships_seq_run",
         ),
     )

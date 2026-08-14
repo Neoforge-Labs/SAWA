@@ -29,9 +29,10 @@ app = marimo.App(width="full")
 @app.cell
 def _():
     from pathlib import Path
-    import polars as pl
+
     import matplotlib.pyplot as plt
     import numpy as np
+    import polars as pl
 
     from hivdrwatch.paper1 import (
         DRUG_CLASS_ORDER,
@@ -98,18 +99,20 @@ def _(
     years = country_years["collection_year"].unique(maintain_order=True).to_list()
 
     row_labels = [f"{c} {y}" for c in countries for y in years]
-    row_index = {(c, y): i for i, (c, y) in enumerate((c, y) for c in countries for y in years)}
+    row_index = {
+        (c, y): i for i, (c, y) in enumerate((c, y) for c in countries for y in years)
+    }
     n_rows = len(row_labels)
 
     # Columns: (drug_class × subtype) panels. Restrict to subtypes we
     # care about + drop empty combos to keep the figure compact.
     present_subtypes = [
-        s for s in SUBTYPE_ORDER
-        if landscape.filter(pl.col("subtype") == s).height > 0
+        s for s in SUBTYPE_ORDER if landscape.filter(pl.col("subtype") == s).height > 0
     ]
 
     fig, axes = plt.subplots(
-        1, len(DRUG_CLASS_ORDER),
+        1,
+        len(DRUG_CLASS_ORDER),
         figsize=(3.2 * len(DRUG_CLASS_ORDER), 0.35 * n_rows + 1.5),
         sharey=True,
         constrained_layout=True,
@@ -143,7 +146,8 @@ def _(
             grid,
             aspect="auto",
             cmap=cmap,
-            vmin=vmin, vmax=vmax,
+            vmin=vmin,
+            vmax=vmax,
             interpolation="nearest",
         )
         # Grey out NaN (below-min-N cells)
@@ -156,9 +160,13 @@ def _(
                     val = grid[r, c]
                     txt_color = "white" if (not np.isnan(val) and val > 0.5) else "black"
                     ax.text(
-                        c, r, annot[r][c],
-                        ha="center", va="center",
-                        fontsize=6, color=txt_color,
+                        c,
+                        r,
+                        annot[r][c],
+                        ha="center",
+                        va="center",
+                        fontsize=6,
+                        color=txt_color,
                     )
 
         ax.set_xticks(range(len(present_subtypes)))
@@ -171,7 +179,11 @@ def _(
     axes[0].set_ylabel("country · year")
 
     cbar = fig.colorbar(
-        im, ax=axes, shrink=0.8, aspect=40, pad=0.02,
+        im,
+        ax=axes,
+        shrink=0.8,
+        aspect=40,
+        pad=0.02,
         label="fraction with Sierra ≥ intermediate resistance",
     )
     cbar.set_ticks([0.0, 0.25, 0.5, 0.75, 1.0])
@@ -192,13 +204,13 @@ def _(
 
 @app.cell
 def _(counts, fig_path_pdf, fig_path_png):
-    print(f"aggregation:")
+    print("aggregation:")
     print(f"  {counts.n_dr_rows:,} DR rows  ×  {counts.n_curated_rows:,} curated rows")
     print(f"  → {counts.n_joined_rows:,} per-sequence-per-class rows")
     print(f"  → {counts.n_output_cells:,} landscape cells")
     print(f"     of which {counts.n_cells_above_min:,} have N ≥ min_cell_n")
     print()
-    print(f"figures:")
+    print("figures:")
     print(f"  PDF → {fig_path_pdf}")
     print(f"  PNG → {fig_path_png}")
     return

@@ -35,7 +35,6 @@ from ..resistance import (
     pin_algorithm,
 )
 
-
 # ------------------------------------------------------------------
 # Tasks
 # ------------------------------------------------------------------
@@ -46,13 +45,11 @@ def load_merged_sequences(parquet_path: Path) -> pl.DataFrame:
     log = get_run_logger()
     df = pl.read_parquet(parquet_path)
     if "accession" not in df.columns or "sequence" not in df.columns:
-        raise ValueError(
-            f"{parquet_path} missing required columns (accession, sequence)"
-        )
+        raise ValueError(f"{parquet_path} missing required columns (accession, sequence)")
     # Sierra needs non-gapped sequences; strip alignment gaps here.
-    df = df.with_columns(
-        pl.col("sequence").str.replace_all("-", "").alias("sequence")
-    ).filter(pl.col("sequence").str.len_chars() >= 200)
+    df = df.with_columns(pl.col("sequence").str.replace_all("-", "").alias("sequence")).filter(
+        pl.col("sequence").str.len_chars() >= 200
+    )
     log.info("loaded %d sequences from %s", df.height, parquet_path)
     return df
 
@@ -131,7 +128,7 @@ def dr_ingest_flow(
     dr_path, st_path = write_dr_parquet(dr_results, subtypes, out_dir)
 
     # Storage tail — never crashes the flow.
-    from ._storage_tail import storage_tail  # noqa: PLC0415
+    from ._storage_tail import storage_tail
 
     storage_tail("sierra", dr_path, enabled=to_postgres)
 
@@ -162,7 +159,9 @@ def main(argv: list[str] | None = None) -> int:
         help="Sierra response cache",
     )
     parser.add_argument(
-        "--out-dir", type=Path, default=Path("data/interim"),
+        "--out-dir",
+        type=Path,
+        default=Path("data/interim"),
         help="where dr_results.parquet + sierra_subtypes.parquet are written",
     )
     parser.add_argument("--batch-size", type=int, default=100)

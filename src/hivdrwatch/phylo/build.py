@@ -190,9 +190,7 @@ def write_subtype_alignment(
             raise ValueError("neither 'aligned_pol' nor 'sequence' in subset")
 
     if min_coverage is not None and seq_col == "aligned_pol":
-        subset = filter_by_coverage(
-            subset, seq_col=seq_col, min_coverage=min_coverage
-        )
+        subset = filter_by_coverage(subset, seq_col=seq_col, min_coverage=min_coverage)
 
     out_fasta.parent.mkdir(parents=True, exist_ok=True)
     with out_fasta.open("w", encoding="utf-8") as fh:
