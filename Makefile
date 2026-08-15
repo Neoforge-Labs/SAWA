@@ -280,6 +280,42 @@ causal:
 	    $${PER_SUBTYPE:+--per-subtype} \
 	    $${PER_DRUG:+--per-drug}
 
+# ---------- paper 2 (CausalPhylo) manuscript ----------
+
+.PHONY: paper2 paper2-bench paper2-fig1 paper2-render
+paper2: paper2-bench paper2-fig1 paper2-render
+
+# Synthetic-ground-truth benchmark that generates the numbers cited
+# in paper2_causal/manuscript.qmd §Results.
+paper2-bench:
+	python -m benchmarks.paper2_synth_recovery \
+	    --sizes 500 2000 8000 \
+	    --seed 42 \
+	    --out benchmarks/results/paper2_synth_recovery.json
+
+# Render the DR domain DAG figure from causal/dag.py — no external
+# data needed.
+paper2-fig1:
+	python paper2_causal/notebooks/paper2_fig01_dag.py
+
+# Render the Quarto manuscript to PDF + HTML.
+paper2-render:
+	cd paper2_causal && quarto render manuscript.qmd
+
+# ---------- paper 3 (foundation-model benchmark) manuscript ----------
+
+.PHONY: paper3 paper3-bench paper3-render
+paper3: paper3-bench paper3-render
+
+paper3-bench:
+	python -m benchmarks.paper3_baselines_synth \
+	    --sizes 2000 8000 20000 \
+	    --seed 42 \
+	    --out benchmarks/results/paper3_baselines_synth.json
+
+paper3-render:
+	cd paper3_foundation && quarto render manuscript.qmd
+
 # ---------- tests ----------
 
 .PHONY: test
