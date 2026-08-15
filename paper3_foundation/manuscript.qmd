@@ -1,6 +1,6 @@
 ---
-title: "Foundation models for HIV-1 drug-resistance prediction underperform non-B subtypes: a subtype-stratified benchmark"
-subtitle: "Applying SAWA to reveal and close the generalization gap"
+title: "A subtype-stratified benchmark for HIV-1 drug-resistance prediction: protocol, non-FM baselines, and preregistered foundation-model comparison"
+subtitle: "Applying SAWA to reveal and close the non-B generalisation gap"
 author:
   - name: Kelyn Njeri
     orcid: 0000-0000-0000-0000  # replace when issued
@@ -8,21 +8,28 @@ author:
     affiliations:
       - name: NeoForge Labs, Nairobi, Kenya
 abstract: |
-  Protein and nucleotide foundation models (ESM-2, ESM-C, Evo) have
-  become the default backbone for sequence-based property prediction,
-  including drug-resistance prediction in HIV-1. But their training
-  corpora are dominated by subtype B — the dominant HIV-1 subtype in
-  the sequencing-rich global north. We evaluate off-the-shelf and
-  fine-tuned ESM-2 / Evo against non-FM baselines (k-mer logistic
-  regression, one-hot random forest) on a subtype-stratified
-  benchmark drawn from the SAWA platform's East African cohort
-  (subtypes A1, C, D; ~25 000 sequences from KE, UG, TZ, RW, BI, ET).
-  Under a *subtype holdout* protocol — training on B-only data,
-  testing on non-B — foundation models exhibit a substantial
-  AUROC / PR-AUC gap versus stratified-split baselines. We show that
-  subtype-stratified fine-tuning closes the gap and identify the
-  mutation classes where FMs remain systematically worse than
-  classical baselines even after adaptation.
+  Protein and nucleotide foundation models (ESM-2, ESM-C, Evo) are
+  increasingly used as backbones for sequence-based drug-resistance
+  prediction. Their training corpora are dominated by HIV-1 subtype B
+  — the majority subtype in the sequencing-rich global north — while
+  the global disease burden is dominated by non-B subtypes (A1, C, D,
+  CRF02_AG, others) circulating in sub-Saharan Africa. Any
+  foundation-model-based clinical tool inherits this bias, but the
+  magnitude of the generalisation gap on HIV-1 *pol* has not been
+  systematically measured on a public benchmark under an explicit
+  subtype-holdout protocol. We describe such a benchmark, drawn from
+  the SAWA surveillance platform's East African cohort (~25 000
+  sequences from KE, UG, TZ, RW, BI, ET, 1994–2024), and implement
+  two non-foundation-model baselines — k-mer logistic regression and
+  per-position one-hot random forest — that ship in seconds on a
+  laptop. In this protocol paper we (a) specify two split strategies
+  (stratified and subtype-holdout), (b) report baseline performance
+  on synthetic ground-truth data at a range of sample sizes, (c)
+  preregister the foundation-model comparison to be run against SAWA
+  v0.1.0, and (d) describe the failure-mode analysis and
+  subtype-stratified fine-tuning that Paper 3 v2 will use to
+  characterise and (attempt to) close the gap. Baseline evaluators
+  and dataset splitters are unit-tested and CI-benchmarked.
 keywords:
   - HIV-1
   - drug resistance
@@ -32,8 +39,8 @@ keywords:
   - subtype
   - sub-Saharan Africa
   - benchmark
+  - protocol
 bibliography: refs.bib
-csl: ../paper1_tools/bioinformatics.csl
 format:
   pdf: {documentclass: article, number-sections: true}
   html: {toc: true, code-fold: true}
@@ -41,93 +48,342 @@ format:
 
 # Introduction
 
-<!--
-Motivate the subtype-B bias problem. FMs are trained on public
-databases dominated by B; non-B accounts for most of the global
-burden. Any FM-based clinical tool inherits the bias.
--->
+The publicly released weights of ESM-2 [@esm2_2023], ESM-C [@esmc2024],
+and Evo [@evo_2024] are trained on protein or nucleotide corpora in
+which HIV-1 subtype B is systematically over-represented. Subtype B
+accounts for the largest fraction of HIV sequences in UniProt and
+GenBank because it dominates in the countries whose surveillance and
+research programmes have historically produced the most sequences —
+North America and Western Europe — while the global epidemiological
+burden is dominated by non-B subtypes: subtype C (Southern Africa,
+India), CRF02_AG (West Africa), A1 (East Africa, Eastern Europe),
+D (East Africa) [@hemelaar2020]. When a foundation-model-based
+resistance predictor is trained on a public corpus and evaluated on
+data from a sub-Saharan African clinic, the training distribution
+and the deployment distribution differ along the very axis (subtype)
+that most affects mutation prevalence, wild-type polymorphism, and
+Sierra rule behaviour.
+
+This is not a new observation. Non-B-specific effects on Stanford
+HIVdb calls are well documented [@wensing2019]. What has not been
+done is a *systematic subtype-holdout benchmark*: train on B, test on
+non-B, on a public HIV-1 *pol* corpus, with (i) two non-FM baselines
+strong enough to expose whether the FMs add value, (ii) per-drug
+per-subtype metrics that let readers see the gap decomposed rather
+than pooled, and (iii) a preregistered protocol so that the reported
+outcome cannot be reverse-engineered to favour the models under test.
+
+This is a protocol paper. Paper 3 v1 (this document) specifies the
+benchmark, reports baseline performance on synthetic ground-truth
+data, and preregisters the foundation-model comparison. Paper 3 v2,
+appearing after the SAWA v0.1.0 data run and the ESM-2 / Evo
+fine-tuning runs, reports the actual gap and the effect of
+subtype-stratified fine-tuning as the mitigation candidate.
+
+# Related work
+
+HIV-1 drug-resistance prediction has an extensive history using
+classical rule-based systems (Stanford HIVdb [@sierra2019], ANRS,
+Rega) and ML approaches [@shafer2015]. Recent work has begun
+exploring transformer-based sequence encoders for HIV and related
+viruses [@steinegger2019; @rives2021]. Foundation-model benchmarks
+in biology broadly (BEND [@marin2024], DeepMSA) tend to report
+pooled metrics that hide subgroup gaps. To our knowledge no
+published benchmark reports HIV-1 drug-resistance predictor
+performance under an explicit subtype-holdout protocol on
+sub-Saharan-Africa-first data, which is the specific gap this work
+addresses.
+
+The AI-for-Biology community has recently converged on the framing
+that "reporting mean performance across a heterogeneous test set is
+inadequate for clinical or public-health deployment claims"
+[@finlayson2021]. This benchmark operationalises that framing for a
+specific, high-stakes case.
 
 # Methods
 
-## Data — SAWA v0.1.0
+## Data substrate — SAWA v0.1.0
 
-Same frozen data vintage as Paper 1 (Zenodo DOI `10.xxxx/xxxxxxx`).
-See `foundation_models/data.py` for the split contract:
+The benchmark data comes from SAWA v0.1.0 [@sawa_v0_1_0], the
+frozen data vintage of the SAWA HIV drug-resistance surveillance
+platform:
 
-* **Stratified split** (baseline): 70/15/15 on (subtype × drug × label).
-* **Subtype-holdout split** (thesis): train + val on subtype B, test
-  on all non-B. This is the paper's headline generalization test.
+* `data/interim/dr_results.parquet` — per-(accession, drug) Sierra
+  output.
+* `data/interim/curated/aligned.parquet` — per-accession curated
+  silver Parquet: accession, sequence, subtype, country,
+  collection_year.
 
-## Non-FM baselines
+The adapter `foundation_models/data.py::build_fm_dataset` joins the
+two on `accession`, produces a per-(accession, drug) binary label
+from Sierra levels (`{high, intermediate} → 1`, `{low, susceptible} → 0`),
+and drops accessions with missing subtype or empty sequence. The
+resulting frame has columns `{accession, sequence, subtype, country,
+collection_year, drug, drug_class, label_binary}`.
 
-* **K-mer logistic regression** (`baselines.KmerLogisticRegression`):
-  L2-regularized, k=3 nucleotide k-mers, liblinear solver.
-* **One-hot random forest** (`baselines.OneHotRandomForest`):
-  per-position one-hot encoding, 200 estimators.
+## Split strategies
 
-Both scale to the full cohort in seconds on a laptop.
+Two split strategies are supported, both deterministic given a seed:
 
-## Foundation-model backbones
+**Stratified split** (baseline, `strategy="stratified"`). 70 / 15 /
+15 train / val / test, stratified on `(subtype, drug, label_binary)`
+so every subtype × drug × label cell is represented in every split.
+This is the *fair-baseline* split: classical models are expected to
+do well on it, and it is the split against which claims of "the FM
+achieves AUROC X" can be reported without confounding by
+distribution shift.
 
-* **ESM-2** (`models/esm2.py`, TBA): fine-tuned classification head
-  on per-drug binary resistance. Amino-acid tokenization from HXB2
-  pol translation.
-* **Evo** (`models/evo.py`, TBA): nucleotide-native FM; fine-tuned
-  head on the same task.
+**Subtype-holdout split** (thesis, `strategy="subtype_holdout"`).
+Train and validation are drawn from a specified pool of subtypes
+(default `("B",)`); the test set contains **all** accessions from
+subtypes outside that pool. This is the paper's headline
+generalisation test: the FM was trained on data from the same
+subtypes as its training distribution and is now asked to predict on
+data from subtypes it has under-sampled by construction.
 
-## Evaluation
+Split determinism, subtype-composition invariants, and
+stratification correctness are verified by
+`tests/foundation_models/test_data.py` (42 tests, CI-enforced).
 
-Per (drug × subtype) cell: AUROC, PR-AUC, Brier score, expected
-calibration error (`evaluate.per_subtype_metrics`). Cells with
-fewer than 5 positive labels are omitted (Paper 3 preregistration
-threshold).
+## Baselines
 
-# Results
+Two non-foundation-model baselines are implemented in
+`foundation_models/baselines.py`. Both wrap scikit-learn
+[@pedregosa2011] (already a project dependency), both provide the
+same `fit(seqs, y) → predict_proba(seqs) → predict(seqs, threshold)`
+interface, and both scale to the full 25 000-sequence cohort in
+seconds on a laptop.
 
-## Baseline benchmark (Sprint 3 result)
+* **K-mer logistic regression** (`KmerLogisticRegression`,
+  default `k=3`). Sequences are tokenised into non-overlapping
+  k-mers over the nucleotide alphabet; k-mer counts feed an
+  L2-regularised logistic regression (`solver="liblinear"`, `C=1.0`,
+  `max_iter=500`). The vocabulary is locked at fit time so
+  transform-time novel k-mers do not perturb the feature width.
+  Rationale: composition-dominant baseline that captures no
+  positional information. If a foundation model adds no value over
+  this, positional or higher-order structure is not being learned.
+* **One-hot random forest** (`OneHotRandomForest`,
+  `n_estimators=200`). Sequences must be equal-length (aligned);
+  each position becomes a one-hot vector over `alphabet ∪ {OTHER}`
+  where the OTHER channel absorbs ambiguity or gap. Rationale:
+  positional-signal baseline that captures no cross-position
+  interactions beyond depth-1 tree splits. Any foundation model
+  claim to model long-range co-evolutionary structure should
+  meaningfully beat this baseline; if it does not, the FM's added
+  parameters and inference cost are not paying off.
 
-![AUROC per drug × subtype for the two non-FM baselines under both
-split strategies. The subtype-holdout gap between B (train) and non-B
-(test) is what fine-tuned FMs need to
-close.](figures/fig01_baseline_benchmark.pdf){#fig-baseline}
+Both baselines are unit-tested for signal recovery on synthetic data
+carrying a fixed motif (`AAAAAAAA` at position 20; see
+`tests/foundation_models/test_baselines.py`).
 
-@fig-baseline establishes the ceiling that fine-tuned FMs must beat.
+## Foundation-model backbones (v2)
 
-## Foundation-model AUROC vs baselines
+The FM comparison is preregistered here and will run in Paper 3 v2:
 
-![](figures/fig02_fm_vs_baseline.pdf){#fig-fm}
+* **ESM-2** [@esm2_2023] — amino-acid tokenisation from HXB2 *pol*
+  translation; fine-tuned classification head on per-drug binary
+  resistance. Base checkpoint `esm2_t33_650M_UR50D`. Frozen backbone
+  and fully-fine-tuned variants both reported.
+* **Evo** [@evo_2024] — nucleotide-native FM; fine-tuned head on the
+  same task; base checkpoint `evo-1.5-8k-base`.
 
-## Where FMs still fail
+The FM adapter modules are stubbed (`foundation_models/models/esm2.py`,
+`foundation_models/models/evo.py`) with the training-loop interface
+locked but no weights downloaded until the v2 run.
 
-![](figures/fig03_failure_analysis.pdf){#fig-failure}
+## Metrics {#sec-metrics}
 
-## Subtype-stratified fine-tuning closes the gap
+Per (drug × subtype × model) cell:
 
-![](figures/fig04_subtype_finetune.pdf){#fig-finetune}
+* **AUROC** — area under the ROC curve.
+* **PR-AUC** — area under precision-recall; primary metric for
+  rare-mutation cells where prevalence is low.
+* **Brier score** — mean squared error of the predicted probability
+  against the label.
+* **ECE** — expected calibration error at 10 uniform-width bins.
+
+Cells with `n_positive < 5` are omitted from scoring — the
+minimum-positives filter is `MIN_POSITIVES_TO_SCORE = 5`,
+committed as a module constant and preregistered here.
+`per_subtype_metrics(df, prob_col, ...)` returns a Polars metrics
+frame ready for the manuscript's figures and tables.
+Ranking-metric handling of single-class cells returns `None`
+rather than raising, to keep aggregation code simple.
+
+## Bootstrap and uncertainty
+
+Point estimates are supplemented with 500-bootstrap 95 % percentile
+intervals; bootstrapping is at the accession level (not row level)
+so that per-drug rows sharing an accession are resampled as a
+block. Bootstrap seeds derive from the run config hash; two runs on
+the same data produce identical CIs.
+
+## Reporting
+
+The primary reporting artifact is a per (drug × subtype × model)
+metrics table with CIs; the primary figure is AUROC vs subtype for
+each model under both split strategies. A secondary figure reports
+the AUROC gap between the training-distribution subtype (B) and the
+held-out subtypes for each model. The primary quantitative claim of
+Paper 3 v2 is the size of that gap, its bootstrap CI, and whether
+subtype-stratified fine-tuning closes it.
+
+# Baseline results on synthetic ground truth
+
+The two baselines are exercised on a synthetic sequence-and-label
+generator (`benchmarks/paper3_baselines_synth.py`) that produces up
+to 20 000 sequences over three subtypes (`B, A1, C`), inserts a
+subtype-shared "true" resistance motif (`AAAAAAAA`) at position 20,
+and inserts a subtype-specific decoy motif (`GGGGGGGG`) at position
+60 in subtype C only.
+
+At seed 42, per-subtype median AUROC under both split strategies
+is:
+
+| `n`    | strategy         | k-mer LR (median AUROC) | one-hot RF (median AUROC) |
+|-------:|------------------|------------------------:|--------------------------:|
+| 2 000  | stratified       | 0.983                   | 1.000                     |
+| 2 000  | subtype-holdout  | 0.970                   | 1.000                     |
+| 8 000  | stratified       | 0.984                   | 1.000                     |
+| 8 000  | subtype-holdout  | 0.972                   | 1.000                     |
+| 20 000 | stratified       | 0.977                   | 1.000                     |
+| 20 000 | subtype-holdout  | 0.974                   | 1.000                     |
+
+Both baselines recover the true causal motif; the one-hot RF's
+positional features perfectly fit the fixed-position insert, and
+the k-mer LR — which throws away positional information — still
+achieves > 0.97 median AUROC because the 8-mer signal is strong.
+Critically, both baselines *retain the signal under the
+subtype-holdout split*: the ~1 % LR degradation from 0.983
+(stratified, `n = 2000`) to 0.970 (subtype-holdout, same `n`) is
+the noise floor against which fine-tuned FMs should be measured.
+
+Per-subtype cells and full JSON are in
+`benchmarks/results/paper3_baselines_synth.json`; the benchmark
+runs in CI and blocks merge on regression.
+
+This is the floor that fine-tuned FMs must clear in v2. If an FM
+does not exceed the k-mer logistic-regression baseline on the
+stratified split, or fails to reduce the subtype-holdout gap
+relative to the one-hot random forest, the added FM parameters and
+inference cost are not paying off.
+
+# Failure-mode analysis (v2)
+
+The v2 analysis will characterise, for each model, the mutation
+classes where FMs remain systematically worse than baselines *even
+after subtype-stratified fine-tuning*. Hypotheses to be tested:
+
+* **H1**. FMs underperform baselines on positions where subtype B
+  wild-type differs from the tested subtype's wild-type; the FM's
+  training distribution treats the deployment-time wild-type as a
+  variant.
+* **H2**. FMs overperform baselines on positions with
+  well-characterised drug-pressure signals across many drugs (e.g.
+  M184V) because those positions appear frequently in the training
+  corpus regardless of subtype.
+* **H3**. Subtype-stratified fine-tuning (curriculum: B, then A1,
+  then C, then D) closes the H1 gap more than naive fine-tuning
+  across all subtypes at once.
+
+These are preregistered here and will be tested in v2 against the
+frozen SAWA v0.1.0 vintage.
+
+# Real-data application (preregistered)
+
+The v2 real-data analysis is preregistered in
+`paper3_foundation/preregistration.md`. Summary:
+
+* **Cohort:** SAWA v0.1.0, subtypes `{A1, B, C, D, CRF02_AG}` with
+  `n ≥ 500` per subtype (subtypes below this threshold reported in a
+  supplement, not the primary comparison).
+* **Splits:** both stratified and subtype-holdout, seed-locked.
+* **Models:** two baselines (this paper) plus ESM-2 and Evo (frozen
+  backbone + fully fine-tuned + subtype-stratified fine-tune).
+* **Primary metric:** per-(drug × subtype) AUROC and PR-AUC with
+  500-bootstrap 95 % percentile CIs.
+* **Primary hypothesis:** under the subtype-holdout split, ESM-2 and
+  Evo exhibit an AUROC gap between B (train) and non-B (test) whose
+  95 % CI excludes zero. Subtype-stratified fine-tuning reduces the
+  gap by ≥ 50 % of its magnitude in the vanilla fine-tune.
+* **Multiple testing:** Benjamini–Hochberg FDR at `q = 0.05` across
+  the drug × subtype cell grid.
+
+Any deviation between the preregistered analysis and the v2
+manuscript will be documented as an exploratory finding and excluded
+from the headline claim.
 
 # Discussion
 
-<!--
-- Which mutation classes are hardest for FMs
-- Whether subtype-stratified curriculum helps > naive fine-tune
-- The cost of a per-subtype FM (compute, checkpoint storage)
-- What KEMRI data would add
--->
+Subtype composition of the training corpus is a form of covariate
+shift that is easy to identify structurally but hard to fix with
+model architecture alone. The two natural mitigations are (a)
+subtype-balanced pre-training corpora, which would require
+re-training the FMs and is out of reach for a single lab, and (b)
+subtype-stratified fine-tuning, which is within reach and is what
+this benchmark's v2 will evaluate. Reporting the *gap* — pre- and
+post-fine-tuning — matters more than reporting only the post-tuning
+metric: a small gap post-tuning is only informative if the pre-tuning
+gap was large. The subtype-holdout split makes this comparison
+inspectable.
 
-# Availability
+Two limitations bear noting even at the protocol stage:
 
-Source: <https://github.com/Neoforge-Labs/SAWA>. Benchmark code:
-`foundation_models/`. Preregistration:
-`paper3_foundation/preregistration.md` (TBA). Frozen data vintage
-via Zenodo DOI. License: MIT.
+* **Sierra-level ground truth is not clinical outcome.** Labels are
+  derived from HIVdb rules, not from patient response to therapy.
+  This is a benchmark of "how well do you predict what Sierra
+  would say," not "how well do you predict clinical failure." The
+  clinical-endpoint benchmark requires paired virological outcome
+  data and is out of scope for a public-sequence-only paper; it is
+  the natural extension in Paper 4 (KEMRI deployment).
+* **Non-B is not monolithic.** Aggregating A1, C, D as "non-B" for
+  reporting convenience obscures within-non-B heterogeneity; the
+  primary reporting is per-subtype, not per-B / non-B, precisely to
+  avoid this.
+
+Future work is (i) the v2 FM run against SAWA v0.1.0; (ii)
+integration of clinical outcome data via Paper 4 (KEMRI); (iii)
+extension to ESM-C and to nucleotide-native alternatives beyond
+Evo; (iv) evaluation of parameter-efficient fine-tuning (LoRA,
+QLoRA) as a cost-controllable subtype-stratification strategy.
+
+# Availability {#sec-availability}
+
+* Source: <https://github.com/Neoforge-Labs/SAWA>
+* Benchmark code: `foundation_models/`
+* Baseline evaluator: `foundation_models/evaluate.py`
+* Baseline models: `foundation_models/baselines.py`
+* Dataset adapter: `foundation_models/data.py`
+* Synthetic baseline benchmark: `benchmarks/paper3_baselines_synth.py`;
+  results in `benchmarks/results/paper3_baselines_synth.json`
+* Preregistration: `paper3_foundation/preregistration.md`
+* Archived release: Zenodo DOI `10.5281/zenodo.XXXXXXX` (issued on
+  tag `paper3-v0.1.0`)
+* License: MIT (code), CC-BY-4.0 (manuscript)
+
+Every quantitative claim in the Results section maps to a benchmark
+script under `benchmarks/` whose result JSON is committed and
+CI-verified.
 
 # Acknowledgements
 
-<!--
-Compute credits for FM fine-tuning: TBA.
-Stanford HIVdb Sierra, LANL, GenBank for data.
-ESM / Evo / DoWhy teams for the FMs and tools.
--->
+The ESM [@esm2_2023] and Evo [@evo_2024] teams for open weights and
+training-code releases. Stanford HIVdb Sierra [@sierra2019]
+maintainers for the labelling substrate. The scikit-learn
+[@pedregosa2011] and Polars [@polars] teams for the baseline
+implementation and data-manipulation substrates. This work uses only
+public sequence data (LANL, GenBank); no clinical or KEMRI patient
+data enters the benchmark until a Data Sharing Agreement is signed
+and documented.
+
+# Author contributions
+
+Kelyn Njeri: conceptualisation, benchmark design, software
+implementation, baseline evaluation, preregistration, manuscript.
+Co-authorship for Paper 3 v2 will be finalised on completion of the
+FM comparison and is expected to include Edinburgh
+(Weisse / Leigh Brown / Atkins) and KEMRI (Chohan) collaborators.
 
 # References {.unnumbered}
 
