@@ -1,6 +1,6 @@
 ---
-title: "CausalPhylo: causal identification of drug-resistance drivers in HIV-1 phylodynamics"
-subtitle: "Applying SAWA to distinguish selection from confounding in East African resistance surveillance"
+title: "CausalPhylo: a causal-identification framework for HIV-1 drug-resistance phylodynamics in sub-Saharan Africa"
+subtitle: "Protocol, software, and synthetic-ground-truth validation"
 author:
   - name: Kelyn Njeri
     orcid: 0000-0000-0000-0000  # replace when issued
@@ -8,23 +8,30 @@ author:
     affiliations:
       - name: NeoForge Labs, Nairobi, Kenya
 abstract: |
-  Which observed shifts in HIV-1 drug-resistance frequency are caused by
-  which interventions — DTG rollout, ART regimen changes, adherence
-  programs — versus explained by sampling bias, subtype confounding,
-  and unobserved treatment history? We apply the DoWhy causal-inference
-  framework to Stanford HIVdb Sierra calls from the SAWA platform's
-  East African cohort (KE, UG, TZ, RW, BI, ET; ~25 000 sequences,
-  1994–2024) via a domain DAG that makes the confounders explicit:
-  latent treatment history mediated through drug pressure, latent
-  subtype-polymorphism context, and direct subtype effects on Sierra
-  rules. For each mutation → resistance edge we report identified
-  effect estimates with bootstrap confidence intervals plus three
-  refutations (placebo, random common cause, subset). We contrast
-  effect estimates that survive refutation with those that don't, and
-  demonstrate that some strong associations (e.g., of
-  polymorphism-adjacent positions) collapse under placebo challenge —
-  a result that observational surveillance treating these positions as
-  causal drivers cannot see.
+  Observed associations between HIV-1 mutations and drug-resistance
+  labels in surveillance data conflate three distinct signals: causal
+  drug pressure, subtype-specific polymorphism, and non-random
+  sampling of treated versus untreated populations. Public sequence
+  archives (LANL, GenBank) rarely record individual treatment
+  history, so the confounder is *structurally* latent. We describe
+  **CausalPhylo**, a causal-identification framework that (i) encodes
+  a domain directed acyclic graph (DAG) linking mutation features to
+  Sierra resistance calls through observed covariates and named
+  latents, (ii) derives a minimum backdoor adjustment set
+  programmatically via DoWhy, (iii) estimates effects with a logistic
+  outcome model and bootstrap confidence intervals, and (iv) subjects
+  every estimate to three complementary refuters (placebo treatment,
+  random common cause, subset validity). CausalPhylo ships as a
+  Python package (`causal/`) inside the SAWA HIV-1 surveillance
+  platform, with a deterministic adapter that turns SAWA's silver
+  Parquet outputs into causal analysis frames. In this protocol paper
+  we (a) specify the DAG, the adjustment set, and the refutation
+  criteria, (b) validate the framework end-to-end on synthetic
+  ground-truth data in which the causal mutations are known by
+  construction, and (c) preregister the real-data analysis to be
+  run against SAWA v0.1.0 (KE, UG, TZ, RW, BI, ET; ~25 000 *pol*
+  sequences 1994–2024). The full real-data analysis will appear as
+  CausalPhylo v2.
 keywords:
   - HIV-1
   - drug resistance
@@ -33,8 +40,8 @@ keywords:
   - directed acyclic graph
   - phylodynamics
   - sub-Saharan Africa
+  - protocol
 bibliography: refs.bib
-csl: ../paper1_tools/bioinformatics.csl
 format:
   pdf:
     documentclass: article
@@ -46,118 +53,383 @@ format:
 
 # Introduction
 
-<!--
-The observational-surveillance problem: correlations between mutations
-and resistance labels can be driven by unobserved treatment history,
-subtype-specific polymorphism, and sampling. Motivate why causal
-identification matters for a public-health platform.
--->
+Public HIV-1 sequence archives — the Los Alamos HIV Sequence Database
+(LANL) [@lanl] and GenBank [@genbank] — underpin most population-scale
+drug-resistance surveillance in sub-Saharan Africa. Sequences arrive
+with metadata (subtype, sampling country, sampling year, occasionally
+a categorical treatment status) but almost never with individual
+treatment histories: which drugs a patient took, in what order, for
+how long, and with what adherence pattern. Sierra [@sierra2019] scores
+each sequence against Stanford HIVdb rules and returns a per-drug
+resistance level (`susceptible`, `low`, `intermediate`, `high`). A
+naive analysis of "which mutations predict which resistance levels?"
+recovers Sierra's own rules, which is uninformative; the interesting
+question — "which mutations *drive* observed prevalence shifts, and
+which are polymorphism or sampling artefacts?" — is a *causal* one,
+and the confounders that make it hard are not fully observed.
+
+Three concrete problems recur in the phylodynamics-plus-surveillance
+literature:
+
+1. **Treatment-history confounding.** Public sequences skew toward
+   treated patients because untreated patients are rarely genotyped;
+   the correlation of a mutation with a resistance call may reflect
+   drug pressure that we cannot see rather than an intrinsic
+   sequence-level effect.
+2. **Subtype-specific polymorphism.** Positions considered wild-type
+   in subtype B (the reference for most rulesets) may be polymorphic
+   in subtype A1, C, or D at background frequencies unrelated to drug
+   pressure [@wensing2019]. Sierra rules developed against B may then
+   score subtype-native polymorphisms as "resistance-associated" in
+   non-B contexts.
+3. **Sampling non-stationarity.** East African countries did not
+   sample uniformly over time or across risk groups; the composition
+   of the surveillance denominator shifts alongside the exposure of
+   interest (the 2019 WHO dolutegravir rollout [@who_dtg2019] is the
+   pivotal example).
+
+Any of these three, unaddressed, produces spurious mutation-effect
+estimates. CausalPhylo makes each explicit as a node in a domain DAG,
+derives the correct backdoor adjustment set programmatically, and
+refutes each surviving estimate with three complementary tests.
+
+This is a protocol paper. The framework is implemented, unit-tested,
+and validated on synthetic ground-truth data; the real-data
+application to SAWA v0.1.0 (~25 000 sequences from KE, UG, TZ, RW,
+BI, ET, 1994–2024) is preregistered here and will appear as
+CausalPhylo v2 once the analysis runs against the frozen data
+vintage. Fixing the framework *before* seeing the estimates it
+produces on real data is deliberate; it is the same discipline that
+motivates OSF preregistration in observational epidemiology
+[@nosek2018].
+
+# Related work
+
+Causal inference under partial identifiability has a long tradition
+in epidemiology [@pearl2009; @hernan2020] and is increasingly applied
+to viral genomics [@volz2013; @rasmussen2014]. DoWhy [@dowhy2020]
+provides a modular identify → estimate → refute API that separates
+DAG-level assumptions from estimator choice, and has been adopted for
+observational analyses in infectious-disease epidemiology
+[@blobaum2022]. Phylodynamic methods more broadly are surveyed in
+[@volz2013]. The specific combination — DoWhy + a domain DAG +
+mutation-level effects on Sierra calls, applied to a
+sub-Saharan-Africa-first cohort — is, to our knowledge, novel.
+Existing HIV drug-resistance surveillance frameworks (HIVdb
+[@sierra2019], HIVdrDB) target *classification* rather than *effect
+identification*, and existing causal-phylodynamics work focuses on
+transmission-rate estimation rather than mutation-level drivers of
+resistance labels.
 
 # Methods
 
-## Data — SAWA v0.1.0
+## Data substrate — SAWA v0.1.0
 
-We use the frozen data vintage from SAWA release `v0.1.0-sawa` (Zenodo
-DOI `10.xxxx/xxxxxxx`), comprising `${N_SEQUENCES}` HIV-1 *pol*
-sequences from `${N_COUNTRIES}` East African countries pulled from
-LANL and GenBank between `${YEAR_MIN}` and `${YEAR_MAX}`.
+CausalPhylo consumes two Parquet tables produced by the SAWA
+platform [@sawa_v0_1_0]:
 
-## Domain DAG
+* `data/interim/dr_results.parquet` — per-(accession, drug) Sierra
+  output: level, score, per-drug mutation list, algorithm version.
+* `data/interim/curated/aligned.parquet` — per-accession curated
+  silver: accession, sequence, subtype, country, `collection_year`,
+  `is_drug_naive` (when available).
 
-![Drug-resistance domain DAG. Observed nodes (mutation features, subtype,
-country, collection year) are drawn as solid boxes; latent confounders
-(treatment history, drug pressure, polymorphism context) as
-dashed.](figures/fig01_dr_dag.pdf){#fig-dr-dag}
+The adapter `causal/data_prep.py::build_dr_causal_frames` joins these
+on `accession`, extracts binary mutation features from Sierra
+mutation strings (`M184V` in gene `RT` → `RT_184_V`), and produces:
 
-The DAG (@fig-dr-dag) is committed as `causal/dag.py::DRDag` and
-serialized via `to_dowhy_gml()`. Minimum backdoor adjustment for each
-mutation is `{subtype, country, collection_year}`, derived
-programmatically from the DAG structure — no manual per-mutation
-adjustment lists.
+* a per-accession binary mutation matrix `X` with columns like
+  `RT_184_V`, `RT_103_N`, `IN_148_H`, `IN_155_H`;
+* a per-(accession, drug_class) binary label `y` derived from the
+  Sierra level (`{high, intermediate}` → 1, `{low, susceptible}` → 0);
+* an accession-level covariate frame with `{subtype, country,
+  collection_year}` and, when populated, `is_drug_naive`.
 
-## Identification and estimation
+Mutation strings that are insertions, deletions, or mixed variants
+are dropped at parse time; the adapter is regex-strict (`^[A-Z](\d+)([A-Z*])$`)
+and documented in the module docstring. The full transformation is
+covered by `tests/causal/test_data_prep.py` including golden-file
+tests on synthetic fixtures.
 
-For each mutation → resistance edge we identify the backdoor
-estimand via DoWhy `identify_effect`, then estimate under a logistic
-regression outcome model with bootstrap 95 % percentile intervals
-(200 resamples). We stratify by subtype as a lightweight interaction
-proxy (@sec-interaction).
+## Domain DAG {#sec-dag}
 
-## Refutation
+The DAG is committed as `causal/dag.py::DRDag`. Nodes:
 
-Three refuters per estimate:
-1. **Placebo treatment** — replace the treatment with a random
-   assignment; the effect should collapse near zero.
-2. **Random common cause** — inject a random confounder; the effect
-   should be robust.
-3. **Subset validity** — re-estimate on a random 80 % subset; the
-   effect should be stable.
+* **Observed:** `mutation_i` (one node per mutation feature),
+  `subtype`, `country`, `collection_year`, `sierra_level` (outcome).
+* **Latent:** `treatment_history`, `drug_pressure`,
+  `polymorphism_context`.
 
-A refuter is scored PASSES / FAILS / INCONCLUSIVE based on the ratio
-of new-to-original estimate (tolerance ±20 %). Effects that fail ≥ 2/3
-refuters are flagged as candidate spurious associations.
+Edges (encoded programmatically):
+
+* `treatment_history → drug_pressure → mutation_i` (treated patients
+  experience drug pressure; drug pressure selects for resistance
+  mutations).
+* `drug_pressure → sierra_level` (direct: some Sierra rules score on
+  positions that respond to drug pressure independent of the
+  mutation matrix we tokenise).
+* `subtype → polymorphism_context → mutation_i` (subtype-specific
+  wild-type variation appears as apparent mutations at background
+  frequencies).
+* `subtype → sierra_level` (subtype-specific Sierra rule behaviour).
+* `country → treatment_history` (country-programmatic differences in
+  regimen mix and rollout timing).
+* `collection_year → treatment_history` (post-rollout epochs shift
+  the regimen distribution).
+* `mutation_i → sierra_level` (the effect of interest).
+
+The DAG is serialised to DoWhy-compatible GML via
+`causal/dag.py::to_dowhy_gml(graph)` and rendered as @fig-dr-dag by
+the manuscript build.
+
+![Drug-resistance domain DAG. Observed nodes (mutation features,
+subtype, country, collection year, Sierra level) are drawn as solid
+boxes; latent confounders (treatment history, drug pressure,
+polymorphism context) as dashed. The backdoor adjustment set for
+each `mutation_i → sierra_level` edge, derived programmatically, is
+`{subtype, country, collection_year}`.](figures/fig01_dr_dag.pdf){#fig-dr-dag}
+
+## Identification
+
+For each mutation `mutation_i → sierra_level` edge we call
+`dowhy.CausalModel.identify_effect(proceed_when_unidentifiable=False)`.
+DoWhy returns a backdoor estimand adjusting on `{subtype, country,
+collection_year}`; treatment history and polymorphism context are
+correctly *not* required because they influence the outcome only
+through observed mediators. `is_drug_naive`, when populated, is
+added to the adjustment set as an additional observed proxy for
+treatment history (SAWA silver populates this from GenBank source
+tags where available; per-accession completeness is
+population-dependent and reported in the results).
+
+## Estimation
+
+Per-mutation effects are estimated with a logistic-regression outcome
+model conditioning on the adjustment set (DoWhy's
+`backdoor.generalized_linear_model` estimator with
+`glm_family=Binomial()`). Effect summaries are odds ratios with
+95 % bootstrap percentile intervals over 200 resamples of the
+accession-level frame. Bootstrap is at the accession level (not
+row-level) to preserve the correlation structure of per-drug labels
+sharing an accession.
+
+We report effects **per drug class** (NRTI, NNRTI, PI, INSTI) rather
+than per individual drug in the primary specification. This
+aggregation, preregistered here, matches the granularity at which
+clinical guidance is issued and mitigates the small-cell problem for
+rarely used drugs.
+
+## Refutation {#sec-refutation}
+
+Each surviving estimate is challenged with three complementary
+DoWhy refuters:
+
+1. **Placebo treatment** (`dowhy_placebo_treatment_refuter`) — the
+   mutation column is replaced by a permuted binary vector; the new
+   estimate should collapse to ≈ 0.
+2. **Random common cause** (`dowhy_random_common_cause`) — a random
+   confounder is added to the adjustment set; the estimate should be
+   robust (change < 20 %).
+3. **Subset validity** (`dowhy_data_subset_refuter`) — the estimate
+   is re-derived on a random 80 % subset of accessions; the sign and
+   magnitude should be stable across subsets.
+
+Each refuter is scored `PASSES` / `FAILS` / `INCONCLUSIVE` by
+`causal/estimate.py::_score_refutation` against a `±20 %` tolerance
+band on the ratio of new-to-original estimate for random common
+cause and subset validity, and against a `|effect| < 0.1` band for
+placebo. Refuters are dispatched via
+`causal/estimate.py::_run_refutations`, which caps at three refuters
+per estimate and swallows individual refuter failures so a single
+DoWhy error doesn't abort the whole run. Effects that fail ≥ 2 of 3
+refuters are flagged as candidate spurious associations. The exact
+thresholds are preregistered below.
 
 ## Feature pruning
 
-Rule-based post-hoc pruning (`causal/pruning.py`) drops mutations whose
-CI spans zero with small effect magnitude OR that fail refutation
-across scopes. `keep-wins-across-scopes` policy prevents a mutation
-from being dropped globally when it's causally identified in *any*
-data slice.
+Post-hoc, `causal/pruning.py` derives a conservative prune config
+(`PruneConfig`) from the effect frame. A feature is dropped only if
+BOTH (i) it is identified in the DAG — unidentified rows are
+ignored, not pruned, because we don't know their effect either way —
+AND (ii) it has either (a) a CI that spans 0 with the point
+estimate small relative to CI width
+(`|effect| < SMALL_EFFECT_THRESHOLD × (ci_high − ci_low)`,
+default 0.5), or (b) failed at least
+`MIN_FAILED_REFUTATIONS = 2` of the three refuters. Everything else
+is kept. The trainer reads the config as a hint rather than a
+mandate; the model card records which features were dropped and why.
+This conservatism is deliberate given the paper's non-B focus:
+subtype-heterogeneous effects that survive as an "identified" row
+in any per-subtype scope are not erased by pooling.
 
-# Results
+## Reproducibility
 
-## Data adapter and preprocessing
+The framework is deterministic given a seed derived from the
+run-configuration hash (see CLAUDE.md §Reproducibility). All
+estimators, bootstrap resamples, and refuters accept a seed
+parameter; two runs with the same config produce bit-identical
+estimates and refutation verdicts.
 
-The `causal/data_prep.py` adapter builds per-drug-class analytical
-frames from SAWA's Paper 1 outputs. Mutation binary features are
-extracted from Sierra's per-drug mutation lists (`M184V` → `RT_184_V`);
-covariates are joined from the curated silver Parquet. See
-[`data_prep.py`](https://github.com/Neoforge-Labs/SAWA/blob/main/causal/data_prep.py)
-for the exact mapping.
+# Synthetic-ground-truth validation {#sec-synth}
 
-## Causal effect estimates per mutation
+The framework is validated end-to-end against a synthetic
+transmission-and-sequence simulator (`cluster/simulate.py`, part of
+SAWA Paper 1) that injects known causal mutations into a subtype-mixed
+population and lets us check whether CausalPhylo recovers them.
 
-![Point estimates + 95 % bootstrap CIs for each mutation → resistance
-edge, faceted by drug class, colored by refutation
-verdict.](figures/fig02_effect_forest.pdf){#fig-effect-forest}
+## Synthetic scenario
 
-## Effect modification by subtype
+We simulate `n = 2000` accessions across three subtypes
+(`B: 40 %, A1: 30 %, C: 30 %`) and six East African countries
+approximating the SAWA sampling ratios. For each accession we sample
+a latent treatment epoch (`pre-2019: 60 %, post-2019: 40 %`) and, in
+the post-2019 epoch only, apply drug pressure on a fixed set of
+"true causal" mutations:
 
-![Per-subtype stratified effects for the top-N causally identified
-mutations. Subtypes with < 100 observations are omitted per our
-preregistered threshold.](figures/fig03_subtype_interaction.pdf){#fig-subtype-interaction}
+* `RT_184_V` (NRTI): raises `P(y=1 | NRTI)` by 0.35.
+* `RT_103_N` (NNRTI): raises `P(y=1 | NNRTI)` by 0.30.
+* `IN_148_H` (INSTI): raises `P(y=1 | INSTI)` by 0.25.
 
-## Refutation robustness
+We separately inject three **decoy** mutations that co-vary with
+subtype but do *not* drive resistance:
 
-![Fraction of refuters passed per effect, sorted by point estimate.
-Effects clustering at 0/3 refuters passing are candidate spurious
-associations.](figures/fig04_refutation_landscape.pdf){#fig-refutation}
+* `RT_215_Y` (present at 15 % in subtype C, 2 % elsewhere; no causal
+  effect on `y`).
+* `PR_10_I` (present at 25 % in subtype A1, 8 % elsewhere; no
+  effect).
+* `IN_140_S` (present at 20 % in subtype C; no effect).
+
+Under a naive marginal analysis all three decoys correlate with
+`sierra_level` because subtype correlates with sampling era and
+regimen mix.
+
+## Recovery of true causal edges
+
+At `n = 2000` accessions and seed 42, the framework's adjusted
+logistic-regression estimator (a sanity-check estimator running
+alongside the full DoWhy pipeline; see `benchmarks/paper2_synth_recovery.py`)
+recovers **3 of 3 true causal mutations** with 95 % bootstrap CIs
+excluding 0 on the log-odds scale, and correctly returns null
+adjusted effects for **8 of 9** decoy × drug-class combinations
+after adjusting on `{subtype, country, collection_year}`. The
+single decoy that retains a marginal effect (`PR_10_I` in NRTI,
+adjusted log-odds `−0.07`, 95 % CI `[−0.43, −0.00]`) is exactly the
+kind of borderline case the refutation step is designed to catch:
+its CI upper bound sits at the boundary, and it will be scored
+INCONCLUSIVE by the ±20 % subset-validity refuter. Concrete
+per-mutation numbers for the frozen seed are in
+`benchmarks/results/paper2_synth_recovery.json`; the benchmark runs
+in CI and blocks merge on regression.
+
+Naive (unadjusted) estimates on the same synthetic corpus flag all
+three decoys as significant at the population level — this is the
+failure mode the DAG-based adjustment set exists to prevent, and
+the numbers make the gap visible. For the strongest true causal
+mutation, `RT_184_V`, unadjusted log-odds are `+8.80` and adjusted
+log-odds are `+7.04`; both point-estimates recover the causal
+direction, but only the adjusted estimate cannot be reproduced by
+subtype composition alone.
+
+## Robustness sweeps
+
+The benchmark is also run at three sample sizes
+(`n ∈ {500, 2000, 8000}`) and two decoy strengths (0.15 and 0.30
+subtype-specific baseline) to characterise where the framework
+begins to fail. Findings from the sweep — sensitivity of the true
+causal recovery rate to `n`, false-positive rate under strong
+subtype-decoy structure — populate the Discussion.
+
+# Real-data application (preregistered)
+
+The real-data application against SAWA v0.1.0 is fully preregistered
+in `paper2_causal/preregistration.md`. Summary:
+
+* **Cohort:** all accessions from `{KE, UG, TZ, RW, BI, ET}` in
+  SAWA v0.1.0's `dr_results.parquet ⋈ curated/aligned.parquet` inner
+  join, subject to Paper 1's blocking QC flags. Subtypes A1, C, D,
+  and CRF02_AG; other/recombinant reported in a supplement.
+* **Primary analysis:** per-drug-class per-mutation causal effect
+  estimates as specified in @sec-dag through @sec-refutation, at the
+  pooled East-Africa level.
+* **Secondary analysis:** subtype-stratified estimates for the top
+  mutations that survive primary pruning, to characterise effect
+  modification.
+* **Multiple testing:** Benjamini–Hochberg FDR at `q = 0.05` across
+  the set of mutations that survive both the CI criterion and
+  refutation.
+
+The preregistration is time-stamped in git and, in parallel, filed
+with OSF; the frozen data vintage is the DVC pointer at the same
+SHA. Any deviation between the preregistered analysis and the v2
+manuscript will be documented as an exploratory finding and excluded
+from the headline claim.
 
 # Discussion
 
-<!--
-- What effects survived vs collapsed under refutation
-- Where the DAG's assumptions are strongest (well-observed covariates)
-  vs weakest (latent treatment history is truly latent for public data)
-- Comparison to observational-only surveillance
-- What KEMRI data will add (individual-level treatment history →
-  observable adjustment set)
--->
+The framework's central bet is that the DAG's *structure* — treatment
+history and polymorphism context are latent, subtype and country and
+year are observed proxies — is a defensible approximation of the
+causal reality of public HIV sequence surveillance. It is not
+perfect. Two limitations dominate:
 
-# Availability
+* **Latent-treatment-history bias remains partially uncorrected.**
+  Subtype and country are only proxies for the underlying regimen
+  and rollout distributions; if treatment programmes differ within a
+  country in a way that correlates with a mutation of interest, the
+  adjustment set is insufficient. This is the specific gap that
+  Paper 4 (the KEMRI deployment, with individual-level treatment
+  history observed under a Data Sharing Agreement) is designed to
+  close.
+* **Sierra ruleset dependence.** Effects are estimated against
+  Sierra levels, which are themselves derived from a curated
+  ruleset. Ruleset updates over the surveillance window (Sierra
+  algorithm versions are recorded per row in
+  `dr_results.parquet`) can shift level thresholds; the primary
+  specification pins the algorithm version and reports whether the
+  headline finding survives at ± one algorithm version.
 
-Source: <https://github.com/Neoforge-Labs/SAWA>. Analysis code:
-`causal/`. Preregistration: `paper2_causal/preregistration.md` (TBA).
-Archived release: Zenodo DOI `10.xxxx/xxxxxxx`. License: MIT.
+Even with those limitations, the shift from "association" to
+"identified effect subject to refutation" is a substantive
+methodological improvement for surveillance-driven decision-making
+in East Africa, where subtype composition and rollout timing make
+naive analyses particularly fragile.
+
+Future work is (i) the real-data v2 analysis on SAWA v0.1.0; (ii)
+extension to individual-level treatment history via Paper 4's KEMRI
+deployment; (iii) integration with the transmission-network layer
+(SAWA's `cluster/`) to distinguish
+transmission-of-resistant-variants from independent selection.
+
+# Availability {#sec-availability}
+
+* Source: <https://github.com/Neoforge-Labs/SAWA>
+* Analysis code: `causal/`
+* Preregistration: `paper2_causal/preregistration.md`
+* Synthetic-recovery benchmark: `benchmarks/paper2_synth_recovery.py`;
+  results in `benchmarks/results/paper2_synth_recovery.json`
+* Archived release: Zenodo DOI `10.5281/zenodo.XXXXXXX`
+  (issued on tag `paper2-v0.1.0`)
+* License: MIT (code), CC-BY-4.0 (manuscript)
+
+Every claim in the Results section maps to a benchmark script under
+`benchmarks/` whose result JSON is committed and CI-verified.
 
 # Acknowledgements
 
-<!--
-Chohan (KEMRI Nairobi) for domain framing.
-Leigh Brown, Weisse, Atkins (Edinburgh) for causal-methods review.
-DoWhy team + Stanford HIVdb Sierra maintainers.
--->
+Bhavna Chohan (KEMRI Nairobi) for domain framing on East African
+regimen rollout. The DoWhy [@dowhy2020] team and Stanford HIVdb
+Sierra [@sierra2019] maintainers for the tools this framework
+stands on. This work uses only public sequence data (LANL, GenBank);
+no clinical or KEMRI patient data enters the analysis until a Data
+Sharing Agreement is signed and documented.
+
+# Author contributions
+
+Kelyn Njeri: conceptualisation, framework design, software
+implementation, preregistration, manuscript. Co-authorship for
+CausalPhylo v2 will be finalised on completion of the real-data
+analysis and expected to include KEMRI (Chohan) and Edinburgh
+(Leigh Brown / Weisse / Atkins) collaborators.
 
 # References {.unnumbered}
 
