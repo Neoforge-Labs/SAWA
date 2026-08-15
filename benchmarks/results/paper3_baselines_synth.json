@@ -1,0 +1,375 @@
+{
+  "stage": "paper3_baselines_synth",
+  "seed": 42,
+  "generated_at": "2026-08-14",
+  "host": {
+    "platform": "Linux-6.8.0-124-generic-aarch64-with-glibc2.35",
+    "machine": "aarch64",
+    "python": "3.10.12",
+    "cpu_count": 4
+  },
+  "schema_version": "0.1.0",
+  "notes": "Baseline benchmark for Paper 3 v1 Results section. True motif AAAAAAAA at pos 20 (subtype-shared, causal); decoy motif GGGGGGGG at pos 60 in subtype C (non-causal).",
+  "measurements": [
+    {
+      "n": 2000,
+      "strategy": "stratified",
+      "kmer_lr_auroc_median": 0.9832915622389307,
+      "kmer_lr_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 100,
+          "n_positive": 35,
+          "auroc": 0.9907692307692308,
+          "pr_auc": 0.9830377118228466,
+          "brier": 0.193702292981244,
+          "ece": 0.31946424021152064
+        },
+        {
+          "drug": "3TC",
+          "subtype": "B",
+          "n": 104,
+          "n_positive": 42,
+          "auroc": 0.9800307219662058,
+          "pr_auc": 0.9673204196408695,
+          "brier": 0.20650048909707655,
+          "ece": 0.34135231255691284
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 101,
+          "n_positive": 38,
+          "auroc": 0.9832915622389307,
+          "pr_auc": 0.9604045388452737,
+          "brier": 0.20149484580263646,
+          "ece": 0.32027760139633005
+        }
+      ],
+      "one_hot_rf_auroc_median": 1.0,
+      "one_hot_rf_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 100,
+          "n_positive": 35,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.0066170000000000005,
+          "ece": 0.06649999999999998
+        },
+        {
+          "drug": "3TC",
+          "subtype": "B",
+          "n": 104,
+          "n_positive": 42,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.006370192307692308,
+          "ece": 0.0674038461538462
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 101,
+          "n_positive": 38,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.005302970297029703,
+          "ece": 0.060198019801980154
+        }
+      ]
+    },
+    {
+      "n": 2000,
+      "strategy": "subtype_holdout",
+      "kmer_lr_auroc_median": 0.970312755764593,
+      "kmer_lr_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 649,
+          "n_positive": 225,
+          "auroc": 0.9679245283018868,
+          "pr_auc": 0.9274625346898656,
+          "brier": 0.2155611521176425,
+          "ece": 0.24674691277794653
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 667,
+          "n_positive": 247,
+          "auroc": 0.972700983227299,
+          "pr_auc": 0.9435417852709498,
+          "brier": 0.2193271667886968,
+          "ece": 0.2704093771007432
+        }
+      ],
+      "one_hot_rf_auroc_median": 1.0,
+      "one_hot_rf_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 649,
+          "n_positive": 225,
+          "auroc": 1.0,
+          "pr_auc": 0.9999999999999999,
+          "brier": 0.011651001540832049,
+          "ece": 0.09046224961479199
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 667,
+          "n_positive": 247,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.009929835082458772,
+          "ece": 0.08629685157421288
+        }
+      ]
+    },
+    {
+      "n": 8000,
+      "strategy": "stratified",
+      "kmer_lr_auroc_median": 0.9843327454438565,
+      "kmer_lr_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 399,
+          "n_positive": 139,
+          "auroc": 0.9672385168788047,
+          "pr_auc": 0.9081305058378423,
+          "brier": 0.14738552195214838,
+          "ece": 0.25757176602389803
+        },
+        {
+          "drug": "3TC",
+          "subtype": "B",
+          "n": 419,
+          "n_positive": 150,
+          "auroc": 0.9889714993804213,
+          "pr_auc": 0.9790810541230938,
+          "brier": 0.1387630598901747,
+          "ece": 0.27928113264032983
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 387,
+          "n_positive": 135,
+          "auroc": 0.9843327454438565,
+          "pr_auc": 0.9618342305895216,
+          "brier": 0.14353161541645126,
+          "ece": 0.28541595000187825
+        }
+      ],
+      "one_hot_rf_auroc_median": 1.0,
+      "one_hot_rf_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 399,
+          "n_positive": 139,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.0025285714285714295,
+          "ece": 0.036115288220551385
+        },
+        {
+          "drug": "3TC",
+          "subtype": "B",
+          "n": 419,
+          "n_positive": 150,
+          "auroc": 1.0,
+          "pr_auc": 0.9999999999999999,
+          "brier": 0.0020758949880668267,
+          "ece": 0.0334606205250597
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 387,
+          "n_positive": 135,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.0022116279069767453,
+          "ece": 0.033927648578811365
+        }
+      ]
+    },
+    {
+      "n": 8000,
+      "strategy": "subtype_holdout",
+      "kmer_lr_auroc_median": 0.9720976821801712,
+      "kmer_lr_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 2642,
+          "n_positive": 918,
+          "auroc": 0.9676102846397646,
+          "pr_auc": 0.9227126811862929,
+          "brier": 0.18109532347307683,
+          "ece": 0.23835723841637138
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 2573,
+          "n_positive": 893,
+          "auroc": 0.976585079720578,
+          "pr_auc": 0.944476818628995,
+          "brier": 0.1789493951850179,
+          "ece": 0.26570396670666474
+        }
+      ],
+      "one_hot_rf_auroc_median": 1.0,
+      "one_hot_rf_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 2642,
+          "n_positive": 918,
+          "auroc": 1.0,
+          "pr_auc": 1.0000000000000002,
+          "brier": 0.004679901589704769,
+          "ece": 0.0530847842543528
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 2573,
+          "n_positive": 893,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.004749630781189273,
+          "ece": 0.052607850757870195
+        }
+      ]
+    },
+    {
+      "n": 20000,
+      "strategy": "stratified",
+      "kmer_lr_auroc_median": 0.976568836688734,
+      "kmer_lr_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 987,
+          "n_positive": 338,
+          "auroc": 0.9817835358904459,
+          "pr_auc": 0.9625587434257872,
+          "brier": 0.10564143034910435,
+          "ece": 0.21063855554412636
+        },
+        {
+          "drug": "3TC",
+          "subtype": "B",
+          "n": 1028,
+          "n_positive": 366,
+          "auroc": 0.9722855067439288,
+          "pr_auc": 0.9359324810955116,
+          "brier": 0.10974079488143348,
+          "ece": 0.2200342586838933
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 990,
+          "n_positive": 339,
+          "auroc": 0.976568836688734,
+          "pr_auc": 0.9471555417784167,
+          "brier": 0.10805451106441814,
+          "ece": 0.21246206871282042
+        }
+      ],
+      "one_hot_rf_auroc_median": 1.0,
+      "one_hot_rf_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 987,
+          "n_positive": 338,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.001433434650455928,
+          "ece": 0.023424518743667674
+        },
+        {
+          "drug": "3TC",
+          "subtype": "B",
+          "n": 1028,
+          "n_positive": 366,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.0013386186770428024,
+          "ece": 0.024289883268482478
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 990,
+          "n_positive": 339,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.001218181818181819,
+          "ece": 0.022141414141414156
+        }
+      ]
+    },
+    {
+      "n": 20000,
+      "strategy": "subtype_holdout",
+      "kmer_lr_auroc_median": 0.9744540834731943,
+      "kmer_lr_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 6567,
+          "n_positive": 2245,
+          "auroc": 0.9732093221710233,
+          "pr_auc": 0.9364347867934562,
+          "brier": 0.14516065331852085,
+          "ece": 0.2721841522276701
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 6588,
+          "n_positive": 2254,
+          "auroc": 0.9756988447753652,
+          "pr_auc": 0.9404159737845581,
+          "brier": 0.14384941587863975,
+          "ece": 0.2767053901688501
+        }
+      ],
+      "one_hot_rf_auroc_median": 1.0,
+      "one_hot_rf_per_subtype": [
+        {
+          "drug": "3TC",
+          "subtype": "A1",
+          "n": 6567,
+          "n_positive": 2245,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.00258841175574844,
+          "ece": 0.03555504796710825
+        },
+        {
+          "drug": "3TC",
+          "subtype": "C",
+          "n": 6588,
+          "n_positive": 2254,
+          "auroc": 1.0,
+          "pr_auc": 1.0,
+          "brier": 0.0023819672131147546,
+          "ece": 0.03408014571949003
+        }
+      ]
+    }
+  ]
+}
