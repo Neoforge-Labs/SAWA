@@ -8,14 +8,18 @@ on:
     branches: [main]
     paths:
       - "src/hivdrwatch/paper1/**"
+      - "causal/dag.py"
       - "notebooks/fig0*.py"
+      - "paper2_causal/notebooks/**"
       - "benchmarks/results/*.json"
       - ".github/workflows/figures.yml"
   pull_request:
     branches: [main]
     paths:
       - "src/hivdrwatch/paper1/**"
+      - "causal/dag.py"
       - "notebooks/fig0*.py"
+      - "paper2_causal/notebooks/**"
       - "benchmarks/results/*.json"
       - ".github/workflows/figures.yml"
   # Nightly regen — GitHub only fires cron on the default branch, and
@@ -66,6 +70,11 @@ jobs:
       - name: Fig 1 — pipeline architecture
         run: uv run python notebooks/fig01_pipeline_architecture.py
 
+      # Paper 2 Fig 1 — DR domain DAG. Rendered from causal/dag.py,
+      # no external data. Always renderable.
+      - name: Paper 2 Fig 1 — DR domain DAG
+        run: uv run python paper2_causal/notebooks/paper2_fig01_dag.py
+
       # Fig 5 needs committed benchmark JSONs. Skip cleanly if missing
       # so a fresh repo without benchmarks still passes.
       - name: Fig 5 — scalability (from committed benchmark JSONs)
@@ -87,5 +96,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: figures
-          path: paper1_tools/figures/
+          path: |
+            paper1_tools/figures/
+            paper2_causal/figures/
           if-no-files-found: ignore

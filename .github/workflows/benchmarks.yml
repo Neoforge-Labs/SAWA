@@ -10,6 +10,8 @@ on:
     paths:
       - "benchmarks/**"
       - "src/hivdrwatch/**"
+      - "foundation_models/**"
+      - "causal/**"
       - ".github/workflows/benchmarks.yml"
 
 concurrency:
@@ -52,6 +54,24 @@ jobs:
         run: uv run python -m benchmarks.scale_cluster
              --sizes 100 200 500
              --out benchmarks/results/scale_cluster.json
+
+      # Paper 2 synthetic-ground-truth causal-recovery benchmark.
+      # Cited by paper2_causal/manuscript.qmd §Results — regressions
+      # here mean the numbers in the manuscript would change on
+      # regenerate, so block merge.
+      - name: Paper 2 — synthetic causal recovery
+        run: uv run python -m benchmarks.paper2_synth_recovery
+             --sizes 500 2000 8000
+             --seed 42
+             --out benchmarks/results/paper2_synth_recovery.json
+
+      # Paper 3 synthetic-ground-truth baseline benchmark. Same
+      # rationale — cited by paper3_foundation/manuscript.qmd.
+      - name: Paper 3 — synthetic baselines
+        run: uv run python -m benchmarks.paper3_baselines_synth
+             --sizes 2000 8000 20000
+             --seed 42
+             --out benchmarks/results/paper3_baselines_synth.json
 
       - name: Commit updated benchmark results
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
