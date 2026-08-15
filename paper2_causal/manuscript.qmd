@@ -1,0 +1,165 @@
+---
+title: "CausalPhylo: causal identification of drug-resistance drivers in HIV-1 phylodynamics"
+subtitle: "Applying SAWA to distinguish selection from confounding in East African resistance surveillance"
+author:
+  - name: Kelyn Njeri
+    orcid: 0000-0000-0000-0000  # replace when issued
+    email: kelyn@neoforge.io
+    affiliations:
+      - name: NeoForge Labs, Nairobi, Kenya
+abstract: |
+  Which observed shifts in HIV-1 drug-resistance frequency are caused by
+  which interventions — DTG rollout, ART regimen changes, adherence
+  programs — versus explained by sampling bias, subtype confounding,
+  and unobserved treatment history? We apply the DoWhy causal-inference
+  framework to Stanford HIVdb Sierra calls from the SAWA platform's
+  East African cohort (KE, UG, TZ, RW, BI, ET; ~25 000 sequences,
+  1994–2024) via a domain DAG that makes the confounders explicit:
+  latent treatment history mediated through drug pressure, latent
+  subtype-polymorphism context, and direct subtype effects on Sierra
+  rules. For each mutation → resistance edge we report identified
+  effect estimates with bootstrap confidence intervals plus three
+  refutations (placebo, random common cause, subset). We contrast
+  effect estimates that survive refutation with those that don't, and
+  demonstrate that some strong associations (e.g., of
+  polymorphism-adjacent positions) collapse under placebo challenge —
+  a result that observational surveillance treating these positions as
+  causal drivers cannot see.
+keywords:
+  - HIV-1
+  - drug resistance
+  - causal inference
+  - DoWhy
+  - directed acyclic graph
+  - phylodynamics
+  - sub-Saharan Africa
+bibliography: refs.bib
+csl: ../paper1_tools/bioinformatics.csl
+format:
+  pdf:
+    documentclass: article
+    number-sections: true
+  html:
+    toc: true
+    code-fold: true
+---
+
+# Introduction
+
+<!--
+The observational-surveillance problem: correlations between mutations
+and resistance labels can be driven by unobserved treatment history,
+subtype-specific polymorphism, and sampling. Motivate why causal
+identification matters for a public-health platform.
+-->
+
+# Methods
+
+## Data — SAWA v0.1.0
+
+We use the frozen data vintage from SAWA release `v0.1.0-sawa` (Zenodo
+DOI `10.xxxx/xxxxxxx`), comprising `${N_SEQUENCES}` HIV-1 *pol*
+sequences from `${N_COUNTRIES}` East African countries pulled from
+LANL and GenBank between `${YEAR_MIN}` and `${YEAR_MAX}`.
+
+## Domain DAG
+
+![Drug-resistance domain DAG. Observed nodes (mutation features, subtype,
+country, collection year) are drawn as solid boxes; latent confounders
+(treatment history, drug pressure, polymorphism context) as
+dashed.](figures/fig01_dr_dag.pdf){#fig-dr-dag}
+
+The DAG (@fig-dr-dag) is committed as `causal/dag.py::DRDag` and
+serialized via `to_dowhy_gml()`. Minimum backdoor adjustment for each
+mutation is `{subtype, country, collection_year}`, derived
+programmatically from the DAG structure — no manual per-mutation
+adjustment lists.
+
+## Identification and estimation
+
+For each mutation → resistance edge we identify the backdoor
+estimand via DoWhy `identify_effect`, then estimate under a logistic
+regression outcome model with bootstrap 95 % percentile intervals
+(200 resamples). We stratify by subtype as a lightweight interaction
+proxy (@sec-interaction).
+
+## Refutation
+
+Three refuters per estimate:
+1. **Placebo treatment** — replace the treatment with a random
+   assignment; the effect should collapse near zero.
+2. **Random common cause** — inject a random confounder; the effect
+   should be robust.
+3. **Subset validity** — re-estimate on a random 80 % subset; the
+   effect should be stable.
+
+A refuter is scored PASSES / FAILS / INCONCLUSIVE based on the ratio
+of new-to-original estimate (tolerance ±20 %). Effects that fail ≥ 2/3
+refuters are flagged as candidate spurious associations.
+
+## Feature pruning
+
+Rule-based post-hoc pruning (`causal/pruning.py`) drops mutations whose
+CI spans zero with small effect magnitude OR that fail refutation
+across scopes. `keep-wins-across-scopes` policy prevents a mutation
+from being dropped globally when it's causally identified in *any*
+data slice.
+
+# Results
+
+## Data adapter and preprocessing
+
+The `causal/data_prep.py` adapter builds per-drug-class analytical
+frames from SAWA's Paper 1 outputs. Mutation binary features are
+extracted from Sierra's per-drug mutation lists (`M184V` → `RT_184_V`);
+covariates are joined from the curated silver Parquet. See
+[`data_prep.py`](https://github.com/Neoforge-Labs/SAWA/blob/main/causal/data_prep.py)
+for the exact mapping.
+
+## Causal effect estimates per mutation
+
+![Point estimates + 95 % bootstrap CIs for each mutation → resistance
+edge, faceted by drug class, colored by refutation
+verdict.](figures/fig02_effect_forest.pdf){#fig-effect-forest}
+
+## Effect modification by subtype
+
+![Per-subtype stratified effects for the top-N causally identified
+mutations. Subtypes with < 100 observations are omitted per our
+preregistered threshold.](figures/fig03_subtype_interaction.pdf){#fig-subtype-interaction}
+
+## Refutation robustness
+
+![Fraction of refuters passed per effect, sorted by point estimate.
+Effects clustering at 0/3 refuters passing are candidate spurious
+associations.](figures/fig04_refutation_landscape.pdf){#fig-refutation}
+
+# Discussion
+
+<!--
+- What effects survived vs collapsed under refutation
+- Where the DAG's assumptions are strongest (well-observed covariates)
+  vs weakest (latent treatment history is truly latent for public data)
+- Comparison to observational-only surveillance
+- What KEMRI data will add (individual-level treatment history →
+  observable adjustment set)
+-->
+
+# Availability
+
+Source: <https://github.com/Neoforge-Labs/SAWA>. Analysis code:
+`causal/`. Preregistration: `paper2_causal/preregistration.md` (TBA).
+Archived release: Zenodo DOI `10.xxxx/xxxxxxx`. License: MIT.
+
+# Acknowledgements
+
+<!--
+Chohan (KEMRI Nairobi) for domain framing.
+Leigh Brown, Weisse, Atkins (Edinburgh) for causal-methods review.
+DoWhy team + Stanford HIVdb Sierra maintainers.
+-->
+
+# References {.unnumbered}
+
+::: {#refs}
+:::

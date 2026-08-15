@@ -26,12 +26,16 @@ from prefect.tasks import task_input_hash
 
 from ..causal import (
     DAG_VERSION,
+    build_dr_causal_frames,
     derive_prune_config,
     effects_to_frame,
     estimate_all_dr_effects,
     estimate_all_outbreak_effects,
+    estimate_dr_effect,
+    estimate_dr_effects_per_subtype,
     write_html_report,
 )
+from ..dag import DRDag
 from ..tracking import tracked_run
 
 
@@ -96,6 +100,88 @@ def run_dr_effects(
         per_subtype,
     )
     return effects
+
+
+@task
+def run_dr_effects_from_paper1(
+    dr_parquet: Path,
+    curated_parquet: Path,
+    bootstrap_samples: int,
+    per_subtype: bool,
+    per_drug: bool,
+    subtype_min_samples: int,
+) -> list:
+    """New path (Sprint 1 for Paper 2): build causal frames on the fly
+    from Paper 1's dr_results + curated Parquet, then estimate per scope.
+
+    This is the recommended entrypoint — the old `dr_gold` frame was
+    produced by a module deleted in Phase 0. The adapter (data_prep.py)
+    replaces it and stays in lockstep with the SAWA pipeline schema.
+    """
+    log = get_run_logger()
+    if not dr_parquet.exists() or not curated_parquet.exists():
+        log.warning(
+            "missing dr_results (%s) or curated (%s) — DR causal analysis skipped",
+            dr_parquet,
+            curated_parquet,
+        )
+        return []
+
+    dr = pl.read_parquet(dr_parquet)
+    curated = pl.read_parquet(curated_parquet)
+    frames, counts = build_dr_causal_frames(dr, curated, per_drug=per_drug)
+    log.info(
+        "adapter built %d %s frames (%d accessions × %d mutations)",
+        counts.n_scopes,
+        counts.scope_kind,
+        counts.n_accessions,
+        counts.n_mutation_features,
+    )
+
+    dag_mutations = DRDag().mutation_features
+    all_effects: list = []
+    for scope, frame in frames.items():
+        scope_tag = f"DR/{counts.scope_kind}={scope}"
+        if frame.height < subtype_min_samples:
+            log.info("skipping %s (n=%d < %d)", scope_tag, frame.height, subtype_min_samples)
+            continue
+        for mutation in dag_mutations:
+            all_effects.append(
+                estimate_dr_effect(
+                    frame,
+                    mutation,
+                    data_scope=scope_tag,
+                    bootstrap_samples=bootstrap_samples,
+                )
+            )
+            if per_subtype:
+                per_st = estimate_dr_effects_per_subtype(
+                    frame,
+                    mutation,
+                    min_samples=subtype_min_samples,
+                    bootstrap_samples=bootstrap_samples,
+                )
+                # Prefix scope so cross-scope comparison stays disambiguated.
+                for eff in per_st:
+                    if not eff.data_scope.startswith(scope_tag):
+                        eff = eff.model_copy(
+                            update={
+                                "data_scope": eff.data_scope.replace("DR/", f"{scope_tag}/"),
+                            },
+                        )
+                    all_effects.append(eff)
+
+    log.info(
+        "Paper1→causal produced %d effects (%d %ss × %d mutations, "
+        "bootstrap=%d, per_subtype=%s)",
+        len(all_effects),
+        counts.n_scopes,
+        counts.scope_kind,
+        len(dag_mutations),
+        bootstrap_samples,
+        per_subtype,
+    )
+    return all_effects
 
 
 @task
@@ -181,24 +267,67 @@ def write_outputs(
 
 @flow(name="causal")
 def causal_flow(
-    dr_gold: Path,
     outbreak_gold: Path,
     out_dir: Path,
     *,
+    dr_parquet: Path | None = None,
+    curated_parquet: Path | None = None,
+    dr_gold: Path | None = None,
     drugs: list[str] | None = None,
     bootstrap_samples: int = 0,
     per_subtype: bool = False,
+    per_drug: bool = False,
+    subtype_min_samples: int = 100,
 ) -> tuple[Path, Path]:
-    dr_df = load_dr_gold(dr_gold)
+    """Causal effect estimation flow.
+
+    Two DR input modes (mutually exclusive):
+      * `dr_parquet` + `curated_parquet` (RECOMMENDED, Sprint 1):
+        build frames on the fly via the data_prep adapter.
+      * `dr_gold`: legacy pre-built DR gold parquet (kept for BC).
+    """
+    if dr_parquet and curated_parquet:
+        dr_effects = run_dr_effects_from_paper1(
+            dr_parquet,
+            curated_parquet,
+            bootstrap_samples,
+            per_subtype,
+            per_drug,
+            subtype_min_samples,
+        )
+    elif dr_gold:
+        dr_df = load_dr_gold(dr_gold)
+        dr_effects = run_dr_effects(dr_df, drugs, bootstrap_samples, per_subtype)
+    else:
+        dr_effects = []
+
     outbreak_df = load_outbreak_gold(outbreak_gold)
-    dr_effects = run_dr_effects(dr_df, drugs, bootstrap_samples, per_subtype)
     outbreak_effects = run_outbreak_effects(outbreak_df, bootstrap_samples)
     return write_outputs(dr_effects, outbreak_effects, out_dir)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="causal.flows.causal")
-    parser.add_argument("--dr-gold", type=Path, default=Path("data/gold/dr_features.parquet"))
+    parser.add_argument(
+        "--dr-parquet",
+        type=Path,
+        default=Path("data/interim/dr_results.parquet"),
+        help="Sierra DR results parquet (Paper 1 output). "
+        "Used with --curated-parquet by the data_prep adapter.",
+    )
+    parser.add_argument(
+        "--curated-parquet",
+        type=Path,
+        default=Path("data/interim/curated/aligned.parquet"),
+        help="Silver curated parquet (Paper 1 output).",
+    )
+    parser.add_argument(
+        "--dr-gold",
+        type=Path,
+        default=None,
+        help="Legacy: pre-built DR gold parquet. Overrides --dr-parquet / "
+        "--curated-parquet when supplied. Prefer the adapter path.",
+    )
     parser.add_argument(
         "--outbreak-gold",
         type=Path,
@@ -209,7 +338,7 @@ def main(argv: list[str] | None = None) -> int:
         "--drugs",
         nargs="+",
         default=None,
-        help="restrict DR analysis to these drug short names; default = all",
+        help="Legacy path only — restrict DR analysis to these drug short names.",
     )
     parser.add_argument(
         "--bootstrap-samples",
@@ -222,6 +351,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also emit per-subtype (interaction proxy) DR effect rows",
     )
+    parser.add_argument(
+        "--per-drug",
+        action="store_true",
+        help="adapter path: emit one frame per drug (not per drug class). "
+        "Adapter-only; ignored when --dr-gold is supplied.",
+    )
+    parser.add_argument(
+        "--subtype-min-samples",
+        type=int,
+        default=100,
+        help="per-subtype effect rows require ≥ this many rows in the subtype.",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -231,12 +372,16 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     causal_flow(
-        dr_gold=args.dr_gold,
         outbreak_gold=args.outbreak_gold,
         out_dir=args.out_dir,
+        dr_parquet=args.dr_parquet if args.dr_gold is None else None,
+        curated_parquet=args.curated_parquet if args.dr_gold is None else None,
+        dr_gold=args.dr_gold,
         drugs=args.drugs,
         bootstrap_samples=args.bootstrap_samples,
         per_subtype=args.per_subtype,
+        per_drug=args.per_drug,
+        subtype_min_samples=args.subtype_min_samples,
     )
     return 0
 

@@ -7,6 +7,12 @@ from .dag import (
     observed_subgraph,
     to_dowhy_gml,
 )
+from .data_prep import (
+    RESISTANT_LEVELS,
+    CausalDatasetCounts,
+    build_dr_causal_frames,
+    load_dr_causal_dataset,
+)
 from .estimate import (
     estimate_all_dr_effects,
     estimate_all_outbreak_effects,
@@ -32,6 +38,8 @@ from .schema import (
 __all__ = [
     "CAUSAL_SCHEMA_VERSION",
     "DAG_VERSION",
+    "RESISTANT_LEVELS",
+    "CausalDatasetCounts",
     "CausalEffect",
     "DRDag",
     "EstimationMethod",
@@ -40,6 +48,7 @@ __all__ = [
     "RefutationResult",
     "RefutationVerdict",
     "apply_prune_config",
+    "build_dr_causal_frames",
     "derive_prune_config",
     "effects_to_frame",
     "estimate_all_dr_effects",
@@ -47,6 +56,7 @@ __all__ = [
     "estimate_dr_effect",
     "estimate_dr_effects_per_subtype",
     "estimate_outbreak_effect",
+    "load_dr_causal_dataset",
     "load_prune_config",
     "observed_subgraph",
     "to_dowhy_gml",

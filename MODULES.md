@@ -72,14 +72,15 @@ exposures, a sensitivity analysis table, and one counterfactual figure.
 
 | Module | Status | What it does |
 |---|---|---|
-| `fm/data.py` | · | Build train/val/test splits from HIV-DR-Watch outputs; stratified sampling by subtype × drug class |
-| `fm/tokenize.py` | · | Protein tokenization for ESM-family; nucleotide tokenization for Evo |
-| `fm/models/esm2.py` | · | ESM-2 / ESM-C fine-tuning heads for resistance prediction |
-| `fm/models/evo.py` | · | Evo fine-tuning wrapper |
-| `fm/baselines.py` | · | Non-FM baselines: logistic regression on k-mers, random forest, one-hot MLP |
-| `fm/train.py` | · | Fine-tuning loop with subtype-stratified curriculum |
-| `fm/evaluate.py` | · | Metrics: AUROC, PR-AUC, calibration, per-subtype breakdown |
-| `fm/failure_analysis.py` | · | The "where do foundation models fail on non-B subtypes" analysis — Figure 2 of Paper 3 |
+| `fm/data.py` | ✓ | Subtype-stratified train/val/test splits from SAWA Paper 1 outputs. Two strategies: `stratified` (70/15/15 on subtype×drug×label) and `subtype_holdout` (train on B, test on non-B — Paper 3's thesis). Deterministic given seed. |
+| `fm/kmers.py` | ✓ | Nucleotide/protein k-mer featurizer → scipy sparse CSR matrix; explicit vocab support for fit/transform. |
+| `fm/tokenize.py` | · | Protein tokenization for ESM-family; nucleotide tokenization for Evo (GPU path) |
+| `fm/models/esm2.py` | · | ESM-2 / ESM-C fine-tuning heads for resistance prediction (GPU) |
+| `fm/models/evo.py` | · | Evo fine-tuning wrapper (GPU) |
+| `fm/baselines.py` | ✓ | Non-FM baselines: `KmerLogisticRegression` (L2, liblinear) + `OneHotRandomForest`. Runs in seconds. These are what the FMs must beat. |
+| `fm/train.py` | · | Fine-tuning loop with subtype-stratified curriculum (GPU) |
+| `fm/evaluate.py` | ✓ | AUROC, PR-AUC, Brier, ECE (10-bin default). `per_subtype_metrics` returns a Polars metrics frame; cells with < 5 positives dropped. |
+| `fm/failure_analysis.py` | · | The "where do foundation models fail on non-B subtypes" analysis — Figure 2 of Paper 3 (GPU) |
 
 **Definition of "foundation-model work done":** `python -m foundation_models.paper3 benchmark`
 reproduces the full benchmark table (models × subtypes × drug classes)

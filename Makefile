@@ -239,6 +239,47 @@ api:
 api-dev:
 	uvicorn hivdrwatch.api.main:app --host 0.0.0.0 --port $${API_PORT:-8080} --reload
 
+# ---------- foundation_models / Paper 3 baselines ----------
+
+# Fit the zero-GPU baselines (k-mer LR + one-hot RF) against Paper 1
+# outputs and write per-drug × per-subtype metrics. GPU-required
+# ESM-2 / Evo fine-tuning lands separately.
+.PHONY: fm-baselines
+fm-baselines:
+	python -c "\
+import polars as pl; \
+from pathlib import Path; \
+from foundation_models import build_fm_dataset; \
+from foundation_models.baselines import KmerLogisticRegression; \
+from foundation_models.evaluate import per_subtype_metrics; \
+dr = pl.read_parquet('$(INTERIM_DIR)/dr_results.parquet'); \
+cur = pl.read_parquet('$(CURATED_OUT)'); \
+ds = build_fm_dataset(dr, cur, strategy='$${STRATEGY:-subtype_holdout}', seed=42); \
+rows = []; \
+for drug, test_df in ds.test.partition_by('drug', as_dict=True).items(): \
+    train_df = ds.train.filter(pl.col('drug') == drug); \
+    if train_df.is_empty(): \
+        continue; \
+    m = KmerLogisticRegression(k=3, seed=42).fit(train_df['sequence'].to_list(), train_df['label_binary'].to_list()); \
+    probs = m.predict_proba(test_df['sequence'].to_list()); \
+    rows.append(per_subtype_metrics(test_df.with_columns(pl.Series('p', probs)), prob_col='p')); \
+out = Path('$(GOLD_DIR)/paper3_baseline_metrics.parquet'); \
+out.parent.mkdir(parents=True, exist_ok=True); \
+(pl.concat(rows) if rows else pl.DataFrame()).write_parquet(out); \
+print(f'wrote {out}')"
+
+# ---------- causal / Paper 2 ----------
+
+.PHONY: causal
+causal:
+	python -m causal.flows.causal \
+	    --dr-parquet $(INTERIM_DIR)/dr_results.parquet \
+	    --curated-parquet $(CURATED_OUT) \
+	    --out-dir $(GOLD_DIR) \
+	    --bootstrap-samples $${BOOTSTRAP:-200} \
+	    $${PER_SUBTYPE:+--per-subtype} \
+	    $${PER_DRUG:+--per-drug}
+
 # ---------- tests ----------
 
 .PHONY: test
