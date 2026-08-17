@@ -1,0 +1,5 @@
+outs:
+- md5: 36fee77077f06a7cfa606db4da230ef8
+  size: 8360
+  hash: md5
+  path: outbreak_features.parquet

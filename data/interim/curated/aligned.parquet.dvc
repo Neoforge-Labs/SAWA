@@ -1,0 +1,5 @@
+outs:
+- md5: ccdfb5d8b54e7458052af3e32ce11565
+  size: 4544543
+  hash: md5
+  path: aligned.parquet

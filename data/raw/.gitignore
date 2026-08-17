@@ -1,0 +1,8 @@
+# Raw data never enters git — see CLAUDE.md.
+# DVC pointers (`*.dvc`) and this .gitignore DO — see the root
+# .gitignore for the recursive exclusion pattern that also allows
+# nested subdirectories to hold committable pointers.
+#
+# This file intentionally holds no ignore rules so nested .dvc pointer
+# files at any depth remain re-includable. Its only job is to keep
+# `data/raw/` present in a fresh clone.

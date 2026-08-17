@@ -1,0 +1,6 @@
+outs:
+- md5: 6aa49968e849576dd308af6fd93d7df2.dir
+  size: 24803769
+  nfiles: 61
+  hash: md5
+  path: trees

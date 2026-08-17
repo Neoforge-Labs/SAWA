@@ -16,15 +16,16 @@ venv
 # --- Data (DVC-tracked; NEVER commit raw data) ---
 # Per CLAUDE.md: raw data never enters git. DVC pointers (`*.dvc`) DO
 # enter git; the actual data lives on the DVC remote (MinIO/S3).
-data/raw/
-data/interim/
-data/processed/
-data/gold/
-!data/raw/.gitignore
-!data/interim/.gitignore
-!data/processed/.gitignore
-!data/gold/.gitignore
+# Exclude the CONTENTS of these dirs, not the dirs themselves. Git will
+# not descend into a wholly-excluded directory, so `data/interim/` would
+# silently break the `!*.dvc` re-include below. Using `data/**/**`
+# excludes everything at any depth while `!data/**/` re-includes the
+# intermediate directories so git actually walks them and honors the
+# file-level re-includes for pointers + auto-managed gitignores.
+data/**/*
+!data/**/
 !data/**/*.dvc
+!data/**/.gitignore
 
 # DVC internals
 .dvc/tmp
