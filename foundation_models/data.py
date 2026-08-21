@@ -82,6 +82,9 @@ def build_fm_dataset(
     val_frac: float = 0.15,
     holdout_train_subtypes: tuple[str, ...] = ("B",),
     seed: int = 42,
+    sequence_column: str | None = None,
+    strip_gaps: bool = True,
+    min_sequence_length: int = 300,
 ) -> FMDataset:
     """Build a foundation-model dataset from SAWA Paper 1 Parquets.
 
@@ -91,6 +94,28 @@ def build_fm_dataset(
     `strategy="subtype_holdout"` — train + val on
     `holdout_train_subtypes` only; test on ALL other subtypes.
     Use this to reproduce Paper 3's headline generalization gap.
+
+    Parameters
+    ----------
+    sequence_column
+        Column in `curated` holding the sequence. Default `None` = auto-
+        detect: prefer `"sequence"` (raw, from the ingest layer) then
+        `"aligned_pol"` (from the curate layer). The output frame always
+        exposes the sequence under the canonical name `sequence`.
+    strip_gaps
+        When the source column is aligned (e.g. `aligned_pol`), remove
+        gap characters (`-`) before emitting. Default `True` because
+        every FM tokenizer we support treats `-` as an unknown token,
+        which is a no-op that just wastes context length. Set to
+        `False` if a downstream evaluator needs alignment-preserving
+        positions.
+    min_sequence_length
+        Drop rows whose gap-stripped sequence is shorter than this
+        many characters. Default 300 — below that, HIV pol is missing
+        so much of RT that resistance calls in the drug-class labels
+        aren't well-defined from sequence alone. This is a coarse
+        guard; per-gene coverage filtering happens upstream in
+        `curate/qc.py`.
     """
     _require_cols(
         "dr_results",
@@ -100,8 +125,27 @@ def build_fm_dataset(
     _require_cols(
         "curated",
         curated,
-        {"accession", "sequence", "subtype", "country", "collection_year"},
+        {"accession", "subtype", "country", "collection_year"},
     )
+
+    if sequence_column is None:
+        if "sequence" in curated.columns:
+            sequence_column = "sequence"
+        elif "aligned_pol" in curated.columns:
+            sequence_column = "aligned_pol"
+        else:
+            raise ValueError(
+                "curated has neither 'sequence' nor 'aligned_pol'; supply "
+                "sequence_column= explicitly with a column name that holds "
+                "the pol sequences"
+            )
+    elif sequence_column not in curated.columns:
+        raise ValueError(
+            f"sequence_column={sequence_column!r} not in curated columns: "
+            f"{curated.columns}"
+        )
+
+    logger.info("using sequence column %r (strip_gaps=%s)", sequence_column, strip_gaps)
 
     # Per-(accession, drug) binary label from Sierra levels.
     labeled = (
@@ -112,13 +156,20 @@ def build_fm_dataset(
         .unique(subset=["accession", "drug"], keep="last")
     )
 
+    seq_expr = pl.col(sequence_column)
+    if strip_gaps and sequence_column != "sequence":
+        # Gaps in aligned_pol shouldn't survive into the FM tokenizer.
+        seq_expr = seq_expr.str.replace_all("-", "")
+    seq_expr = seq_expr.alias("sequence")
+
     covs = (
-        curated.select(["accession", "sequence", "subtype", "country", "collection_year"])
+        curated.with_columns(seq_expr)
+        .select(["accession", "sequence", "subtype", "country", "collection_year"])
         .unique(subset=["accession"], keep="first")
         .filter(
             pl.col("subtype").is_not_null()
             & pl.col("sequence").is_not_null()
-            & (pl.col("sequence").str.len_chars() > 0)
+            & (pl.col("sequence").str.len_chars() >= min_sequence_length)
         )
     )
 
