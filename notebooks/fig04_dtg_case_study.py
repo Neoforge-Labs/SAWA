@@ -161,7 +161,7 @@ def _(
     ax_delta.set_yticklabels([])
     ax_delta.set_xlabel("Δ prevalence (post − pre, 95% CI)")
     ax_delta.set_title(
-        f"{summary.n_strata_with_signal}/{summary.n_strata_scored} strata with signal"
+        f"{summary.n_headline_after_fdr}/{summary.n_strata_primary} primary strata BH-significant ({summary.n_signal_secondary}/{summary.n_strata_secondary} secondary exploratory)"
     )
     ax_delta.grid(axis="x", linestyle="--", alpha=0.3)
 
@@ -183,8 +183,8 @@ def _(fig_path_pdf, fig_path_png, summary):
     print("DTG case study:")
     print(f"  N pre  = {summary.n_pre_seqs:,}")
     print(f"  N post = {summary.n_post_seqs:,}")
-    print(f"  strata scored: {summary.n_strata_scored}")
-    print(f"  strata with signal: {summary.n_strata_with_signal}")
+    print(f"  primary strata: {summary.n_strata_primary} (signal: {summary.n_signal_primary}, BH-headline: {summary.n_headline_after_fdr})")
+    print(f"  secondary (exploratory) strata: {summary.n_strata_secondary} (signal: {summary.n_signal_secondary})")
     print()
     print("figures:")
     print(f"  PDF → {fig_path_pdf}")
