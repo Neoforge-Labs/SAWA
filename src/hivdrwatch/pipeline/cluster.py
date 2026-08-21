@@ -33,6 +33,7 @@ from prefect.tasks import task_input_hash
 from ..cluster import (
     DEFAULT_THRESHOLD,
     assign_clusters,
+    build_outbreak_features,
     cluster_geographic_spread,
     cluster_growth_rate,
     cluster_size_distribution,
@@ -41,16 +42,91 @@ from ..cluster import (
     read_distances,
     run_tn93,
 )
-from ..features import build_outbreak_features
+from ..cluster.distance import compute_pairwise_distances_python
+
+
+@task
+def materialize_aligned_fasta(
+    aligned_fasta: Path,
+    curated_parquet: Path,
+    work_dir: Path,
+) -> Path:
+    """Ensure a per-accession aligned FASTA exists on disk for tn93.
+
+    The curate stage writes only Parquet (`aligned_pol` column); tn93
+    needs a FASTA. If `aligned_fasta` doesn't exist we materialize it
+    from the Parquet's `aligned_pol` column into `work_dir/aligned.fasta`
+    and return the new path; otherwise pass through.
+    """
+    log = get_run_logger()
+    if aligned_fasta.exists() and aligned_fasta.stat().st_size > 0:
+        log.info("aligned FASTA present — using %s", aligned_fasta)
+        return aligned_fasta
+
+    work_dir.mkdir(parents=True, exist_ok=True)
+    out = work_dir / "aligned.fasta"
+    curated = pl.read_parquet(curated_parquet)
+    if "aligned_pol" not in curated.columns:
+        raise ValueError(
+            f"curated Parquet {curated_parquet} lacks 'aligned_pol' column; "
+            "cannot materialize FASTA for tn93"
+        )
+    seq_col = "aligned_pol"
+    n_written = 0
+    with out.open("w", encoding="utf-8") as fh:
+        for row in curated.select(["accession", seq_col]).iter_rows(named=True):
+            seq = row[seq_col]
+            if not seq:
+                continue
+            fh.write(f">{row['accession']}\n{seq}\n")
+            n_written += 1
+    log.info(
+        "materialized aligned FASTA from %s → %s (%d records)",
+        curated_parquet,
+        out,
+        n_written,
+    )
+    if n_written == 0:
+        raise ValueError(
+            f"materialized 0 records from {curated_parquet}: "
+            "aligned_pol column is empty or all-null"
+        )
+    return out
 
 
 @task(retries=1)
-def run_distances(aligned_fasta: Path, work_dir: Path, threshold: float) -> Path:
+def run_distances(
+    aligned_fasta: Path,
+    work_dir: Path,
+    threshold: float,
+    engine: str = "python",
+) -> Path:
+    """Compute pairwise TN93 distances → CSV of below-threshold pairs.
+
+    Two engines:
+
+    * ``python`` (default) — in-process vectorized p-distance, which is
+      monotone with TN93 for small divergences. Empirically the only
+      engine that produces non-empty output for our workflow. See
+      ``cluster/distance.py::compute_pairwise_distances_python``.
+    * ``docker`` — the historical `tn93` Docker container. Silently
+      emits zero pairs on both synthetic and real cohorts at v1.0.13
+      (confirmed via diagnostic re-run at t=1.0). Retained for
+      reference / A/B comparison against future tn93 releases.
+    """
     log = get_run_logger()
     work_dir.mkdir(parents=True, exist_ok=True)
     output_csv = work_dir / "distances.csv"
-    run_tn93(aligned_fasta, output_csv, threshold=threshold)
-    log.info("tn93 distances → %s", output_csv)
+    if engine == "docker":
+        run_tn93(aligned_fasta, output_csv, threshold=threshold)
+        log.info("tn93 (docker) distances → %s", output_csv)
+    else:
+        compute_pairwise_distances_python(
+            aligned_fasta, output_csv, threshold=threshold
+        )
+        log.info("tn93 (python vectorized) distances → %s", output_csv)
+    n_pairs = max(0, sum(1 for _ in output_csv.open()) - 1)
+    log.info("distances CSV: %d below-threshold pairs at t=%.4f", n_pairs, threshold)
     return output_csv
 
 
@@ -122,9 +198,11 @@ def cluster_flow(
     *,
     threshold: float = DEFAULT_THRESHOLD,
     to_postgres: bool | None = None,
+    distance_engine: str = "python",
 ) -> tuple[Path, Path]:
     curated = load_curated(curated_parquet)
-    distances_csv = run_distances(aligned_fasta, work_dir, threshold)
+    aligned_fasta = materialize_aligned_fasta(aligned_fasta, curated_parquet, work_dir)
+    distances_csv = run_distances(aligned_fasta, work_dir, threshold, engine=distance_engine)
     cluster_df = cluster(distances_csv, curated, threshold)
     features_df = outbreak_rollup(curated, cluster_df)
     cluster_path, features_path = write_gold(cluster_df, features_df, gold_dir)
@@ -167,6 +245,18 @@ def main(argv: list[str] | None = None) -> int:
         help="After writing the Parquet, also load cluster memberships "
         "into Postgres (also honors HIVDRWATCH_LOAD_TO_POSTGRES=1 env).",
     )
+    parser.add_argument(
+        "--distance-engine",
+        choices=("python", "docker"),
+        default="python",
+        help=(
+            "Distance backend. Default 'python' — vectorized in-process "
+            "p-distance, the only engine that produces non-empty output on "
+            "our workflow. 'docker' runs tn93 v1.0.13 which silently emits "
+            "zero pairs on both synthetic and real cohorts; kept for "
+            "reference / A-B testing against future tn93 releases."
+        ),
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -182,6 +272,7 @@ def main(argv: list[str] | None = None) -> int:
         gold_dir=args.gold_dir,
         threshold=args.threshold,
         to_postgres=args.to_postgres or None,
+        distance_engine=args.distance_engine,
     )
     return 0
 

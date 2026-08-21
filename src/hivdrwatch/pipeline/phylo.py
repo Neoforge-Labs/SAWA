@@ -53,6 +53,7 @@ def build_trees(
     subtypes: list[str] | None,
     min_taxa: int,
     min_coverage: float,
+    partition_report_path: Path,
 ) -> list:
     log = get_run_logger()
     # Pass the Prefect run logger down so IQ-TREE/TreeTime subprocess
@@ -69,8 +70,13 @@ def build_trees(
         min_taxa=min_taxa,
         min_coverage=min_coverage,
         stream_logger=log,
+        partition_report_path=partition_report_path,
     )
-    log.info("built %d tree artifacts across subtypes", len(meta))
+    log.info(
+        "built %d tree artifacts; partition audit trail → %s",
+        len(meta),
+        partition_report_path,
+    )
     return meta
 
 
@@ -116,8 +122,12 @@ def phylo_flow(
     subtypes: list[str] | None = None,
     min_taxa: int = MIN_TAXA_FOR_TREE,
     min_coverage: float = MIN_ALIGNED_COVERAGE,
+    partition_report_path: Path | None = None,
 ) -> Path:
     curated = load_curated(curated_parquet)
+    # Default the partition report next to the manifest — one gold-tier
+    # artifact directory, one audit trail.
+    report_path = partition_report_path or (manifest_path.parent / "partition_report.parquet")
     rows = build_trees(
         curated,
         trees_root,
@@ -128,6 +138,7 @@ def phylo_flow(
         subtypes=subtypes,
         min_taxa=min_taxa,
         min_coverage=min_coverage,
+        partition_report_path=report_path,
     )
     return write_and_track(rows, manifest_path)
 
@@ -148,6 +159,15 @@ def main(argv: list[str] | None = None) -> int:
         "--manifest",
         type=Path,
         default=Path("data/gold/trees/manifest.parquet"),
+    )
+    parser.add_argument(
+        "--partition-report",
+        type=Path,
+        default=None,
+        help=(
+            "audit trail: per-subtype accounting parquet "
+            "(default: <manifest-dir>/partition_report.parquet)"
+        ),
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
@@ -213,6 +233,7 @@ def main(argv: list[str] | None = None) -> int:
         subtypes=args.subtypes,
         min_taxa=args.min_taxa,
         min_coverage=args.min_coverage,
+        partition_report_path=args.partition_report,
     )
     return 0
 
