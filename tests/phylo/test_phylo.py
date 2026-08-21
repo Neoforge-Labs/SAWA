@@ -22,12 +22,16 @@ import polars as pl
 import pytest
 
 from hivdrwatch.phylo import (
+    EXCLUDED_SUBTYPES,
+    MIN_ALIGNED_COVERAGE,
     MIN_TAXA_FOR_TREE,
     SubstitutionModel,
     TreeKind,
     TreeMetadata,
+    build_partition_report,
     build_tip_dates_csv,
     partition_by_subtype,
+    write_partition_report,
     write_subtype_alignment,
 )
 from hivdrwatch.phylo.iqtree import (
@@ -38,6 +42,7 @@ from hivdrwatch.phylo.iqtree import (
 )
 from hivdrwatch.phylo.treetime import (
     _extract_clock_rate,
+    _extract_clock_rate_from_file,
 )
 from hivdrwatch.phylo.treetime import (
     _extract_version as _treetime_version,
@@ -92,6 +97,124 @@ class TestPartitionBySubtype:
         df = pl.from_dicts(rows)
         parts = partition_by_subtype(df, min_taxa=20)
         assert set(parts) == {"A1"}
+
+    def test_default_excluded_subtypes_covers_unknown_and_recombinant(self) -> None:
+        # Regression: 'unknown' has always been excluded; 'recombinant'
+        # was added because it lumps distinct CRFs into a single label
+        # and IQ-TREE fails on the mixed alignment. Both should be
+        # rejected by default without an explicit `excluded=` argument.
+        assert "unknown" in EXCLUDED_SUBTYPES
+        assert "recombinant" in EXCLUDED_SUBTYPES
+
+        df = self._frame({"A1": 30, "unknown": 30, "recombinant": 30})
+        parts = partition_by_subtype(df, min_taxa=20)
+        assert set(parts) == {"A1"}
+
+
+# ---------- build_partition_report ----------
+
+
+class TestPartitionReport:
+    """Audit-trail parquet: one row per candidate subtype label.
+
+    The report must be deterministic given the same curated frame and
+    thresholds, and must reflect every non-null subtype label — including
+    those excluded by policy and those below thresholds — so that a
+    reviewer can reconstruct manifest membership without reading logs.
+    """
+
+    def _frame(self, spec: dict[str, tuple[int, str]]) -> pl.DataFrame:
+        """spec: {subtype: (count, sequence_pattern)} — pattern controls coverage."""
+        rows = []
+        for st, (n, seq) in spec.items():
+            for i in range(n):
+                rows.append(
+                    {
+                        "accession": f"{st}{i:03d}",
+                        "subtype": st,
+                        "passes_qc": True,
+                        "collection_year": 2020,
+                        "aligned_pol": seq,
+                    }
+                )
+        return pl.from_dicts(rows)
+
+    def test_one_row_per_candidate_label(self) -> None:
+        df = self._frame(
+            {
+                "A1": (30, "A" * 3012),
+                "C": (5, "A" * 3012),
+                "unknown": (100, "A" * 3012),
+            }
+        )
+        report = build_partition_report(df)
+        assert sorted(r.subtype for r in report) == ["A1", "C", "unknown"]
+
+    def test_decision_built_for_healthy_subtype(self) -> None:
+        df = self._frame({"A1": (30, "A" * 3012)})
+        report = build_partition_report(df)
+        row = next(r for r in report if r.subtype == "A1")
+        assert row.decision == "built"
+        assert row.n_available == 30
+        assert row.n_after_qc == 30
+        assert row.n_after_coverage == 30
+
+    def test_decision_excluded_label(self) -> None:
+        df = self._frame({"unknown": (100, "A" * 3012), "recombinant": (50, "A" * 3012)})
+        report = build_partition_report(df)
+        for name in ("unknown", "recombinant"):
+            row = next(r for r in report if r.subtype == name)
+            assert row.decision == "excluded_label"
+            assert "EXCLUDED_SUBTYPES" in row.decision_reason
+
+    def test_decision_below_min_taxa(self) -> None:
+        df = self._frame({"A1": (5, "A" * 3012)})
+        report = build_partition_report(df, min_taxa=20)
+        row = next(r for r in report if r.subtype == "A1")
+        assert row.decision == "below_min_taxa"
+        assert row.min_taxa_used == 20
+
+    def test_decision_below_min_coverage(self) -> None:
+        # 30 sequences pass QC but every one is 90% gap → all fail coverage.
+        low_cov = ("-" * 2711) + ("A" * 301)  # ~10% non-gap
+        df = self._frame({"A1": (30, low_cov)})
+        report = build_partition_report(df, min_taxa=20, min_coverage=0.5)
+        row = next(r for r in report if r.subtype == "A1")
+        assert row.decision == "below_min_coverage"
+        assert row.n_after_qc == 30
+        assert row.n_after_coverage == 0
+
+    def test_deterministic_order(self) -> None:
+        # Order stability matters for downstream diffs / manifest audits.
+        df = self._frame(
+            {"D": (30, "A" * 3012), "A1": (30, "A" * 3012), "C": (30, "A" * 3012)}
+        )
+        report = build_partition_report(df)
+        assert [r.subtype for r in report] == ["A1", "C", "D"]
+
+    def test_thresholds_recorded(self) -> None:
+        df = self._frame({"A1": (30, "A" * 3012)})
+        report = build_partition_report(df, min_taxa=25, min_coverage=0.7)
+        row = report[0]
+        assert row.min_taxa_used == 25
+        assert row.min_coverage_used == 0.7
+
+    def test_write_partition_report_roundtrip(self, tmp_path: Path) -> None:
+        df = self._frame(
+            {"A1": (30, "A" * 3012), "unknown": (10, "A" * 3012)}
+        )
+        report = build_partition_report(df)
+        out = tmp_path / "partition_report.parquet"
+        write_partition_report(report, out)
+        assert out.exists()
+        loaded = pl.read_parquet(out)
+        assert set(loaded["subtype"].to_list()) == {"A1", "unknown"}
+        assert set(loaded["decision"].to_list()) == {"built", "excluded_label"}
+
+    def test_default_coverage_matches_module_constant(self) -> None:
+        df = self._frame({"A1": (30, "A" * 3012)})
+        report = build_partition_report(df)
+        assert report[0].min_coverage_used == MIN_ALIGNED_COVERAGE
 
 
 # ---------- write_subtype_alignment ----------
@@ -206,6 +329,35 @@ class TestTreetimeParsers:
 
     def test_version_extraction(self) -> None:
         assert "0.11.4" in _treetime_version("TreeTime 0.11.4 running...")
+
+    def test_clock_rate_from_file_positive(self, tmp_path: Path) -> None:
+        # Real TreeTime `molecular_clock.txt` format seen on the D subtype
+        # run at v0.11.4 — tab-indented, r² on a separate line.
+        (tmp_path / "molecular_clock.txt").write_text(
+            "Root-Tip-Regression:\n --rate:\t2.303e-03\n --r^2:  \t0.09\n"
+        )
+        rate, sd = _extract_clock_rate_from_file(tmp_path)
+        assert rate == pytest.approx(2.303e-3)
+        assert sd is None  # File doesn't emit SD; caller must not fabricate.
+
+    def test_clock_rate_from_file_negative(self, tmp_path: Path) -> None:
+        # Real observation on the C subtype (n=20, poor temporal signal).
+        # Negative rate must be preserved so downstream can flag the fit.
+        (tmp_path / "molecular_clock.txt").write_text(
+            "Root-Tip-Regression:\n --rate:\t-1.103e-03\n --r^2:  \t0.001\n"
+        )
+        rate, sd = _extract_clock_rate_from_file(tmp_path)
+        assert rate == pytest.approx(-1.103e-3)
+        assert sd is None
+
+    def test_clock_rate_from_file_missing(self, tmp_path: Path) -> None:
+        rate, sd = _extract_clock_rate_from_file(tmp_path)
+        assert rate is None and sd is None
+
+    def test_clock_rate_from_file_malformed(self, tmp_path: Path) -> None:
+        (tmp_path / "molecular_clock.txt").write_text("gibberish, no rate line")
+        rate, sd = _extract_clock_rate_from_file(tmp_path)
+        assert rate is None and sd is None
 
 
 # ---------- TreeMetadata schema ----------

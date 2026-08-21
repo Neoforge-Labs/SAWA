@@ -12,12 +12,17 @@ import polars as pl
 import pytest
 
 from hivdrwatch.paper1.fig04_dtg import (
+    FDR_Q,
     INSTI_CLASS,
-    MIN_EPOCH_N,
+    MIN_EPOCH_N_PRIMARY,
+    MIN_EPOCH_N_SECONDARY,
     POST_YEARS,
     PRE_YEARS,
     RESISTANT_LEVELS,
     ROLLOUT_YEAR,
+    _benjamini_hochberg,
+    _clopper_pearson_ci,
+    _fisher_exact,
     aggregate_dtg_landscape,
 )
 
@@ -75,8 +80,60 @@ class TestConstants:
         assert POST_YEARS[0] == 2020
         assert ROLLOUT_YEAR == 2019
 
-    def test_min_epoch_n(self) -> None:
-        assert MIN_EPOCH_N == 30
+    def test_min_epoch_n_tiers(self) -> None:
+        assert MIN_EPOCH_N_PRIMARY == 30
+        assert MIN_EPOCH_N_SECONDARY == 5
+
+    def test_fdr_q(self) -> None:
+        assert FDR_Q == 0.05
+
+
+class TestClopperPearson:
+    def test_zero_events_lower_bound_is_zero(self) -> None:
+        p, lo, hi = _clopper_pearson_ci(0, 30)
+        assert lo == 0.0 and p == 0.0 and 0 < hi < 1
+
+    def test_all_events_upper_bound_is_one(self) -> None:
+        p, lo, hi = _clopper_pearson_ci(30, 30)
+        assert p == 1.0 and hi == 1.0 and 0 < lo < 1
+
+    def test_bracket_always_holds(self) -> None:
+        for k, n in [(0, 5), (1, 5), (5, 5), (50, 100), (0, 1000)]:
+            p, lo, hi = _clopper_pearson_ci(k, n)
+            assert 0 <= lo <= p <= hi <= 1
+
+
+class TestFisherExact:
+    def test_no_difference_gives_p_near_one(self) -> None:
+        _, p = _fisher_exact(5, 100, 5, 100)
+        assert p > 0.5
+
+    def test_clear_signal_gives_small_p(self) -> None:
+        _, p = _fisher_exact(30, 100, 3, 100)
+        assert p < 0.001
+
+    def test_zero_n_returns_p_one(self) -> None:
+        _, p = _fisher_exact(0, 0, 3, 30)
+        assert p == 1.0
+
+
+class TestBH:
+    def test_all_significant_pass(self) -> None:
+        qs = _benjamini_hochberg([0.001, 0.002, 0.003], q=0.05)
+        assert all(q <= 0.05 for q in qs)
+
+    def test_monotone_ordering_preserved(self) -> None:
+        pvals = [0.9, 0.001, 0.5, 0.02]
+        qs = _benjamini_hochberg(pvals, q=0.05)
+        # Smaller p → smaller q
+        rank_by_p = sorted(range(len(pvals)), key=lambda i: pvals[i])
+        prev_q = -1.0
+        for i in rank_by_p:
+            assert qs[i] >= prev_q
+            prev_q = qs[i]
+
+    def test_empty(self) -> None:
+        assert _benjamini_hochberg([], q=0.05) == []
 
 
 class TestEpochAssignment:
@@ -85,7 +142,9 @@ class TestEpochAssignment:
         curated = _curated(
             [{"accession": "A1", "country": "KE", "collection_year": 2019, "subtype": "A1"}]
         )
-        per_epoch, delta, summary = aggregate_dtg_landscape(dr, curated, min_epoch_n=1)
+        per_epoch, delta, summary = aggregate_dtg_landscape(
+            dr, curated, min_epoch_n_secondary=1
+        )
         # 2019 is buffer — sequence should not appear in either epoch.
         assert summary.n_pre_seqs == 0
         assert summary.n_post_seqs == 0
@@ -97,7 +156,7 @@ class TestEpochAssignment:
         curated = _curated(
             [{"accession": "A1", "country": "KE", "collection_year": 2018, "subtype": "A1"}]
         )
-        per_epoch, _, summary = aggregate_dtg_landscape(dr, curated, min_epoch_n=1)
+        per_epoch, _, summary = aggregate_dtg_landscape(dr, curated, min_epoch_n_secondary=1)
         assert summary.n_pre_seqs == 1
         assert per_epoch.filter(pl.col("epoch") == "pre").height == 1
 
@@ -106,7 +165,7 @@ class TestEpochAssignment:
         curated = _curated(
             [{"accession": "A1", "country": "KE", "collection_year": 2020, "subtype": "A1"}]
         )
-        per_epoch, _, summary = aggregate_dtg_landscape(dr, curated, min_epoch_n=1)
+        per_epoch, _, summary = aggregate_dtg_landscape(dr, curated, min_epoch_n_secondary=1)
         assert summary.n_post_seqs == 1
         assert per_epoch.filter(pl.col("epoch") == "post").height == 1
 
@@ -129,7 +188,7 @@ class TestResistanceCounting:
             "level": "intermediate",
         }
         per_epoch, _, _ = aggregate_dtg_landscape(
-            _dr(dr_rows), _curated(curated_rows), min_epoch_n=1
+            _dr(dr_rows), _curated(curated_rows), min_epoch_n_secondary=1
         )
         post = per_epoch.filter(pl.col("epoch") == "post").to_dicts()[0]
         assert post["n_insti_resistant"] == 1
@@ -148,65 +207,76 @@ class TestResistanceCounting:
                 for a in ("A1", "A2", "A3")
             ]
         )
-        per_epoch, _, _ = aggregate_dtg_landscape(dr, curated, min_epoch_n=1)
+        per_epoch, _, _ = aggregate_dtg_landscape(dr, curated, min_epoch_n_secondary=1)
         pre = per_epoch.filter(pl.col("epoch") == "pre").to_dicts()[0]
         assert pre["n_insti_resistant"] == 0
 
 
-class TestMinEpochN:
-    def test_undersized_stratum_omitted_from_delta(self) -> None:
-        # 5 pre + 5 post, min_epoch_n=30 → should be omitted from delta.
+class TestTiering:
+    def test_below_secondary_threshold_omitted_from_delta(self) -> None:
+        # 3 pre + 3 post — below secondary threshold (5) — omitted entirely
         dr_rows, curated_rows = _mk_stratum(
-            "KE", "A1", 2015, 2021, n_pre=5, n_pre_r=0, n_post=5, n_post_r=2
+            "KE", "A1", 2015, 2021, n_pre=3, n_pre_r=0, n_post=3, n_post_r=1
         )
         per_epoch, delta, _ = aggregate_dtg_landscape(
-            _dr(dr_rows), _curated(curated_rows), min_epoch_n=30
+            _dr(dr_rows),
+            _curated(curated_rows),
+            min_epoch_n_secondary=5,
         )
-        # Per-epoch frame still shows counts; delta is empty.
         assert per_epoch.height == 2
         assert delta.height == 0
 
-    def test_signal_flagged_when_ci_excludes_zero(self) -> None:
-        # Big jump with enough N: pre 0/100, post 20/100 → CI clearly > 0.
+    def test_secondary_tier_scored_but_not_headline(self) -> None:
+        # 10 pre + 10 post — passes secondary (≥5) but below primary (≥30)
         dr_rows, curated_rows = _mk_stratum(
-            "KE",
-            "A1",
-            2015,
-            2021,
-            n_pre=100,
-            n_pre_r=0,
-            n_post=100,
-            n_post_r=20,
+            "KE", "A1", 2015, 2021, n_pre=10, n_pre_r=0, n_post=10, n_post_r=5
         )
-        _, delta, summary = aggregate_dtg_landscape(
-            _dr(dr_rows), _curated(curated_rows), min_epoch_n=30
-        )
+        _, delta, summary = aggregate_dtg_landscape(_dr(dr_rows), _curated(curated_rows))
         assert delta.height == 1
         row = delta.to_dicts()[0]
-        assert row["signal"] is True
-        assert row["delta_prev"] > 0
-        assert row["delta_ci_low"] > 0
-        assert summary.n_strata_with_signal == 1
+        assert row["tier"] == "secondary"
+        # Even if BH-significant, secondary strata don't count toward
+        # the preregistered headline.
+        assert summary.n_strata_secondary == 1
+        assert summary.n_strata_primary == 0
 
-    def test_no_signal_when_ci_spans_zero(self) -> None:
-        # Small change with enough N: pre 5/100, post 6/100 → CI spans 0.
+    def test_primary_tier_with_bh_signal(self) -> None:
+        # Big jump with primary-tier N: pre 0/100, post 25/100
+        # Fisher p is extremely small; BH q also small → signal True.
         dr_rows, curated_rows = _mk_stratum(
-            "KE",
-            "A1",
-            2015,
-            2021,
-            n_pre=100,
-            n_pre_r=5,
-            n_post=100,
-            n_post_r=6,
+            "KE", "A1", 2015, 2021, n_pre=100, n_pre_r=0, n_post=100, n_post_r=25
         )
-        _, delta, summary = aggregate_dtg_landscape(
-            _dr(dr_rows), _curated(curated_rows), min_epoch_n=30
-        )
+        _, delta, summary = aggregate_dtg_landscape(_dr(dr_rows), _curated(curated_rows))
         assert delta.height == 1
         row = delta.to_dicts()[0]
+        assert row["tier"] == "primary"
+        assert row["signal"] is True
+        assert row["signal_direction"] == "up"
+        assert row["bh_q"] < 0.05
+        assert row["fisher_p"] < 0.001
+        assert summary.n_headline_after_fdr == 1
+
+    def test_primary_no_signal_when_fisher_non_significant(self) -> None:
+        # Small change with primary-tier N: pre 5/100, post 6/100 → Fisher p large
+        dr_rows, curated_rows = _mk_stratum(
+            "KE", "A1", 2015, 2021, n_pre=100, n_pre_r=5, n_post=100, n_post_r=6
+        )
+        _, delta, summary = aggregate_dtg_landscape(_dr(dr_rows), _curated(curated_rows))
+        assert delta.height == 1
+        row = delta.to_dicts()[0]
+        assert row["tier"] == "primary"
         assert row["signal"] is False
-        assert summary.n_strata_with_signal == 0
+        assert summary.n_headline_after_fdr == 0
+
+    def test_downward_direction_never_flagged_as_signal(self) -> None:
+        # Post lower than pre — signal must be False regardless of Fisher p
+        dr_rows, curated_rows = _mk_stratum(
+            "KE", "A1", 2015, 2021, n_pre=100, n_pre_r=30, n_post=100, n_post_r=5
+        )
+        _, delta, _ = aggregate_dtg_landscape(_dr(dr_rows), _curated(curated_rows))
+        row = delta.to_dicts()[0]
+        assert row["signal_direction"] == "down"
+        assert row["signal"] is False
 
 
 class TestSubtypeStratification:
@@ -227,7 +297,7 @@ class TestSubtypeStratification:
             dr_rows.extend(d)
             curated_rows.extend(c)
         _, delta, _ = aggregate_dtg_landscape(
-            _dr(dr_rows), _curated(curated_rows), min_epoch_n=30
+            _dr(dr_rows), _curated(curated_rows), min_epoch_n_primary=30
         )
         assert set(delta["subtype"].to_list()) == {"A1", "C"}
 
@@ -241,7 +311,9 @@ class TestNonInstiIgnored:
         curated = _curated(
             [{"accession": "A1", "country": "KE", "collection_year": 2021, "subtype": "A1"}]
         )
-        per_epoch, _, _ = aggregate_dtg_landscape(_dr(dr_rows), curated, min_epoch_n=1)
+        per_epoch, _, _ = aggregate_dtg_landscape(
+            _dr(dr_rows), curated, min_epoch_n_secondary=1
+        )
         post = per_epoch.filter(pl.col("epoch") == "post").to_dicts()[0]
         # NRTI row must not count as INSTI resistance.
         assert post["n_insti_resistant"] == 0
