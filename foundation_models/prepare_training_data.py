@@ -41,12 +41,12 @@ import argparse
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import polars as pl
 
-from .data import RESISTANT_LEVELS, build_fm_dataset
+from .data import build_fm_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -305,7 +305,7 @@ def prepare_drug_class(
         n_dropped_high_ambiguity=n_dropped_ambig,
         max_aa_x_fraction=max_aa_x_fraction,
         seed=seed,
-        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        generated_at=datetime.now(UTC).isoformat(timespec="seconds"),
         train_parquet=str(train_path),
         val_parquet=str(val_path),
         test_parquet=str(test_path),

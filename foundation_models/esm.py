@@ -44,7 +44,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -221,7 +220,6 @@ def _label_balanced_subsample(df, n: int, seed: int):
 
 
 def _compute_pos_weight(train_df) -> float:
-    import torch
 
     n_pos = int(train_df["label_binary"].sum())
     n_neg = train_df.height - n_pos
@@ -290,7 +288,7 @@ def train_from_manifest(
     )
 
     manifest_path = Path(manifest)
-    train_df, val_df, test_df, run_meta = _load_splits(
+    train_df, val_df, test_df, _run_meta = _load_splits(
         manifest_path, cfg.drug_class, cfg.strategy
     )
     if cfg.smoke:

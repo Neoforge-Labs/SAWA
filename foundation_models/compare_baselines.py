@@ -31,7 +31,7 @@ import argparse
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -174,7 +174,7 @@ def compare(
     skip_esm: bool = False,
 ) -> list[ModelRow]:
     """Run all three models on the same splits; return per-drug rows."""
-    train, test, meta = _load_splits(manifest_path, drug_class, strategy)
+    train, test, _meta = _load_splits(manifest_path, drug_class, strategy)
     logger.info(
         "loaded splits: train=%d test=%d for %s/%s",
         train.height,
@@ -291,7 +291,7 @@ def write_outputs(rows: list[ModelRow], out_dir: Path, drug_class: str, strategy
     summary = {
         "drug_class": drug_class,
         "strategy": strategy,
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "headline": headline,
         "per_drug": df.to_dicts(),
     }
