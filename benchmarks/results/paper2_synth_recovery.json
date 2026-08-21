@@ -1,12 +1,12 @@
 {
   "stage": "paper2_synth_recovery",
   "seed": 42,
-  "generated_at": "2026-08-14",
+  "generated_at": "2026-08-17",
   "host": {
-    "platform": "Linux-6.8.0-124-generic-aarch64-with-glibc2.35",
-    "machine": "aarch64",
-    "python": "3.10.12",
-    "cpu_count": 4
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.12",
+    "cpu_count": 8
   },
   "schema_version": "0.1.0",
   "notes": "Sanity-check estimator on synthetic ground truth for Paper 2 v1 Results. The full DoWhy identify \u2192 estimate \u2192 refute run lives in causal/flows/causal.py; this benchmark checks that backdoor adjustment on {subtype, country, collection_year} correctly deconfounds the subtype-associated decoys.",
@@ -22,9 +22,9 @@
         6.422933129623278,
         6.587567671017627
       ],
-      "adjusted_log_odds": 6.335863311457649,
+      "adjusted_log_odds": 6.335863311457637,
       "adjusted_ci": [
-        6.191533341797589,
+        6.1915333417975935,
         6.406674963011015
       ],
       "recovers": true
@@ -37,13 +37,13 @@
       "expected_effect_direction": "positive",
       "unadjusted_log_odds": 6.502463358359343,
       "unadjusted_ci": [
-        6.408691457561077,
-        6.582304359613679
+        6.408691457561075,
+        6.582304359613677
       ],
-      "adjusted_log_odds": 6.361306733009797,
+      "adjusted_log_odds": 6.361306733009793,
       "adjusted_ci": [
-        6.2181562648978606,
-        6.41636592351171
+        6.218156264912183,
+        6.4163659235117105
       ],
       "recovers": true
     },
@@ -55,12 +55,12 @@
       "expected_effect_direction": "positive",
       "unadjusted_log_odds": 6.447812726826771,
       "unadjusted_ci": [
-        6.342403474142136,
+        6.342403474142135,
         6.535615350713337
       ],
       "adjusted_log_odds": 6.415441291923787,
       "adjusted_ci": [
-        6.069733541663302,
+        6.069733541663349,
         6.444939675432243
       ],
       "recovers": true
@@ -68,18 +68,18 @@
     {
       "n": 500,
       "mutation": "RT_215_Y",
-      "drug_class": "NRTI",
+      "drug_class": "NNRTI",
       "kind": "decoy_subtype_confounded",
       "confounded_by_subtype": "C",
-      "unadjusted_log_odds": -0.37971601333092064,
+      "unadjusted_log_odds": 0.06859767837327195,
       "unadjusted_ci": [
-        -1.1810906405366681,
-        0.22128772860716958
+        -0.6850483127119935,
+        0.6411422626787632
       ],
-      "adjusted_log_odds": -0.14428331593736307,
+      "adjusted_log_odds": -0.0035468393513550874,
       "adjusted_ci": [
-        -0.9344680568541045,
-        0.33729970678746196
+        -0.6085400184028956,
+        0.6033450113433928
       ],
       "adjusted_ci_includes_zero": true
     },
@@ -94,46 +94,46 @@
         -1.2613568671106195,
         0.31482640030175263
       ],
-      "adjusted_log_odds": -0.06188440139468389,
+      "adjusted_log_odds": -0.0618844013946839,
       "adjusted_ci": [
-        -1.1329145804895253,
-        0.14163694869393997
+        -1.1329145804895262,
+        0.141636948690224
       ],
       "adjusted_ci_includes_zero": true
     },
     {
       "n": 500,
       "mutation": "RT_215_Y",
-      "drug_class": "NNRTI",
+      "drug_class": "NRTI",
       "kind": "decoy_subtype_confounded",
       "confounded_by_subtype": "C",
-      "unadjusted_log_odds": 0.06859767837327195,
+      "unadjusted_log_odds": -0.3797160133309204,
       "unadjusted_ci": [
-        -0.6850483127119935,
-        0.6411422626787632
+        -1.1810906405366681,
+        0.22128772860716958
       ],
-      "adjusted_log_odds": -0.003546839351069025,
+      "adjusted_log_odds": -0.14428331593736332,
       "adjusted_ci": [
-        -0.6085400850514449,
-        0.6033450114258062
+        -0.9344680568541396,
+        0.3462913923693133
       ],
       "adjusted_ci_includes_zero": true
     },
     {
       "n": 500,
       "mutation": "PR_10_I",
-      "drug_class": "NRTI",
+      "drug_class": "NNRTI",
       "kind": "decoy_subtype_confounded",
       "confounded_by_subtype": "A1",
-      "unadjusted_log_odds": 0.22130205040209774,
+      "unadjusted_log_odds": -0.10348888879539261,
       "unadjusted_ci": [
-        -0.33351025534873247,
-        0.7467714147897778
+        -0.6861063418256207,
+        0.4348968363910998
       ],
-      "adjusted_log_odds": 0.13532325800280934,
+      "adjusted_log_odds": -0.11236906728307944,
       "adjusted_ci": [
-        -0.471233355715797,
-        0.5957714319881887
+        -0.6940754529985728,
+        0.45378352991552845
       ],
       "adjusted_ci_includes_zero": true
     },
@@ -146,66 +146,30 @@
       "unadjusted_log_odds": -0.28894799696860674,
       "unadjusted_ci": [
         -0.9492735885186702,
-        0.2856109619307289
+        0.2856109619307287
       ],
-      "adjusted_log_odds": -0.06193856373579026,
+      "adjusted_log_odds": -0.061938563735790375,
       "adjusted_ci": [
-        -0.8817599381020302,
-        0.2884933033561719
+        -0.8817599381020306,
+        0.28849330335647766
       ],
       "adjusted_ci_includes_zero": true
     },
     {
       "n": 500,
       "mutation": "PR_10_I",
-      "drug_class": "NNRTI",
-      "kind": "decoy_subtype_confounded",
-      "confounded_by_subtype": "A1",
-      "unadjusted_log_odds": -0.10348888879539261,
-      "unadjusted_ci": [
-        -0.6861063418256218,
-        0.4348968363910999
-      ],
-      "adjusted_log_odds": -0.11236906728359795,
-      "adjusted_ci": [
-        -0.6940754529979456,
-        0.4537835299155294
-      ],
-      "adjusted_ci_includes_zero": true
-    },
-    {
-      "n": 500,
-      "mutation": "IN_140_S",
       "drug_class": "NRTI",
       "kind": "decoy_subtype_confounded",
-      "confounded_by_subtype": "C",
-      "unadjusted_log_odds": 0.24741309423299737,
+      "confounded_by_subtype": "A1",
+      "unadjusted_log_odds": 0.22130205040209774,
       "unadjusted_ci": [
-        -0.38413075475966935,
-        0.8781855142907786
+        -0.33351025534873235,
+        0.7467714147897778
       ],
-      "adjusted_log_odds": 0.16016880488697918,
+      "adjusted_log_odds": 0.13532325800280937,
       "adjusted_ci": [
-        -0.19758879511839889,
-        1.1165373092264181
-      ],
-      "adjusted_ci_includes_zero": true
-    },
-    {
-      "n": 500,
-      "mutation": "IN_140_S",
-      "drug_class": "INSTI",
-      "kind": "decoy_subtype_confounded",
-      "confounded_by_subtype": "C",
-      "unadjusted_log_odds": 0.19212332822455316,
-      "unadjusted_ci": [
-        -0.42251671554063475,
-        0.7961216356231637
-      ],
-      "adjusted_log_odds": 0.042078001383117854,
-      "adjusted_ci": [
-        -0.4357695114843469,
-        0.7312889408917368
+        -0.47415264897464443,
+        0.5957714319406167
       ],
       "adjusted_ci_includes_zero": true
     },
@@ -220,10 +184,46 @@
         -0.349111980898668,
         0.850971071524712
       ],
-      "adjusted_log_odds": 0.1233809362849242,
+      "adjusted_log_odds": 0.12338093628044194,
       "adjusted_ci": [
-        -0.4759337511990454,
-        0.6823174913451713
+        -0.46698395070368487,
+        0.7016115821070767
+      ],
+      "adjusted_ci_includes_zero": true
+    },
+    {
+      "n": 500,
+      "mutation": "IN_140_S",
+      "drug_class": "INSTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.19212332822455316,
+      "unadjusted_ci": [
+        -0.42251671554063475,
+        0.7961216356231638
+      ],
+      "adjusted_log_odds": 0.04207800138311788,
+      "adjusted_ci": [
+        -0.47346415515351814,
+        0.7312889410510344
+      ],
+      "adjusted_ci_includes_zero": true
+    },
+    {
+      "n": 500,
+      "mutation": "IN_140_S",
+      "drug_class": "NRTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.24741309423299737,
+      "unadjusted_ci": [
+        -0.3841307547596691,
+        0.8781855142907786
+      ],
+      "adjusted_log_odds": 0.16016880488698024,
+      "adjusted_ci": [
+        -0.1975887951219866,
+        1.116537307641689
       ],
       "adjusted_ci_includes_zero": true
     },
@@ -235,13 +235,13 @@
       "expected_effect_direction": "positive",
       "unadjusted_log_odds": 8.796291102257369,
       "unadjusted_ci": [
-        8.758371151839944,
+        8.758371151839949,
         8.83317327506272
       ],
-      "adjusted_log_odds": 7.037290171996515,
+      "adjusted_log_odds": 7.03729017199649,
       "adjusted_ci": [
-        6.9039194183233015,
-        7.149606460985801
+        6.903919418323272,
+        7.149606460985778
       ],
       "recovers": true
     },
@@ -253,13 +253,13 @@
       "expected_effect_direction": "positive",
       "unadjusted_log_odds": 8.704375865338983,
       "unadjusted_ci": [
-        8.649970000766109,
+        8.649970000766105,
         8.749334206504248
       ],
-      "adjusted_log_odds": 7.3004473200645155,
+      "adjusted_log_odds": 7.300447320064511,
       "adjusted_ci": [
-        7.1510272404899276,
-        7.418432894336989
+        7.15102724048989,
+        7.418432894336987
       ],
       "recovers": true
     },
@@ -272,50 +272,14 @@
       "unadjusted_log_odds": 8.656565412636935,
       "unadjusted_ci": [
         8.601204550339656,
-        8.706945955326024
+        8.706945955326027
       ],
-      "adjusted_log_odds": 7.416202179089734,
+      "adjusted_log_odds": 7.416202179089731,
       "adjusted_ci": [
-        6.810765390230922,
-        7.54702886286692
+        6.810765390230872,
+        7.547028862866921
       ],
       "recovers": true
-    },
-    {
-      "n": 2000,
-      "mutation": "RT_215_Y",
-      "drug_class": "NRTI",
-      "kind": "decoy_subtype_confounded",
-      "confounded_by_subtype": "C",
-      "unadjusted_log_odds": 0.19394638774252676,
-      "unadjusted_ci": [
-        -0.16587221978137034,
-        0.5484118277203865
-      ],
-      "adjusted_log_odds": -7.324702283960884e-09,
-      "adjusted_ci": [
-        -0.05645606695574504,
-        0.2565504873917586
-      ],
-      "adjusted_ci_includes_zero": true
-    },
-    {
-      "n": 2000,
-      "mutation": "RT_215_Y",
-      "drug_class": "INSTI",
-      "kind": "decoy_subtype_confounded",
-      "confounded_by_subtype": "C",
-      "unadjusted_log_odds": 0.08172088829385245,
-      "unadjusted_ci": [
-        -0.35393893454653413,
-        0.4238972460751326
-      ],
-      "adjusted_log_odds": -1.8592816838768434e-08,
-      "adjusted_ci": [
-        -0.051396506044281774,
-        0.08680370752773364
-      ],
-      "adjusted_ci_includes_zero": true
     },
     {
       "n": 2000,
@@ -328,46 +292,46 @@
         -0.6953330047174484,
         0.17942366227974896
       ],
-      "adjusted_log_odds": -0.029709464825134528,
+      "adjusted_log_odds": -0.029709464825134486,
       "adjusted_ci": [
-        -0.5441476669741423,
-        0.025618912398595282
+        -0.5441476667575,
+        0.0256189123983093
       ],
       "adjusted_ci_includes_zero": true
     },
     {
       "n": 2000,
-      "mutation": "PR_10_I",
-      "drug_class": "NRTI",
+      "mutation": "RT_215_Y",
+      "drug_class": "INSTI",
       "kind": "decoy_subtype_confounded",
-      "confounded_by_subtype": "A1",
-      "unadjusted_log_odds": -0.34188767832141903,
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.08172088829385248,
       "unadjusted_ci": [
-        -0.6954492887794986,
-        -0.007774558358365533
+        -0.35393893454653413,
+        0.4238972460751326
       ],
-      "adjusted_log_odds": -0.073650440528308,
+      "adjusted_log_odds": -1.8592816838768434e-08,
       "adjusted_ci": [
-        -0.4253575491121992,
-        -2.502715818288284e-08
+        -0.05139650604428154,
+        0.08680370752773356
       ],
-      "adjusted_ci_includes_zero": false
+      "adjusted_ci_includes_zero": true
     },
     {
       "n": 2000,
-      "mutation": "PR_10_I",
-      "drug_class": "INSTI",
+      "mutation": "RT_215_Y",
+      "drug_class": "NRTI",
       "kind": "decoy_subtype_confounded",
-      "confounded_by_subtype": "A1",
-      "unadjusted_log_odds": 0.08122467111606269,
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.19394638774252676,
       "unadjusted_ci": [
-        -0.24250573355837263,
-        0.4150855788744403
+        -0.16587221978137034,
+        0.5484118277203865
       ],
-      "adjusted_log_odds": -2.6025730113415684e-08,
+      "adjusted_log_odds": -7.3247022839608576e-09,
       "adjusted_ci": [
-        -0.0469626762373861,
-        0.11693306306107801
+        -0.05645606695574494,
+        0.25655048739313535
       ],
       "adjusted_ci_includes_zero": true
     },
@@ -382,28 +346,64 @@
         -0.617963380180136,
         0.14773262796976408
       ],
-      "adjusted_log_odds": -0.03357123076497131,
+      "adjusted_log_odds": -0.03357123076497123,
       "adjusted_ci": [
-        -0.37802159894620607,
-        0.05748062274539818
+        -0.37802159894620907,
+        0.05748062274539527
       ],
       "adjusted_ci_includes_zero": true
     },
     {
       "n": 2000,
-      "mutation": "IN_140_S",
+      "mutation": "PR_10_I",
+      "drug_class": "INSTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "A1",
+      "unadjusted_log_odds": 0.08122467111606269,
+      "unadjusted_ci": [
+        -0.24250573355837265,
+        0.41508557887444025
+      ],
+      "adjusted_log_odds": -2.6025730113415674e-08,
+      "adjusted_ci": [
+        -0.0469626762373864,
+        0.11693306306107742
+      ],
+      "adjusted_ci_includes_zero": true
+    },
+    {
+      "n": 2000,
+      "mutation": "PR_10_I",
       "drug_class": "NRTI",
       "kind": "decoy_subtype_confounded",
-      "confounded_by_subtype": "C",
-      "unadjusted_log_odds": 0.12305062976682687,
+      "confounded_by_subtype": "A1",
+      "unadjusted_log_odds": -0.34188767832141886,
       "unadjusted_ci": [
-        -0.21089429240418622,
-        0.4244073583607173
+        -0.6954492887794985,
+        -0.007774558358365534
       ],
-      "adjusted_log_odds": -1.2245575278121574e-08,
+      "adjusted_log_odds": -0.07365044052830758,
       "adjusted_ci": [
-        -0.09048031166866383,
-        0.207579886399708
+        -0.4253575480308976,
+        -2.5027158182882844e-08
+      ],
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 2000,
+      "mutation": "IN_140_S",
+      "drug_class": "NNRTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.08525119715624015,
+      "unadjusted_ci": [
+        -0.27901500842631294,
+        0.4382305228434977
+      ],
+      "adjusted_log_odds": 0.010304005944257934,
+      "adjusted_ci": [
+        -0.22921148054356508,
+        0.1767151340846022
       ],
       "adjusted_ci_includes_zero": true
     },
@@ -416,32 +416,248 @@
       "unadjusted_log_odds": -0.1454595027537008,
       "unadjusted_ci": [
         -0.5828127767922741,
-        0.21643000761297077
+        0.21643000761297215
       ],
       "adjusted_log_odds": -3.193974733842993e-08,
       "adjusted_ci": [
-        -0.10917166987219659,
-        0.04322246337646595
+        -0.10917166987219655,
+        0.043222463376466354
       ],
       "adjusted_ci_includes_zero": true
     },
     {
       "n": 2000,
       "mutation": "IN_140_S",
+      "drug_class": "NRTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.12305062976682687,
+      "unadjusted_ci": [
+        -0.21089429240418622,
+        0.42440735836071725
+      ],
+      "adjusted_log_odds": -1.2245575278121574e-08,
+      "adjusted_ci": [
+        -0.0904803116687075,
+        0.20757988639764047
+      ],
+      "adjusted_ci_includes_zero": true
+    },
+    {
+      "n": 8000,
+      "mutation": "RT_184_V",
+      "drug_class": "NRTI",
+      "kind": "true_causal",
+      "expected_effect_direction": "positive",
+      "unadjusted_log_odds": 11.100828433356874,
+      "unadjusted_ci": [
+        11.081250270771282,
+        11.120847626468926
+      ],
+      "adjusted_log_odds": 7.339410747628551,
+      "adjusted_ci": [
+        7.2591246930734625,
+        7.409061534047078
+      ],
+      "recovers": true
+    },
+    {
+      "n": 8000,
+      "mutation": "RT_103_N",
+      "drug_class": "NNRTI",
+      "kind": "true_causal",
+      "expected_effect_direction": "positive",
+      "unadjusted_log_odds": 11.074953538642774,
+      "unadjusted_ci": [
+        11.052743744542326,
+        11.097637001561901
+      ],
+      "adjusted_log_odds": 7.4317332401712255,
+      "adjusted_ci": [
+        7.350438534722609,
+        7.506163290176711
+      ],
+      "recovers": true
+    },
+    {
+      "n": 8000,
+      "mutation": "IN_148_H",
+      "drug_class": "INSTI",
+      "kind": "true_causal",
+      "expected_effect_direction": "positive",
+      "unadjusted_log_odds": 10.989961501762194,
+      "unadjusted_ci": [
+        10.961860661697711,
+        11.014645117198674
+      ],
+      "adjusted_log_odds": 7.709068325949847,
+      "adjusted_ci": [
+        7.079938395831415,
+        8.019916875620558
+      ],
+      "recovers": true
+    },
+    {
+      "n": 8000,
+      "mutation": "RT_215_Y",
       "drug_class": "NNRTI",
       "kind": "decoy_subtype_confounded",
       "confounded_by_subtype": "C",
-      "unadjusted_log_odds": 0.08525119715624015,
+      "unadjusted_log_odds": 0.07078618802695597,
       "unadjusted_ci": [
-        -0.27901500842631294,
-        0.4382305228434976
+        -0.10720002491024064,
+        0.2606256923924428
       ],
-      "adjusted_log_odds": 0.010304005944257967,
+      "adjusted_log_odds": -1.620335737849175e-08,
       "adjusted_ci": [
-        -0.2292114799339156,
-        0.17671513408441078
+        -2.5272182613593878e-08,
+        -6.251245212571322e-09
       ],
-      "adjusted_ci_includes_zero": true
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 8000,
+      "mutation": "RT_215_Y",
+      "drug_class": "INSTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.10517471670072591,
+      "unadjusted_ci": [
+        -0.09056548081725349,
+        0.28075159101910035
+      ],
+      "adjusted_log_odds": -1.802960903958812e-08,
+      "adjusted_ci": [
+        -2.6909416809802825e-08,
+        -9.14653317102544e-09
+      ],
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 8000,
+      "mutation": "RT_215_Y",
+      "drug_class": "NRTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.1305137817221397,
+      "unadjusted_ci": [
+        -0.049080428647944443,
+        0.3148515712875574
+      ],
+      "adjusted_log_odds": -1.2141424507067625e-08,
+      "adjusted_ci": [
+        -2.1039491171081407e-08,
+        -2.128868075181656e-09
+      ],
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 8000,
+      "mutation": "PR_10_I",
+      "drug_class": "NNRTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "A1",
+      "unadjusted_log_odds": 0.08610568014739621,
+      "unadjusted_ci": [
+        -0.09306697082066198,
+        0.2265792028838375
+      ],
+      "adjusted_log_odds": -2.138699722298892e-08,
+      "adjusted_ci": [
+        -3.291411020163196e-08,
+        -1.1421994913629198e-08
+      ],
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 8000,
+      "mutation": "PR_10_I",
+      "drug_class": "INSTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "A1",
+      "unadjusted_log_odds": -0.03422048155382446,
+      "unadjusted_ci": [
+        -0.1991273141492933,
+        0.11164041920765998
+      ],
+      "adjusted_log_odds": -3.342081202358164e-08,
+      "adjusted_ci": [
+        -4.3557064321827017e-08,
+        -2.339104122431123e-08
+      ],
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 8000,
+      "mutation": "PR_10_I",
+      "drug_class": "NRTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "A1",
+      "unadjusted_log_odds": -0.08432027052443593,
+      "unadjusted_ci": [
+        -0.2598120943798739,
+        0.09847894387367032
+      ],
+      "adjusted_log_odds": -3.052729705795983e-08,
+      "adjusted_ci": [
+        -4.152926320990002e-08,
+        -1.824046606640291e-08
+      ],
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 8000,
+      "mutation": "IN_140_S",
+      "drug_class": "NNRTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": -0.17212059239785552,
+      "unadjusted_ci": [
+        -0.3718320961445095,
+        0.0046259301221188145
+      ],
+      "adjusted_log_odds": -3.357009152372921e-08,
+      "adjusted_ci": [
+        -4.415567082624138e-08,
+        -2.3232121725294978e-08
+      ],
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 8000,
+      "mutation": "IN_140_S",
+      "drug_class": "INSTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": 0.033290247388712266,
+      "unadjusted_ci": [
+        -0.15777130995465746,
+        0.20800335740634243
+      ],
+      "adjusted_log_odds": -2.6439714632129275e-08,
+      "adjusted_ci": [
+        -3.6859756504317576e-08,
+        -1.595653978888566e-08
+      ],
+      "adjusted_ci_includes_zero": false
+    },
+    {
+      "n": 8000,
+      "mutation": "IN_140_S",
+      "drug_class": "NRTI",
+      "kind": "decoy_subtype_confounded",
+      "confounded_by_subtype": "C",
+      "unadjusted_log_odds": -0.10834209954756552,
+      "unadjusted_ci": [
+        -0.27086905643230846,
+        0.054777325142766335
+      ],
+      "adjusted_log_odds": -2.8871421781787038e-08,
+      "adjusted_ci": [
+        -3.8855802115394386e-08,
+        -1.9436907728461577e-08
+      ],
+      "adjusted_ci_includes_zero": false
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "stage": "align",
   "seed": 42,
-  "generated_at": "2026-08-13",
+  "generated_at": "2026-08-17",
   "host": {
     "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
     "machine": "arm64",
@@ -11,45 +11,45 @@
   "measurements": [
     {
       "n_sequences": 100,
-      "wall_seconds": 0.07022570900153369,
-      "peak_mb": 86.09375,
-      "throughput_per_sec": 1423.9799273200083,
+      "wall_seconds": 0.011832333984784782,
+      "peak_mb": 95.375,
+      "throughput_per_sec": 8451.417964417686,
       "extras": {
         "n_aligned": 100.0
       }
     },
     {
       "n_sequences": 200,
-      "wall_seconds": 0.014869250007905066,
-      "peak_mb": 86.359375,
-      "throughput_per_sec": 13450.57752702203,
+      "wall_seconds": 0.009868541965261102,
+      "peak_mb": 96.421875,
+      "throughput_per_sec": 20266.41835278535,
       "extras": {
         "n_aligned": 200.0
       }
     },
     {
       "n_sequences": 500,
-      "wall_seconds": 0.026739166001789272,
-      "peak_mb": 86.359375,
-      "throughput_per_sec": 18699.16211921277,
+      "wall_seconds": 0.02269745897501707,
+      "peak_mb": 97.625,
+      "throughput_per_sec": 22028.897620229047,
       "extras": {
         "n_aligned": 500.0
       }
     },
     {
       "n_sequences": 1000,
-      "wall_seconds": 0.06376900000032037,
-      "peak_mb": 86.359375,
-      "throughput_per_sec": 15681.600777728614,
+      "wall_seconds": 0.04362308303825557,
+      "peak_mb": 97.625,
+      "throughput_per_sec": 22923.64340968388,
       "extras": {
         "n_aligned": 1000.0
       }
     },
     {
       "n_sequences": 2000,
-      "wall_seconds": 0.1412093749968335,
-      "peak_mb": 86.359375,
-      "throughput_per_sec": 14163.36557006111,
+      "wall_seconds": 0.0880547920241952,
+      "peak_mb": 97.625,
+      "throughput_per_sec": 22713.13069992206,
       "extras": {
         "n_aligned": 2000.0
       }
