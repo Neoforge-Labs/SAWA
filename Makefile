@@ -16,7 +16,7 @@ MODELS_DIR    ?= $(DATA_DIR)/models
 
 INGEST_OUT    := $(INTERIM_DIR)/east_africa_pol.parquet
 CURATED_OUT   := $(INTERIM_DIR)/curated/aligned.parquet
-ALIGNED_FASTA := $(INTERIM_DIR)/curate/aligned.fasta
+ALIGNED_FASTA := $(INTERIM_DIR)/curated/aligned.fasta
 CV_JSON       := $(GOLD_DIR)/cluster_validation.json
 BENCH_DIR     := benchmarks/results
 
@@ -315,6 +315,134 @@ paper3-bench:
 
 paper3-render:
 	cd paper3_foundation && quarto render manuscript.qmd
+
+# ---------- EDA + supplement notebooks (Marimo) ----------
+
+.PHONY: eda dtg-supp
+# Comprehensive v0.2.0 exploratory data-analysis report — A/B/C/D/E/F/H/I.
+# Renders to a self-contained HTML embeddable in the SAWA dashboard.
+eda:
+	marimo export html notebooks/eda_v0.2.0.py \
+	    -o paper1_tools/figures/eda_v0.2.0.html
+
+# Fig 4 supplement — DTG-era INSTI resistance deep-dive (§G).
+# Per-position INSTI mutations, per-drug level distributions,
+# preregistered sensitivity analyses, BH-FDR correction diagnostic.
+dtg-supp:
+	marimo export html notebooks/dtg_deep_dive.py \
+	    -o paper1_tools/figures/dtg_deep_dive.html
+
+# ---------- DVC (data provenance) ----------
+
+.PHONY: dvc-init dvc-track dvc-status
+# Idempotent DVC bootstrap: init if needed, then track every gold-tier
+# artifact. Safe to re-run after new data lands; only adds pointers.
+dvc-init dvc-track:
+	bash scripts/setup_dvc.sh
+
+# Quick check: what's out-of-sync between tracked pointers and disk?
+dvc-status:
+	dvc status
+
+# ---------- Foundation-model training (Paper 3) ----------
+
+.PHONY: fm-prepare fm-esm-smoke fm-esm-train fm-esm-all
+# Build train/val/test parquets per drug class from the curated + Sierra
+# outputs. Writes to data/gold/fm/<class>/<strategy>/ plus a manifest.
+fm-prepare:
+	python -m foundation_models.prepare_training_data \
+	    --curated data/interim/curated/aligned.parquet \
+	    --dr-results data/interim/dr_results.parquet \
+	    --out-dir data/gold/fm \
+	    --drug-classes INSTI NRTI NNRTI PI \
+	    --strategy stratified \
+	    --seed 42
+
+# ---- Shared FM training hyperparameters ----
+# EPOCHS, BATCH_SIZE, GRAD_ACCUM live here and ONLY here. Every ESM-2
+# training target below must reference them so stratified and
+# subtype_holdout runs stay experimentally comparable — the whole
+# point of the two splits is to hold everything else constant and
+# vary only the train/test partition. If you change EPOCHS to compare
+# runs at different training lengths, override on the command line
+# for both invocations, not by patching one target.
+#
+#   make fm-esm-train EPOCHS=20 CLASS=INSTI
+#   make fm-esm-holdout EPOCHS=20 CLASS=INSTI   # SAME EPOCHS
+EPOCHS      ?= 10
+BATCH_SIZE  ?= 16
+GRAD_ACCUM  ?= 2
+CLASS       ?= INSTI
+STRATEGY    ?= stratified
+SEED        ?= 42
+
+# 1-epoch, 500-row smoke test on INSTI. Verifies GPU + tokenizer +
+# training loop plumbing before you commit compute to a real run.
+# Expected wall: <60s on any GPU with 4+GB VRAM. No MLflow.
+fm-esm-smoke:
+	python -m foundation_models.esm \
+	    --drug-class INSTI --strategy stratified --smoke --verbose
+
+# Fine-tune on the stratified split. Uses shared EPOCHS/BATCH_SIZE so
+# fm-esm-holdout is a proper controlled comparison.
+fm-esm-train:
+	python -m foundation_models.esm \
+	    --drug-class $(CLASS) --strategy stratified \
+	    --batch-size $(BATCH_SIZE) --grad-accum-steps $(GRAD_ACCUM) \
+	    --max-epochs $(EPOCHS) --seed $(SEED) \
+	    $(if $(MLFLOW_URI),--mlflow-uri $(MLFLOW_URI),)
+
+# All four drug classes back-to-back on the stratified split.
+fm-esm-all: fm-prepare
+	for cls in INSTI NRTI NNRTI PI; do \
+	  python -m foundation_models.esm \
+	      --drug-class $$cls --strategy stratified \
+	      --batch-size $(BATCH_SIZE) --grad-accum-steps $(GRAD_ACCUM) \
+	      --max-epochs $(EPOCHS) --seed $(SEED) \
+	      $(if $(MLFLOW_URI),--mlflow-uri $(MLFLOW_URI),); \
+	done
+
+# Head-to-head vs kmer-LR + one-hot-RF baselines on the SAME test split
+# the ESM-2 checkpoint was scored against. This is the essential Paper 3
+# comparison — ESM-2 test AUROC is only meaningful next to a baseline
+# on identical data. Emits data/gold/fm/comparison_<class>_<strategy>.{parquet,json}.
+#
+# Vars: CLASS=INSTI (default), STRATEGY=stratified (default).
+# Example: make fm-compare CLASS=NRTI STRATEGY=subtype_holdout
+fm-compare:
+	python -m foundation_models.compare_baselines \
+	    --drug-class $(CLASS) --strategy $(STRATEGY) --verbose
+
+# Subtype-holdout variant of the ESM-2 fine-tune — Paper 3's thesis-
+# testing split. Train on {A1, C, D} (dominant East African), test on
+# {B, unknown, recombinant, minor subtypes}. Uses the SAME shared
+# EPOCHS/BATCH_SIZE/SEED as fm-esm-train so the stratified vs holdout
+# comparison isolates only the train/test partition.
+fm-esm-holdout:
+	python -m foundation_models.prepare_training_data \
+	    --curated data/interim/curated/aligned.parquet \
+	    --dr-results data/interim/dr_results.parquet \
+	    --out-dir data/gold/fm \
+	    --drug-classes INSTI NRTI NNRTI PI \
+	    --strategy subtype_holdout \
+	    --holdout-train-subtypes A1 C D \
+	    --seed $(SEED)
+	python -m foundation_models.esm \
+	    --drug-class $(CLASS) --strategy subtype_holdout \
+	    --manifest data/gold/fm/manifest_subtype_holdout.json \
+	    --batch-size $(BATCH_SIZE) --grad-accum-steps $(GRAD_ACCUM) \
+	    --max-epochs $(EPOCHS) --seed $(SEED) \
+	    $(if $(MLFLOW_URI),--mlflow-uri $(MLFLOW_URI),)
+
+# ---------- Problems log (methodological record) ----------
+
+.PHONY: log-problem
+# Interactive prompt to append a new PL-### entry to docs/PROBLEMS_LOG.md.
+# Auto-assigns the next ID, records today's date + current git SHA,
+# refuses to run if PROBLEMS_LOG.md has uncommitted edits (pass --force
+# to override). Every future methodological issue gets logged this way.
+log-problem:
+	python scripts/log_problem.py
 
 # ---------- tests ----------
 

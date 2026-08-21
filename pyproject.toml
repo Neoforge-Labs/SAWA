@@ -51,6 +51,19 @@ dev = [
 dvc = [
     "dvc[s3]>=3.55",
 ]
+# Foundation-model fine-tuning (Paper 3). Optional because CPU-only /
+# analyst use of the codebase doesn't need these — install with
+# `uv sync --extra fm` on the GPU rig only.
+#
+# torch is pinned loosely so a CUDA-specific wheel can be selected at
+# install time (e.g. `uv add torch==2.4.0+cu121 --index-url
+# https://download.pytorch.org/whl/cu121`).
+fm = [
+    "torch>=2.3",
+    "transformers>=4.44",
+    "accelerate>=0.34",
+    "safetensors>=0.4",
+]
 
 [project.scripts]
 # Unified entry point (Batch D). Old per-module scripts kept for
@@ -94,7 +107,7 @@ ignore = [
 # functions, and drop bare tuples like `fig02, counts` at the end of a
 # cell as the cell's return value. That looks like N806/N803/B018 to
 # ruff but is idiomatic marimo.
-"notebooks/**/*.py" = ["N806", "N803", "B018", "F841"]
+"notebooks/**/*.py" = ["N806", "N803", "B018", "F841", "F821", "E731", "I001"]
 # Benchmarks use analysis-style UPPERCASE locals for scientific constants.
 "benchmarks/**/*.py" = ["N806"]
 # FastAPI routes use `= Depends(get_db)` and `= Query(...)` as arg
