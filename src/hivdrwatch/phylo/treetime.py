@@ -184,7 +184,13 @@ def run_treetime(
                 f"stderr tail:\n{stderr_text[-500:]}"
             )
 
-    clock_rate, clock_rate_stddev = _extract_clock_rate(stderr_text)
+    # TreeTime's time-scaling workflow writes the fitted rate to
+    # `molecular_clock.txt`, not to stderr. Try the file first (reliable,
+    # persisted, versionable); fall back to the stderr regex for legacy
+    # invocations that used `treetime clock`.
+    clock_rate, clock_rate_stddev = _extract_clock_rate_from_file(out_dir)
+    if clock_rate is None:
+        clock_rate, clock_rate_stddev = _extract_clock_rate(stderr_text)
     version = _extract_version(stderr_text)
 
     logger.info(
@@ -213,6 +219,16 @@ _CLOCK_RE = re.compile(
     r"clock\s+rate\s*:\s*(-?[\d.eE+-]+)\s*\+/-\s*(-?[\d.eE+-]+)",
     re.IGNORECASE,
 )
+# TreeTime writes its molecular-clock fit to a persisted file per run:
+#     Root-Tip-Regression:
+#      --rate:   2.690e-04
+#      --r^2:    0.02
+# The file is emitted by both fixed-clock and joint-clock workflows and
+# is stable across recent TreeTime versions (0.10+). r² is available as
+# a fit-quality proxy but SD is not — TreeTime only publishes SD via the
+# `treetime clock` subcommand, which we don't use for time-scaling.
+_FILE_RATE_RE = re.compile(r"--rate:\s*(-?[\d.eE+-]+)")
+_FILE_R2_RE = re.compile(r"--r\^?2:\s*(-?[\d.eE+-]+)")
 _VERSION_RE = re.compile(r"TreeTime\s+([\d.]+)", re.IGNORECASE)
 
 
@@ -225,6 +241,51 @@ def _extract_clock_rate(stderr: str) -> tuple[float | None, float | None]:
         return (float(match.group(1)), float(match.group(2)))
     except ValueError:
         return (None, None)
+
+
+def _extract_clock_rate_from_file(
+    out_dir: Path,
+) -> tuple[float | None, float | None]:
+    """Parse rate from `<out_dir>/molecular_clock.txt` (TreeTime's persisted fit).
+
+    Returns ``(rate, None)`` because the file emits r² as a fit-quality
+    proxy but not a standard deviation. Callers that need SD have to
+    use the stderr-based ``_extract_clock_rate`` on a `treetime clock`
+    run instead.
+
+    Returns ``(None, None)`` if the file is absent or unparseable —
+    caller can then fall back to the stderr regex.
+    """
+    mc = out_dir / "molecular_clock.txt"
+    if not mc.exists():
+        return (None, None)
+    try:
+        txt = mc.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return (None, None)
+    m = _FILE_RATE_RE.search(txt)
+    if not m:
+        return (None, None)
+    try:
+        rate = float(m.group(1))
+    except ValueError:
+        return (None, None)
+    # r² is not used as SD (units differ), but log it so operators can
+    # spot poor-fit clocks (r² < 0.1 is a red flag for HIV pol).
+    r2_match = _FILE_R2_RE.search(txt)
+    if r2_match:
+        try:
+            r2 = float(r2_match.group(1))
+            level = "warning" if r2 < 0.1 else "info"
+            getattr(logger, level)(
+                "TreeTime clock fit: rate=%.4g subs/site/year, r²=%.3f (from %s)",
+                rate,
+                r2,
+                mc.name,
+            )
+        except ValueError:
+            pass
+    return (rate, None)
 
 
 def _extract_version(stderr: str) -> str:

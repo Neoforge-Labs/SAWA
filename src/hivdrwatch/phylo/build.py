@@ -27,8 +27,10 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
-from datetime import date
+from dataclasses import dataclass
+from datetime import date, datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 import polars as pl
 
@@ -42,6 +44,38 @@ from .schema import (
 from .treetime import TreetimeResult, build_tip_dates_csv, run_treetime
 
 logger = logging.getLogger(__name__)
+
+PartitionDecision = Literal[
+    "built",
+    "excluded_label",
+    "below_min_taxa",
+    "below_min_coverage",
+]
+
+
+PARTITION_REPORT_SCHEMA_VERSION = "0.1.0"
+
+
+@dataclass(frozen=True)
+class PartitionRow:
+    """One row of the tree partition report — audit trail for a subtype label.
+
+    Every candidate subtype label seen in curated data produces exactly
+    one row, regardless of whether a tree was ultimately built. Used to
+    reconstruct *why* the manifest contains the subtypes it does without
+    reading IQ-TREE logs.
+    """
+
+    subtype: str
+    n_available: int
+    n_after_qc: int
+    n_after_coverage: int
+    decision: PartitionDecision
+    decision_reason: str
+    min_taxa_used: int
+    min_coverage_used: float
+    generated_at: str  # ISO-8601 UTC timestamp
+    schema_version: str = PARTITION_REPORT_SCHEMA_VERSION
 
 MIN_TAXA_FOR_TREE = 20
 
@@ -59,11 +93,24 @@ MIN_TAXA_FOR_TREE = 20
 # alternative that recovers the single-gene entries (v0.2).
 MIN_ALIGNED_COVERAGE = 0.5
 
-# Subtype labels that shouldn't get their own tree. "unknown" means the
-# subtype-caller couldn't classify — those sequences might be any
-# subtype, so building a "subtype=unknown" tree mixes A1/C/D/etc.
-# together and produces a phylogenetically meaningless topology.
-EXCLUDED_SUBTYPES: frozenset[str] = frozenset({"unknown"})
+# Subtype labels that shouldn't get their own tree.
+#
+#   * "unknown" — the subtype-caller couldn't classify. Those sequences
+#     might be any subtype, so building a "subtype=unknown" tree mixes
+#     A1 / C / D / etc. together and produces a phylogenetically
+#     meaningless topology.
+#   * "recombinant" — a heterogeneous label that lumps distinct CRFs
+#     (CRF_01_AE, CRF_02_AG, CRF_35_AD, …) into one bucket. Those CRFs
+#     do not share a common ancestor, so a single "recombinant" tree is
+#     phylogenetically incoherent in the same way "unknown" is. If you
+#     want a recombinant-focused tree, build per-CRF trees instead —
+#     that's the scientifically defensible v0.3 direction.
+#
+# Both exclusions are recorded per-run in
+# `data/gold/trees/partition_report.parquet` with `decision =
+# "excluded_label"` so the reasoning stays visible to an auditor
+# without requiring them to read the source.
+EXCLUDED_SUBTYPES: frozenset[str] = frozenset({"unknown", "recombinant"})
 
 
 def partition_by_subtype(
@@ -301,6 +348,116 @@ def build_subtype_tree(
     return ([ml_meta, tt_meta], ml_result, tt_result)
 
 
+def build_partition_report(
+    curated: pl.DataFrame,
+    *,
+    min_taxa: int = MIN_TAXA_FOR_TREE,
+    min_coverage: float = MIN_ALIGNED_COVERAGE,
+    excluded: frozenset[str] = EXCLUDED_SUBTYPES,
+) -> list[PartitionRow]:
+    """One row per candidate subtype label — full accounting for the audit trail.
+
+    Deterministic, does not invoke IQ-TREE. Safe to regenerate for old
+    runs from a frozen curated parquet. Rows sorted by subtype so
+    downstream diffs are stable.
+
+    A row is emitted for every non-null, non-empty subtype label present
+    in `curated`, so an auditor can see the fate of *every* label —
+    including those excluded by policy and those below thresholds.
+    """
+    if "subtype" not in curated.columns:
+        raise ValueError("curated frame missing 'subtype' column")
+
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    non_null = curated.filter(
+        pl.col("subtype").is_not_null()
+        & (pl.col("subtype").str.strip_chars().str.len_chars() > 0)
+    )
+    labels = sorted(non_null["subtype"].unique().to_list())
+
+    rows: list[PartitionRow] = []
+    for label in labels:
+        subset = non_null.filter(pl.col("subtype") == label)
+        n_available = subset.height
+
+        if "passes_qc" in subset.columns:
+            qc_pass = subset.filter(pl.col("passes_qc"))
+        else:
+            qc_pass = subset
+        n_after_qc = qc_pass.height
+
+        if "aligned_pol" in qc_pass.columns:
+            cov_pass = filter_by_coverage(
+                qc_pass, seq_col="aligned_pol", min_coverage=min_coverage
+            )
+        else:
+            cov_pass = qc_pass
+        n_after_coverage = cov_pass.height
+
+        decision: PartitionDecision
+        reason: str
+        if label in excluded:
+            decision = "excluded_label"
+            reason = (
+                f"label in EXCLUDED_SUBTYPES ({sorted(excluded)}) — "
+                "phylogenetically incoherent to build a single tree "
+                "over this label"
+            )
+        elif n_after_qc < min_taxa:
+            decision = "below_min_taxa"
+            reason = (
+                f"n_after_qc={n_after_qc} < min_taxa={min_taxa}; "
+                "increase cohort or lower --min-taxa (risks caterpillar tree)"
+            )
+        elif n_after_coverage < min_taxa:
+            decision = "below_min_coverage"
+            reason = (
+                f"n_after_coverage={n_after_coverage} < min_taxa={min_taxa} "
+                f"at min_coverage={min_coverage:.0%}; predominantly single-gene "
+                "submissions — switch to per-gene trees to recover them"
+            )
+        else:
+            decision = "built"
+            reason = (
+                f"passes all gates (n_after_coverage={n_after_coverage} "
+                f"≥ min_taxa={min_taxa} at min_coverage={min_coverage:.0%})"
+            )
+
+        rows.append(
+            PartitionRow(
+                subtype=label,
+                n_available=n_available,
+                n_after_qc=n_after_qc,
+                n_after_coverage=n_after_coverage,
+                decision=decision,
+                decision_reason=reason,
+                min_taxa_used=min_taxa,
+                min_coverage_used=min_coverage,
+                generated_at=generated_at,
+            )
+        )
+    return rows
+
+
+def write_partition_report(rows: list[PartitionRow], out_path: Path) -> Path:
+    """Serialize partition rows to a parquet audit trail."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if not rows:
+        pl.DataFrame().write_parquet(out_path)
+        return out_path
+    df = pl.from_dicts([r.__dict__ for r in rows])
+    df.write_parquet(out_path, compression="zstd", compression_level=6)
+    logger.info(
+        "wrote tree partition report: %d subtype rows → %s "
+        "(decisions: %s)",
+        len(rows),
+        out_path,
+        {r.subtype: r.decision for r in rows},
+    )
+    return out_path
+
+
 def build_all_trees(
     curated: pl.DataFrame,
     trees_root: Path,
@@ -313,12 +470,26 @@ def build_all_trees(
     min_taxa: int = MIN_TAXA_FOR_TREE,
     min_coverage: float = MIN_ALIGNED_COVERAGE,
     stream_logger: logging.Logger | None = None,
+    partition_report_path: Path | None = None,
 ) -> list[TreeMetadata]:
     """Build ML + time-scaled trees for every eligible subtype.
 
     Returns the flat list of TreeMetadata rows across all subtypes;
     caller writes them to a manifest parquet.
+
+    If `partition_report_path` is supplied, also emits a per-subtype
+    audit-trail parquet at that path — one row per candidate subtype
+    label (including excluded / below-threshold ones), so reviewers can
+    reconstruct why the manifest contains what it does without reading
+    IQ-TREE logs. The report reflects the same `min_taxa`, `min_coverage`,
+    and `EXCLUDED_SUBTYPES` used for the run.
     """
+    if partition_report_path is not None:
+        report = build_partition_report(
+            curated, min_taxa=min_taxa, min_coverage=min_coverage
+        )
+        write_partition_report(report, partition_report_path)
+
     partitions = partition_by_subtype(curated, min_taxa=min_taxa)
     if subtypes is not None:
         keep = set(subtypes)
@@ -371,11 +542,17 @@ def write_manifest(rows: list[TreeMetadata], out_path: Path) -> Path:
 
 
 __all__ = [
+    "EXCLUDED_SUBTYPES",
+    "MIN_ALIGNED_COVERAGE",
     "MIN_TAXA_FOR_TREE",
     "PHYLO_SCHEMA_VERSION",
+    "PartitionDecision",
+    "PartitionRow",
     "build_all_trees",
+    "build_partition_report",
     "build_subtype_tree",
     "partition_by_subtype",
     "write_manifest",
+    "write_partition_report",
     "write_subtype_alignment",
 ]
