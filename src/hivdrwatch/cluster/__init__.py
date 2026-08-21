@@ -25,6 +25,7 @@ from .dynamics import (
     cluster_subtype_mix,
     cluster_time_series,
 )
+from .features import REPORTED_SUBTYPES, build_outbreak_features
 from .hivtrace import (
     HIVTraceInvocation,
     HIVTraceNotAvailable,
@@ -47,6 +48,7 @@ __all__ = [
     "DEFAULT_MUTATION_RATE",
     "DEFAULT_SEQ_LENGTH",
     "DEFAULT_THRESHOLD",
+    "REPORTED_SUBTYPES",
     "ClusterAssignments",
     "ClusterMembership",
     "ClusterValidationResult",
@@ -57,6 +59,7 @@ __all__ = [
     "TN93Invocation",
     "assign_clusters",
     "build_cluster_graph",
+    "build_outbreak_features",
     "cluster_geographic_spread",
     "cluster_growth_rate",
     "cluster_size_distribution",
