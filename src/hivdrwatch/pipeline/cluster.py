@@ -219,11 +219,11 @@ def run_distances(
       divergences. See
       ``cluster/distance.py::compute_pairwise_distances_python``.
     * ``docker`` — the pinned `tn93` container, the reference
-      implementation. At v1.0.13 it emitted zero pairs on both the
-      synthetic and the real cohort; its own 100-site minimum overlap
-      is one reason why, since the FASTA it was handed was half
-      all-gap rows (``docs/evaluations/align-coverage.md``). Retained
-      for A/B comparison.
+      implementation. The zero-pair runs recorded against the old
+      v1.0.13 image were an aarch64 miscompile in tn93's FASTA reader,
+      not a property of the cohort; the image is pinned at v1.0.17 and
+      reads multi-record FASTA correctly
+      (``docs/evaluations/cluster-distance-denominator.md`` §11).
     """
     log = get_run_logger()
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -374,8 +374,9 @@ def main(argv: list[str] | None = None) -> int:
             "Distance backend. Default 'python' — the in-process "
             "vectorized p-distance over the pairwise unambiguous overlap. "
             "'docker' runs the pinned tn93 container as the reference "
-            "implementation; at v1.0.13 it emitted zero pairs on this "
-            "cohort, see docs/evaluations/align-coverage.md."
+            "implementation; it agrees with 'python' on this cohort to "
+            "within the TN93 correction, see "
+            "docs/evaluations/cluster-distance-denominator.md."
         ),
     )
     parser.add_argument(

@@ -111,10 +111,6 @@ def compute_distances(sim: SimulationResult, work_dir: Path, threshold: float) -
     Uses `compute_pairwise_distances_python` rather than Docker tn93.
     Reasons:
 
-      * tn93 v1.0.13 silently emits zero pairs on synthetic data
-        regardless of threshold (confirmed with a diagnostic re-run at
-        t=1.0). We've iterated on flags + FASTA shape + rebuild and
-        cannot get it to emit pairs.
       * The validation harness's job is to check the CLUSTERER against
         ground truth. It doesn't need to also validate the tn93 binary.
         For synthetic gap-free unambiguous sequences, p-distance and
