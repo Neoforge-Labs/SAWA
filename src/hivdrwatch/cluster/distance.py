@@ -1,11 +1,15 @@
-"""TN93 pairwise distance via the pinned tn93 docker image.
+"""Pairwise nucleotide distance for cluster construction.
 
-We shell out to `tn93 -t <threshold> -o distances.csv aligned.fasta`.
-The tool emits only pairs at or below the threshold — which is what we
-want for cluster construction (above-threshold pairs are billions of
-useless zeros).
+Two engines, same CSV shape (`ID1,ID2,Distance` header, then one row
+per pair at or below the threshold — above-threshold pairs are
+billions of useless zeros):
 
-Output CSV shape: `ID1,ID2,Distance` header, then one row per pair.
+* `compute_pairwise_distances_python` — the production engine, used by
+  `pipeline/cluster.py` and by the Fig 3 validation harness. Divides
+  the mismatch count by the **pairwise unambiguous overlap** and
+  refuses pairs that overlap in fewer than `DEFAULT_MIN_OVERLAP` sites.
+* `run_tn93` — the pinned tn93 docker image, kept as the reference
+  implementation for A/B comparison.
 """
 
 from __future__ import annotations
@@ -15,6 +19,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 
 logger = logging.getLogger(__name__)
@@ -22,6 +27,16 @@ logger = logging.getLogger(__name__)
 DEFAULT_IMAGE = "hivdrwatch/tn93:1.0.13"
 DEFAULT_THRESHOLD = 0.015  # HIV-TRACE convention (1.5%)
 DEFAULT_AMBIGUITY_HANDLING = "resolve"  # tn93 flag
+
+# Fewest shared unambiguous sites a pair must have before a distance is
+# reported for it. Matches the `-l 100` default of tn93 itself.
+DEFAULT_MIN_OVERLAP = 100
+
+# The only characters that count toward a pairwise overlap. A gap is the
+# absence of sequence and an IUPAC ambiguity code is a site the
+# depositor could not call; neither is evidence that two sequences
+# agree, so neither belongs in the denominator.
+UNAMBIGUOUS_BASES = b"ACGT"
 
 
 @dataclass(frozen=True)
@@ -198,43 +213,8 @@ def _diagnostic_tn93_all_pairs(
     )
 
 
-def compute_pairwise_distances_python(
-    fasta_path: Path,
-    output_csv: Path,
-    *,
-    threshold: float = DEFAULT_THRESHOLD,
-) -> Path:
-    """In-process pairwise nucleotide distance — the validation-harness path.
-
-    Docker tn93 v1.0.13 silently emits zero pairs on synthetic data
-    regardless of threshold (confirmed with a diagnostic re-run at
-    t=1.0). Rather than keep hunting the black-box binary, the
-    validation harness computes distances in-process here.
-
-    For sequences of equal length with no ambiguities (which is what
-    the JC69 simulator produces), the Tamura-Nei 93 correction reduces
-    to a monotone function of the raw p-distance. Since the clusterer
-    uses `distance <= threshold` on this monotone value, using the raw
-    p-distance directly gives IDENTICAL cluster memberships to the
-    TN93-corrected distance for small divergences. That is exactly the
-    regime the validation harness operates in.
-
-    The real cluster pipeline (`pipeline/cluster.py` on 23k real
-    sequences) continues to use `run_tn93` via Docker — this Python
-    impl is only for the validation harness where the input is
-    synthetic, gap-free, and unambiguous.
-
-    Emits a CSV with the same header (`ID1,ID2,Distance`) as tn93 so
-    `read_distances` consumes it identically.
-    """
-    import numpy as np
-
-    fasta_path = fasta_path.resolve()
-    output_csv = output_csv.resolve()
-    if not fasta_path.exists():
-        raise FileNotFoundError(f"aligned FASTA missing: {fasta_path}")
-    output_csv.parent.mkdir(parents=True, exist_ok=True)
-
+def _read_alignment(fasta_path: Path) -> tuple[list[str], np.ndarray]:
+    """Parse an aligned FASTA into (accessions, [n, width] uint8 matrix)."""
     accessions: list[str] = []
     seqs: list[np.ndarray] = []
     current_id: str | None = None
@@ -259,6 +239,85 @@ def compute_pairwise_distances_python(
                 buffer.append(line)
         _flush()
 
+    if not seqs:
+        return accessions, np.empty((0, 0), dtype=np.uint8)
+
+    # Length check — real alignments should be all-equal-length. Mixed
+    # lengths point at a FASTA writer bug worth catching loudly.
+    lengths = {int(s.size) for s in seqs}
+    if len(lengths) > 1:
+        raise ValueError(
+            f"sequences have mixed lengths {sorted(lengths)}; the distance "
+            "engine expects a proper alignment where every sequence is the "
+            "same length"
+        )
+    return accessions, np.vstack(seqs)
+
+
+def compute_pairwise_distances_python(
+    fasta_path: Path,
+    output_csv: Path,
+    *,
+    threshold: float = DEFAULT_THRESHOLD,
+    min_overlap: int = DEFAULT_MIN_OVERLAP,
+) -> Path:
+    """In-process pairwise nucleotide distance over the pairwise overlap.
+
+    This is the production distance engine: `pipeline/cluster.py`
+    defaults `--distance-engine` to `python`, and `cluster_validate`
+    (Fig 3) calls it directly. `run_tn93` is the reference path kept
+    for A/B comparison. Earlier revisions of this docstring described
+    the function as validation-harness-only; that stopped being true
+    when the pipeline default was set, and the two now agree.
+
+    ## The denominator is the overlap, never the alignment width
+
+    A curated row is 3,012 columns wide whether or not any sequence was
+    placed on them, so most rows are mostly dashes. Dividing the
+    mismatch count by 3,012 treats a column where **neither** sequence
+    has a base as evidence that the two agree there. Nobody sequenced
+    it; it is not agreement, it is absence. Scored that way, two rows
+    of pure gaps are distance 0.0 and link, and any two sequences are
+    pulled toward 0 in proportion to how little of them overlaps — the
+    metric rewards missing data.
+
+    So: divide by the number of columns where both sequences carry an
+    unambiguous base (A/C/G/T). Gap characters and IUPAC ambiguity
+    codes (N, R, Y, …) leave the denominator — an uncalled site is not
+    evidence of agreement either.
+
+    ## Minimum overlap
+
+    An overlap-aware distance from a handful of shared sites is a
+    number with no information in it, so a pair whose overlap is below
+    `min_overlap` gets no row at all rather than an unreliable one.
+    The default matches the `-l 100` default of tn93 itself, whose
+    semantics are the same: refuse the pair, do not clamp its distance.
+
+    ## Relationship to TN93
+
+    For sequences with no ambiguities, the Tamura-Nei 93 correction is
+    a monotone function of the raw p-distance, and the clusterer only
+    ever applies `distance <= threshold` to it, so cluster memberships
+    are identical for the small divergences that matter here. What this
+    function does **not** reproduce is tn93's `-a resolve` ambiguity
+    handling: tn93 resolves an ambiguous site against its partner,
+    where this drops the site. That is the conservative direction (it
+    shrinks the denominator rather than inventing agreement) and it is
+    recorded in `docs/evaluations/cluster-distance-denominator.md`.
+
+    Emits a CSV with the same header (`ID1,ID2,Distance`) as tn93 so
+    `read_distances` consumes it identically.
+    """
+    fasta_path = fasta_path.resolve()
+    output_csv = output_csv.resolve()
+    if not fasta_path.exists():
+        raise FileNotFoundError(f"aligned FASTA missing: {fasta_path}")
+    if min_overlap < 1:
+        raise ValueError(f"min_overlap must be at least 1 site, got {min_overlap}")
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+
+    accessions, matrix = _read_alignment(fasta_path)
     n = len(accessions)
     logger.info("computing in-process pairwise distances for %d sequences", n)
 
@@ -266,38 +325,53 @@ def compute_pairwise_distances_python(
         output_csv.write_text("ID1,ID2,Distance\n")
         return output_csv
 
-    # Length check — real alignments should be all-equal-length. Mixed
-    # lengths point at a FASTA writer bug worth catching loudly.
-    lengths = {int(s.size) for s in seqs}
-    if len(lengths) > 1:
-        raise ValueError(
-            f"sequences have mixed lengths {sorted(lengths)}; the validation "
-            "harness expects a proper alignment where every sequence is the "
-            "same length"
-        )
-    seq_len = lengths.pop()
-
-    # Stack into a 2-D array [n, seq_len] of uint8 for vectorized ops.
-    matrix = np.vstack(seqs)
+    unambiguous = np.isin(matrix, np.frombuffer(UNAMBIGUOUS_BASES, dtype=np.uint8))
+    coverage = unambiguous.sum(axis=1)
+    logger.info(
+        "alignment width %d; unambiguous coverage per sequence: "
+        "min=%d median=%d max=%d; %d sequences below min_overlap=%d",
+        matrix.shape[1],
+        int(coverage.min()),
+        int(np.median(coverage)),
+        int(coverage.max()),
+        int((coverage < min_overlap).sum()),
+        min_overlap,
+    )
 
     n_written = 0
+    n_refused = 0
     with output_csv.open("w", encoding="utf-8") as fh:
         fh.write("ID1,ID2,Distance\n")
         for i in range(n - 1):
-            # Vectorized: differences of row i vs all rows below it.
-            diffs = (matrix[i + 1 :] != matrix[i]).sum(axis=1)
-            distances = diffs / seq_len
-            below = np.where(distances <= threshold)[0]
-            for j_off in below:
-                j = i + 1 + int(j_off)
-                fh.write(f"{accessions[i]},{accessions[j]},{float(distances[j_off]):.6f}\n")
+            # An overlap can never exceed either sequence's own count of
+            # unambiguous sites, so pairs that cannot possibly clear
+            # min_overlap are dropped before any column-wise work.
+            reachable = np.minimum(coverage[i + 1 :], coverage[i]) >= min_overlap
+            n_refused += int((~reachable).sum())
+            candidates = np.flatnonzero(reachable)
+            if candidates.size == 0:
+                continue
+
+            shared = unambiguous[i + 1 :][candidates] & unambiguous[i]
+            overlap = shared.sum(axis=1)
+            keep = overlap >= min_overlap
+            n_refused += int((~keep).sum())
+
+            diffs = ((matrix[i + 1 :][candidates] != matrix[i]) & shared).sum(axis=1)
+            distances = diffs / np.maximum(overlap, 1)
+            for k in np.flatnonzero(keep & (distances <= threshold)):
+                j = i + 1 + int(candidates[k])
+                fh.write(f"{accessions[i]},{accessions[j]},{float(distances[k]):.6f}\n")
                 n_written += 1
 
     logger.info(
-        "in-process distances → %s (%d pairs at or below threshold=%.4f)",
+        "in-process distances → %s (%d pairs at or below threshold=%.4f; "
+        "%d pairs refused for overlap below %d sites)",
         output_csv,
         n_written,
         threshold,
+        n_refused,
+        min_overlap,
     )
     return output_csv
 
