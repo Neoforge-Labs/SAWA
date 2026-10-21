@@ -48,7 +48,7 @@ jobs:
       # scale_cluster requires Docker for tn93; runs but no-ops if
       # docker isn't on PATH. Ubuntu-latest has Docker preinstalled.
       - name: Build tn93 image
-        run: docker build -t hivdrwatch/tn93:1.0.13 docker/hivtrace
+        run: docker build -t hivdrwatch/tn93:1.0.17 docker/hivtrace
 
       - name: Scale — cluster
         run: uv run python -m benchmarks.scale_cluster

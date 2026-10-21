@@ -80,7 +80,7 @@ ps:
 .PHONY: images
 images:
 	docker build -t hivdrwatch/mafft:latest docker/mafft
-	docker build -t hivdrwatch/tn93:1.0.13 docker/hivtrace
+	docker build -t hivdrwatch/tn93:1.0.17 docker/hivtrace
 	docker build -t hivdrwatch/hivtrace:0.1 docker/hivtrace_full
 	docker build -t hivdrwatch/phylo:latest docker/iqtree
 

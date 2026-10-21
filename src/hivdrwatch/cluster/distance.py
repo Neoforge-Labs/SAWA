@@ -24,7 +24,7 @@ import polars as pl
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_IMAGE = "hivdrwatch/tn93:1.0.13"
+DEFAULT_IMAGE = "hivdrwatch/tn93:1.0.17"
 DEFAULT_THRESHOLD = 0.015  # HIV-TRACE convention (1.5%)
 DEFAULT_AMBIGUITY_HANDLING = "resolve"  # tn93 flag
 
@@ -69,13 +69,19 @@ def run_tn93(
     work_dir = aligned_fasta.parent
     output_csv.parent.mkdir(parents=True, exist_ok=True)
 
-    # tn93 v1.0.13's `-l` flag doesn't do what its `--help` claims —
-    # setting `-l 100` (nominally "minimum overlap") silently rejects
-    # every pair in our alignment, and `-f csv` (nominally "output
-    # format") isn't recognized on some tags. Rely on tn93 defaults:
+    # Rely on tn93's own defaults for overlap and output format:
     # `-t THRESHOLD -a AMBIGS -o OUTPUT INPUT`. This is exactly what
-    # HIV-TRACE's tutorial invokes and what the previous successful
-    # cluster-validate run used.
+    # HIV-TRACE's tutorial invokes. Passing `-l 100 -f csv` explicitly
+    # was measured to give the identical pair set on the filtered cohort
+    # (only the row order moves, which is OpenMP scheduling), so the
+    # flags buy nothing and the shorter line is the documented one.
+    #
+    # `-l` is the one place tn93's help and its code disagree: the help
+    # says "at least OVERLAP nucleotides" but the comparison is
+    # `totalNonGap <= min_overlap`, so 100 shared sites are refused and
+    # 101 accepted. `DEFAULT_MIN_OVERLAP` uses the documented reading,
+    # `overlap >= min_overlap`. The coverage gate leaves every surviving
+    # record with >= 1,506 sites, so the one-site boundary cannot bind.
     tn93_args = (
         "-t",
         str(threshold),

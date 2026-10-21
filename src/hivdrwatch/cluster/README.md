@@ -4,7 +4,7 @@ Detects transmission clusters using the HIV-TRACE convention: TN93 pairwise dist
 
 ## Method
 
-- Distance: `distance.compute_pairwise_distances_python`, the in-process engine both `pipeline/cluster.py` and the Fig 3 harness use. `distance.run_tn93` wraps `tn93` (Docker image `hivdrwatch/tn93:1.0.13`), the CDC HIV-TRACE distance tool, and is kept as the reference implementation for A/B comparison.
+- Distance: `distance.compute_pairwise_distances_python`, the in-process engine both `pipeline/cluster.py` and the Fig 3 harness use. `distance.run_tn93` wraps `tn93` (Docker image `hivdrwatch/tn93:1.0.17`), the CDC HIV-TRACE distance tool, and is kept as the reference implementation for A/B comparison.
 - Denominator: the **pairwise overlap** — the columns where both sequences carry an unambiguous base. Not the alignment width. A curated row is 3,012 columns wide whether or not anything was placed on them, so dividing by the width counts a column where neither sequence has a base as agreement, and two all-gap rows come out as distance 0.0. See `docs/evaluations/cluster-distance-denominator.md`.
 - Minimum overlap: 100 shared unambiguous sites (`DEFAULT_MIN_OVERLAP`, matching tn93's own `-l` default). A pair below it gets no row rather than a distance estimated from too few sites.
 - Input: records that pass QC and carry at least `MIN_ALIGNED_COVERAGE` (50 %) non-gap content, the same two gates `phylo/build.py` applies to tree input.
