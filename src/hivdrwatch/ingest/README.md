@@ -19,10 +19,14 @@ Two sources, one canonical `SequenceRecord` output. Every downstream stage reads
 
 ## Contract
 
-- `subtype` — LANL curation wins when present; GenBank note field is the fallback.
-- `country` — LANL `Country` (mapped to ISO 3166-1 alpha-2) wins; folder name is the fallback; requested country is the last-resort default.
+- `subtype` — LANL curation wins when present; the GenBank `/note=` field is the fallback. Both go through `schema.subtype_from_designation`, so the two sources cannot disagree about the same string. Two or more named parents, or a mosaic marker, resolve to `recombinant`; a named CRF resolves to itself. `A` and `F` are parent clades for records that do not say A1/A2 or F1/F2 — ingest does not promote `A` to `A1`.
+- `country` — **the country the record itself states, never the search query's.** GenBank: the `source` feature's `/geo_loc_name=` (NCBI's replacement for `/country=`), mapped via `schema.COUNTRY_NAME_TO_CODE`. LANL: the `Country` column, folder name as fallback. A record that states no country gets `country = None`; there is no fallback, because the country search over-matches and returns records from outside the requested country. `country_raw` keeps the stated value verbatim including any subdivision, and `country_source` says where `country` came from.
+- `gene_region` — derived from the sequence's extent: `"pol"` up to `MAX_POL_LENGTH` (4,000 nt), `"genome"` above it. A pol subregion is still pol; a gag→nef deposit is not.
+- One row per accession. `merge_sources` collapses the copies a record picks up from being returned by several country searches.
 - Duplicate accessions across LANL files — later mtime wins.
 - Sequences shorter than `--min-length` (default 800 bp) are dropped; phylogenetic signal is too weak below that.
+
+`docs/evaluations/ingest-provenance.md` records what the pre-0.2.0 contract did to the shipped corpus, and `scripts/ingest_provenance_probe.py` re-measures it.
 
 ## Run it
 
@@ -46,7 +50,9 @@ Output: Parquet with `schema_version` and `merged_at` columns for downstream pin
 
 ## Schema versioning
 
-The output schema is versioned by `SCHEMA_VERSION` in `schema.py`. Bump per the table in `CLAUDE.md` ("Data and schemas"). Every Parquet output stamps the version; downstream code should read the stamp before assuming column presence.
+The output schema is versioned by `SCHEMA_VERSION` in `schema.py` (currently **0.2.0**). Bump per the table in `CLAUDE.md` ("Data and schemas"); the migration notes live in the `schema.py` module docstring and `CHANGELOG.md`. Every Parquet output stamps the version; downstream code should read the stamp before assuming column presence.
+
+0.1.0 vintages **cannot be migrated in place** — the correct `subtype` and `country` are only recoverable from the source records, so re-run ingest against `data/raw/genbank` (the flat-file cache means this needs no network).
 
 ## Tests
 
