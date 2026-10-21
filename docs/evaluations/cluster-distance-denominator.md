@@ -622,3 +622,166 @@ put in a methods section.
 What is *not* on the table is leaving A in place while the manuscript
 claims the HIV-TRACE convention. Either the metric changes or the
 methods section does.
+
+## 13. Option D, built and checked against the reference
+
+§12.4 recommended computing TN93 in-process so that the cut the
+manuscript claims is available without shelling out to Docker. It is
+built, and it agrees with `hivdrwatch/tn93:1.0.17` on the real cohort.
+
+**The default has not moved.** The metric is still a Paper 1 claim
+awaiting Kelyn (§3, §12.4); the correction is reachable only by asking
+for it, and §13.2 is the proof that asking for nothing changed nothing.
+Nothing in `data/gold/` was regenerated.
+
+### 13.1 What was built
+
+`compute_pairwise_distances_python` takes a `metric` argument:
+`p-distance` (the default, the uncorrected mismatch fraction over the
+pairwise overlap) or `tn93`. `pipeline/cluster.py` grew the matching
+`--distance-metric`, also defaulting to `p-distance`.
+`--distance-engine docker` is unaffected: the reference binary computes
+TN93 itself, so the flag cannot reach it.
+
+Two helpers carry it. `_substitution_cells` returns each pair's 4×4
+substitution counts over the pairwise unambiguous overlap, and
+`_tn93_distances` turns those counts into the distance. The counts are
+taken by slicing the candidate block to the columns where the query
+sequence holds each base, which partitions the width: all sixteen
+counts cost about four passes over the block rather than sixteen.
+
+Two branches of tn93's `computeTN93` (v1.0.17, `src/tn93_shared.cc`)
+are the ones a vectorized rewrite is most likely to drop, and both are
+reproduced:
+
+* **The base frequencies are the pair's own, averaged over both of its
+  sequences.** tn93 accumulates `nucFreq` from both the row and the
+  column of every cell and divides by twice the overlap. Correcting
+  against the cohort's composition, or against one sequence's, is a
+  different estimator.
+* **A pair whose overlap is missing one of the four bases falls back to
+  Kimura 2-parameter.** With a zero frequency TN93's rate parameters
+  divide by zero, so tn93 switches formula rather than emitting a NaN.
+
+One detail from the §12.4 brief needs correcting: tn93's `-1` is its
+**overlap** refusal (`totalNonGap <= min_overlap`). The divergent-pair
+return is `TN93_MAX_DIST`, 1000.0, which it reaches when a logarithm's
+argument is not positive. Either way the pair is far above any
+surveillance threshold, so the in-process path returns `inf` and the
+pair gets no row — the same treatment a `min_overlap` refusal gets,
+rather than a number that would read as a distance.
+
+### 13.2 The default output is byte-identical
+
+The pre-change engine (this file's parent commit) and the current one,
+both over the same 3,397-record filtered FASTA at threshold 0.015:
+
+| | pairs | sha256 of the CSV |
+|---|---|---|
+| before | 35,852 | `eebb9facb5dd2ca9…` |
+| after | 35,852 | `eebb9facb5dd2ca9…` |
+
+Same bytes, not merely the same pair set.
+
+The uncorrected path's wall clock is unchanged within measurement
+noise, although the engine now derives its unambiguous mask from a
+base-code matrix rather than from `np.isin`: two runs of each gave
+42.9 s and 36.6 s before against 45.3 s and 25.9 s after, so the spread
+between repeats on this host is wider than any difference between the
+two versions. The corrected path costs two to three times the default
+(84–149 s across runs), inside §12.3's estimate of 5–7× the inner-loop
+column work — `_substitution_cells` visits each column about four times
+rather than sixteen.
+
+### 13.3 In-process TN93 versus the reference, 3,397 records
+
+`materialize_aligned_fasta` over the same asm10 `aligned.parquet`,
+both engines on that one file, ambiguity handling matched (`-a skip`),
+tn93 run at `-t 0.05` so that a pair it scores above the cut can be
+told apart from one it never scored. Pairs compared unordered.
+
+| | pairs |
+|---|---|
+| in-process `metric="tn93"` @ 0.05 | 254,993 |
+| reference tn93 `-a skip` @ 0.05 | 254,993 |
+| intersection | **254,993** |
+| ours only | **0** |
+| tn93 only | **0** |
+| **unexplained** | **0** |
+
+Per-pair values, against tn93's printed precision (`printf("%g")`, six
+significant figures — the corrected path writes the same):
+
+* **250,964 pairs with a non-zero distance: identical to every digit
+  tn93 prints.** Not approximately — the printed strings match, and the
+  maximum absolute difference over that set is exactly 0.
+* **4,029 pairs are zero-distance** (identical over their overlap). We
+  print `0`; tn93 prints `0` for 3,522 of them and a floating-point
+  residue up to `1.07515e-16` for the other 507, which is its own
+  term-by-term summation not cancelling exactly. That residue, 1.1 ×
+  10⁻¹⁶, is the largest disagreement anywhere in the comparison.
+
+At the surveillance cut the pair sets are the same object:
+
+| | pairs |
+|---|---|
+| in-process `metric="tn93"` @ 0.015 | 35,655 |
+| reference rows ≤ 0.015 | 35,655 |
+| disagreement, either direction | **0** |
+
+And the partition those pairs give, through `cluster/assembly.py` at
+0.015, reproduces §12.1's option B exactly: **192 clusters of size ≥ 2,
+2,118 accessions clustered, largest 195.** The uncorrected default on
+the same cohort still gives 35,852 pairs, which is option A unchanged.
+
+So §12.1's measured cost of adopting the reference cut — 3 of 3,397
+accessions, one of them joining or not joining a 58-member cluster —
+now has an in-process implementation behind it, and the implementation
+is not a second opinion about what TN93 is: it is the same number the
+CDC reference computes.
+
+### 13.4 What this does not settle
+
+* **The cut itself.** `p-distance` is still the default and the
+  manuscript still claims the HIV-TRACE convention. Either the default
+  changes or the methods section does (§12.4), and that is Kelyn's
+  call. What has changed is that choosing the reference cut no longer
+  costs a Docker dependency in the pipeline path.
+* **Ambiguity handling.** `-a skip` is what both sides of this
+  comparison use and what the in-process engine does in both metrics;
+  `run_tn93` still defaults to `-a resolve` (§11.4 item 2). Unchanged
+  and still open.
+* **Ordering.** §12.4 holds: whichever metric is chosen, figure 3
+  should be generated once from it, after §9 item 2's re-curation
+  rather than before.
+* **§11.5.** `cluster/simulate.py` still emits gap-free equal-length
+  sequences, so the Fig 3 harness still cannot see this class of
+  defect.
+
+### 13.5 Tests
+
+`tests/cluster/test_tn93_metric.py`:
+
+* the default is `p-distance`, the implicit and explicit default
+  produce the same bytes, a transition-rich pair reports its mismatch
+  fraction rather than the correction, and an unknown metric is
+  refused;
+* the correction against a scalar transcription of the published
+  formula on four fixtures (including one carrying IUPAC codes and a
+  gap), and against two values worked out by hand — a purine-only
+  alignment and a transversion-only one, both of which exercise the
+  K2P fallback;
+* the correction is not a function of p alone: two pairs with the same
+  mismatch fraction, one by transitions and one by transversions, get
+  different corrected distances (the §12.2 claim, as a test);
+* the non-positive-logarithm guard on both branches, and that a refused
+  pair does not suppress its neighbours;
+* behind the `reference_image` marker, which the default run
+  deselects: a seeded synthetic alignment with ragged coverage and
+  IUPAC codes, scored by both the in-process correction and the pinned
+  image, asserting the same pair set and the same values.
+
+`tests/cluster/test_cluster_pipeline.py` gained the wiring: the flow
+carries `p-distance` unless asked, carries `tn93` when asked, never
+hands a metric to the docker engine, and the CLI refuses an unknown
+one.
