@@ -22,6 +22,7 @@ import hashlib
 import http.client
 import logging
 import os
+import re
 import time
 from collections.abc import Iterator
 from datetime import date
@@ -38,7 +39,13 @@ from tenacity import (
     wait_exponential,
 )
 
-from .schema import SequenceRecord, Source, Subtype
+from .schema import (
+    SequenceRecord,
+    Source,
+    Subtype,
+    country_name_to_code,
+    subtype_from_designation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +81,11 @@ _TRANSIENT_EXCEPTIONS = (
     http.client.HTTPException,
 )
 MIN_POL_LENGTH = 800  # under this and phylogenetic signal is too weak
+
+# HXB2 pol is 3,012 nt. A deposit comfortably longer than that spans other
+# genes too (the gag→nef submissions are 8.6-8.8 kb) and must not be
+# labelled "pol"; the 3,012-4,000 band is pol plus flanking sequence.
+MAX_POL_LENGTH = 4000
 
 
 class GenBankIngester:
@@ -318,22 +330,46 @@ class GenBankIngester:
         try:
             metadata = _extract_source_features(record)
             collection_date = _parse_collection_date(metadata.get("collection_date"))
-            country = _normalize_country(metadata.get("country")) or requested_country
 
-            raw_bytes = str(record.seq).encode("utf-8")
-            record_hash = hashlib.sha256(raw_bytes).hexdigest()
+            # The record's own geography, never the query's. The country
+            # search over-matches — Thai, Brazilian and South African
+            # deposits all come back from East African queries — so
+            # inheriting `requested_country` fabricated the one field two
+            # papers stratify on.
+            country_raw = _stated_country(metadata)
+            country = _normalize_country(country_raw)
+            if country_raw and country is None:
+                logger.warning(
+                    "%s: country %r is not in the name map; storing it verbatim "
+                    "with no ISO code",
+                    record.id,
+                    country_raw,
+                )
+            elif country is not None and country != requested_country.upper():
+                logger.info(
+                    "%s: states %s but was returned by the %s query",
+                    record.id,
+                    country,
+                    requested_country.upper(),
+                )
+
+            subtype = _normalize_subtype(metadata.get("note", "") or "")
+            sequence = str(record.seq)
+            record_hash = hashlib.sha256(sequence.encode("utf-8")).hexdigest()
 
             return SequenceRecord(
                 accession=record.id,
                 source=Source.GENBANK,
-                sequence=str(record.seq),
-                length=len(record.seq),
-                gene_region="pol",
+                sequence=sequence,
+                length=len(sequence),
+                gene_region=_infer_gene_region(len(sequence)),
                 country=country,
+                country_raw=country_raw,
+                country_source="genbank_source_feature" if country_raw else None,
                 collection_date=collection_date,
                 collection_year=collection_date.year if collection_date else None,
-                subtype=_normalize_subtype(metadata.get("note", "")),
-                subtype_source="genbank" if metadata.get("note") else None,
+                subtype=subtype,
+                subtype_source="genbank" if subtype is not Subtype.UNKNOWN else None,
                 pubmed_id=_extract_pubmed_id(record),
                 ingested_at=date.today(),
                 raw_record_hash=record_hash,
@@ -403,31 +439,74 @@ def _parse_collection_date(value: str | None) -> date | None:
     return None
 
 
+def _stated_country(metadata: dict[str, Any]) -> str | None:
+    """The country the record itself states, verbatim, or None.
+
+    NCBI renamed the source qualifier `/country=` to `/geo_loc_name=` and
+    `/geo_loc_name=` is the *only* form present in SAWA's 36,510-accession
+    cache, so reading `country` alone found nothing at all.
+    """
+    for qualifier in ("geo_loc_name", "country"):
+        value = metadata.get(qualifier)
+        if value:
+            return str(value).strip()
+    return None
+
+
 def _normalize_country(value: str | None) -> str | None:
-    """GenBank country field is 'Kenya' or 'Kenya: Nairobi'. Map to ISO code."""
+    """GenBank country field is 'Kenya' or 'Kenya: Nairobi'. Map to ISO code.
+
+    Covers every country, not just the East African ones: a record that
+    states Thailand must not come out of the ingester looking Kenyan.
+    """
     if not value:
         return None
-    name = value.split(":")[0].strip()
-    reverse = {v.lower(): k for k, v in EAST_AFRICA_COUNTRIES.items()}
-    return reverse.get(name.lower())
+    return country_name_to_code(value.split(":")[0])
+
+
+# Keys depositors use to declare a subtype. `\b` on both sides so
+# "intersubtype" and "Genotyping" are not keys.
+_SUBTYPE_KEY = re.compile(r"\b(?:sub-?types?|genotypes?|clades?)\b[\s:=]*", re.IGNORECASE)
+
+# Asserts a mosaic genome without a parseable designation.
+_MOSAIC_HINT = re.compile(r"\b(?:recombinant|mosaic|CRF|URF)", re.IGNORECASE)
+
+# A note packs several facts into one string, separated by semicolons; a
+# designation is compact, so cap it rather than reading into the prose.
+_MAX_DESIGNATION_CHARS = 48
 
 
 def _normalize_subtype(note: str) -> Subtype:
     """Extract subtype from free-text 'note' qualifier. Best-effort only —
-    the LANL curated annotation supersedes this once joined."""
+    the LANL curated annotation supersedes this once joined.
+
+    The declaration is isolated first, then classified by
+    `subtype_from_designation`. The previous substring match meant
+    `"SUBTYPE: C"` matched inside `"SUBTYPE: CRF01_AE"`, so every CRF in
+    the corpus was stored as subtype C.
+    """
     if not note:
         return Subtype.UNKNOWN
-    upper = note.upper()
-    # Order matters: check CRFs before bare letters
-    for st in Subtype:
-        if st in (Subtype.UNKNOWN, Subtype.RECOMBINANT):
-            continue
-        token = st.value.upper()
-        if f"SUBTYPE: {token}" in upper or f"SUBTYPE {token}" in upper:
-            return st
-    if "RECOMBINANT" in upper or "CRF" in upper:
+    key = _SUBTYPE_KEY.search(note)
+    if key is None:
+        return Subtype.RECOMBINANT if _MOSAIC_HINT.search(note) else Subtype.UNKNOWN
+    designation = note[key.end() :].split(";", 1)[0][:_MAX_DESIGNATION_CHARS]
+    resolved = subtype_from_designation(designation)
+    if resolved is Subtype.UNKNOWN and _MOSAIC_HINT.search(note):
         return Subtype.RECOMBINANT
-    return Subtype.UNKNOWN
+    return resolved
+
+
+def _infer_gene_region(length: int) -> str:
+    """Label the extent the deposit covers, rather than assuming pol.
+
+    GenBank gene annotation is inconsistent across depositors — which is
+    why `_build_query` has to OR across gene-name variants — so length is
+    the signal that holds for every record. Anything materially longer
+    than pol's 3,012 nt is a multi-gene deposit however it is annotated;
+    anything shorter is a pol subregion, which is still pol.
+    """
+    return "genome" if length > MAX_POL_LENGTH else "pol"
 
 
 def _extract_pubmed_id(record: SeqRecord) -> str | None:
