@@ -432,27 +432,47 @@ Nothing below has been regenerated. Every one of these was built from the
 is still `·` to build. `benchmarks/results/*.json` measure throughput, not
 labels.
 
-### The new labels fall outside four hardcoded subtype vocabularies
+### Figure 2 silently drops the labels it has no column for
 
-This is not just staleness. Four modules enumerate the subtypes they
-handle, and the corrected labels are not in those lists. **Left alone
-deliberately** — changing any of them changes a Paper 1 or Paper 3
-number, which is Kelyn's call, not a consequence to slip in with a parser
-fix. But a rebuild without touching them does *not* produce a correct
-figure 2.
+Four modules enumerate the subtypes they handle. Three of them turned out
+to account for labels outside their list, so only one is a defect:
 
-| site | list | what happens after the fix |
-|---|---|---|
-| `notebooks/fig02_resistance_landscape.py:110`, via `paper1/style.py:38` | `SUBTYPE_ORDER = ("A1", "C", "D", "recombinant")` | the notebook does `s for s in SUBTYPE_ORDER if ...height > 0`, so **any label not in the tuple is silently dropped from figure 2**. `A` (1,982 rows) and `CRF01_AE` (1,890) — both newly correct — would simply not appear. `recombinant` *is* in the tuple, so its growth from 186 to 5,482 rows will show up, which makes the omission easy to miss. |
-| `phylo/build.py:113` | `EXCLUDED_SUBTYPES = frozenset({"unknown", "recombinant"})` | handled gracefully — `build_partition_report` iterates over every observed label and emits an audit row with a decision, so new labels are accounted for rather than dropped. Two consequences: trees would now be *attempted* for `A` and `CRF01_AE` (both well over `min_taxa = 20`), and the A1 tree loses the 3,407 rows that were mislabelled A1 and are now `recombinant`, i.e. excluded by policy. The A1 tree shrinks substantially. |
-| `foundation_models/prepare_training_data.py:157` | `holdout_train_subtypes = ("A1", "C", "D")` | `A` is in neither the train tuple nor B, so its 1,982 rows land in the held-out *test* arm while A1 trains. Defensible, but it is a decision about Paper 3's thesis, not a default. |
-| `cluster/features.py:42` | `REPORTED_SUBTYPES = ("A1", "C", "D")` | documented to let other subtypes "contribute to entropy but not to the fraction columns", so this degrades rather than breaks — but `recombinant` at 5,482 rows gets no fraction column. |
+- **`phylo/build.py` (`EXCLUDED_SUBTYPES`) is sound.**
+  `build_partition_report` emits an audit row for *every* observed label
+  with an explicit decision and reason, so new labels are accounted for,
+  not dropped. Two real consequences remain, both visible in that report:
+  trees would now be attempted for `A` (1,982 rows) and `CRF01_AE`
+  (1,890), and **the A1 tree loses the 3,407 rows** that were mislabelled
+  A1 and are now `recombinant`, excluded by policy. The A1 tree shrinks
+  substantially.
+- **`foundation_models/data.py` (`_subtype_holdout_split`) is sound.**
+  `train_pool` and `test` partition the frame exhaustively on
+  `holdout_train_subtypes` and the test subtypes are logged, so `A`
+  landing in the held-out arm is the documented behaviour of a holdout
+  split, not a silent default.
+- **`cluster/features.py` (`REPORTED_SUBTYPES`) degrades visibly.** A
+  label outside the list contributes to entropy and to the typed
+  denominator but gets no named fraction column — documented, and the
+  fractions are checked against the typed ratio. `recombinant` at 5,482
+  rows gets no column of its own.
+- **`notebooks/fig02_resistance_landscape.py` was the defect.** The
+  aggregation in `paper1/fig02_aggregate.py` is correct — it groups by
+  every subtype present in the data, with no hardcoded list. The
+  *renderer* then did
+  `[s for s in SUBTYPE_ORDER if ...height > 0]`, so any observed label
+  outside `SUBTYPE_ORDER = ("A1", "C", "D", "recombinant")` left the
+  figure with nothing logged and no count. `A` and `CRF01_AE` together
+  are ~3,900 curated rows with no slot. Because `recombinant` *is* in the
+  tuple, its growth from 186 to 5,482 rows does show up, which made the
+  omission easy to mistake for a complete picture.
 
-Separately, `storage/loader.py` maps named columns explicitly, so the two
-new fields are ignored rather than crashing the Postgres load —
-`country_raw` and `country_source` will not reach the `sequences` table
-without an Alembic migration. No action taken; the Parquet is the source
-of truth for both.
+**Fixed:** `fig02_aggregate.subtypes_omitted_by` returns the omitted
+labels, cell count and observation count, logs a WARNING, and the
+notebook prints it in its own cell before plotting. Widening the display
+order, rolling parent clades into their sub-clades for display, or giving
+CRFs their own column is a presentation decision and is still open —
+§8 item 2. A test pins the gap, so if `SUBTYPE_ORDER` is widened it fails
+and that decision has demonstrably been made.
 
 ---
 
@@ -461,32 +481,22 @@ of truth for both.
 1. **Kelyn reviews the subtype relabelling** (§2) before the vintage is
    rebuilt. The `A`/`F` enum members and the 5,482-row `recombinant`
    stratum are the two decisions worth a second opinion.
-2. **Decide what figure 2 and the Paper 3 split do with the new labels**
-   (§7, "four hardcoded subtype vocabularies"). `SUBTYPE_ORDER` has no
-   slot for `A` or `CRF01_AE`, and the figure-2 notebook drops anything
-   not in it — so a rebuild alone leaves ~3,900 newly-correct rows out of
-   the figure. Options are extending the tuple, rolling `A` up to `A1`
-   for display only, or giving CRFs their own row.
+2. **Decide what figure 2 shows for `A` and the named CRFs** (§7).
+   `SUBTYPE_ORDER` has no column for either, so a rebuild alone leaves
+   ~3,900 newly-correct rows out of the figure. The omission is now
+   reported rather than silent, but the presentation choice is open:
+   widen the tuple, roll `A` into `A1` for display only, or give CRFs
+   their own column. Paper 3's split needs no decision — it partitions
+   exhaustively and logs the test strata.
 3. **Re-run ingest, then curate**, and refresh DVC. This also needs the
    alignment fix from `work/cool-burnell-e07285` merged first, or the
    vintage will be rebuilt twice.
 4. **Narrow the GenBank country search** (§3). The fix makes over-matching
    visible; it does not stop 3,108 off-cohort records being fetched and
    parsed on every run.
-5. **CI lint is already red on `main`.** `ruff check .` has three
-   pre-existing auto-fixable findings (`notebooks/eda_v0.2.0.py` F541 × 2,
-   `src/hivdrwatch/phylo/build.py` UP017), and `ruff format --check .`
-   would reformat 10 pre-existing files (`foundation_models/` × 5,
-   `notebooks/` × 2, `src/hivdrwatch/{phylo/build,pipeline/cluster}.py`,
-   `tests/phylo/test_phylo.py`). Untouched here per the "don't reformat
-   files you didn't change" rule, but `.github/workflows/test.yml` runs
-   both and is failing on them.
-6. **mypy is not actually run in CI**, contrary to CLAUDE.md and
-   MODULES.md: `.github/workflows/test.yml` runs `ruff check` and
-   `ruff format --check` only. `mypy src/hivdrwatch/{ingest,align}` has a
-   pre-existing backlog of 22 errors (23 before this change), mostly
-   missing Biopython stubs.
-7. **The six `tests/cluster/test_features.py` failures are still there** —
+5. **The six `tests/cluster/test_features.py` failures are still there** —
    polars `NoDataError`, pre-existing, noted in `ligase-hivdb.md` §9.4 and
-   `align-coverage.md`. Full suite here: 617 passed, those 6 failed.
-8. **Feature-derived `gene_region`** (§5), as its own change.
+   `align-coverage.md`. They cover the outbreak-feature builder, which is
+   a figure-3 input, so they are worth someone's time. Full suite here:
+   623 passed, those 6 failed.
+6. **Feature-derived `gene_region`** (§5), as its own change.

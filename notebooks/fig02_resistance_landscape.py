@@ -43,6 +43,7 @@ def _():
     from hivdrwatch.paper1.fig02_aggregate import (
         MIN_CELL_N,
         aggregate_resistance_landscape,
+        subtypes_omitted_by,
     )
 
     apply_paper_style()
@@ -65,6 +66,7 @@ def _():
         pl,
         plt,
         resistance_cmap,
+        subtypes_omitted_by,
     )
 
 
@@ -75,6 +77,17 @@ def _(CURATED_PATH, DR_PATH, aggregate_resistance_landscape, pl):
     landscape, counts = aggregate_resistance_landscape(dr, curated)
     landscape, counts
     return counts, curated, dr, landscape
+
+
+@app.cell
+def _(SUBTYPE_ORDER, landscape, subtypes_omitted_by):
+    # The heatmap renders one column per entry in SUBTYPE_ORDER and skips
+    # every other label, so surface what that costs before plotting. `A`
+    # and the named CRFs have no slot in the current order.
+    omitted = subtypes_omitted_by(landscape, SUBTYPE_ORDER)
+    print(omitted.describe())
+    omitted
+    return (omitted,)
 
 
 @app.cell
@@ -104,8 +117,10 @@ def _(
     }
     n_rows = len(row_labels)
 
-    # Columns: (drug_class × subtype) panels. Restrict to subtypes we
-    # care about + drop empty combos to keep the figure compact.
+    # Columns: (drug_class × subtype) panels, restricted to SUBTYPE_ORDER
+    # with empty combos dropped to keep the figure compact. Anything else
+    # observed in the data is NOT drawn — the `omitted` cell above says
+    # what, and `subtypes_omitted_by` is the code path behind it.
     present_subtypes = [
         s for s in SUBTYPE_ORDER if landscape.filter(pl.col("subtype") == s).height > 0
     ]
