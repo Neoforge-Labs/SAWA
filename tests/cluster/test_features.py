@@ -14,11 +14,26 @@ from hivdrwatch.cluster.features import (
 
 
 def _seq_meta(rows: list[dict]) -> pl.DataFrame:
-    return pl.from_dicts(rows)
+    return (
+        pl.from_dicts(rows)
+        if rows
+        else pl.DataFrame(
+            schema={
+                "accession": pl.Utf8,
+                "country": pl.Utf8,
+                "collection_year": pl.Int64,
+                "subtype": pl.Utf8,
+            }
+        )
+    )
 
 
 def _cluster(rows: list[dict]) -> pl.DataFrame:
-    return pl.from_dicts(rows)
+    return (
+        pl.from_dicts(rows)
+        if rows
+        else pl.DataFrame(schema={"accession": pl.Utf8, "cluster_id": pl.Int64})
+    )
 
 
 def _growth(rows: list[dict]) -> pl.DataFrame:

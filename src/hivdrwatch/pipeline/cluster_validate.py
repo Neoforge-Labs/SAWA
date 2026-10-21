@@ -108,8 +108,8 @@ def simulate(
 def compute_distances(sim: SimulationResult, work_dir: Path, threshold: float) -> Path:
     """Emit the synthetic FASTA and the pairwise-distance CSV (shared by both clusterers).
 
-    Uses the in-process Python impl of pairwise nucleotide distance
-    rather than Docker tn93. Reasons:
+    Uses `compute_pairwise_distances_python` rather than Docker tn93.
+    Reasons:
 
       * tn93 v1.0.13 silently emits zero pairs on synthetic data
         regardless of threshold (confirmed with a diagnostic re-run at
@@ -121,9 +121,20 @@ def compute_distances(sim: SimulationResult, work_dir: Path, threshold: float) -
         TN93-corrected distance produce identical connected-component
         cluster memberships.
 
-    The real cluster pipeline (`pipeline/cluster.py` on 23k real
-    sequences) continues to use `run_tn93` via Docker. This harness
-    swap only affects Fig 3's synthetic validation.
+    It is the same engine `pipeline/cluster.py` runs on the real
+    cohort, so what Fig 3 scores and what the published clusters come
+    from are the same code. **But the regime is not the same**: this
+    simulator emits gap-free, unambiguous, equal-coverage sequences,
+    where the pairwise overlap is the whole alignment for every pair.
+    The denominator defect recorded in
+    `docs/evaluations/cluster-distance-denominator.md` therefore could
+    not show up here at all, which is why it survived into the real
+    cohort. Simulating partial coverage is the open item that would let
+    this harness catch it.
+
+    Both clusterers read this one CSV, so the distance step is shared
+    rather than compared: the parity number scores component-finding,
+    not distance computation.
 
     Wipes stale outputs first so a previous run's distances.csv can
     never mask a fresh simulation.
