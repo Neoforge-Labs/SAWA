@@ -432,6 +432,28 @@ Nothing below has been regenerated. Every one of these was built from the
 is still `·` to build. `benchmarks/results/*.json` measure throughput, not
 labels.
 
+### The new labels fall outside four hardcoded subtype vocabularies
+
+This is not just staleness. Four modules enumerate the subtypes they
+handle, and the corrected labels are not in those lists. **Left alone
+deliberately** — changing any of them changes a Paper 1 or Paper 3
+number, which is Kelyn's call, not a consequence to slip in with a parser
+fix. But a rebuild without touching them does *not* produce a correct
+figure 2.
+
+| site | list | what happens after the fix |
+|---|---|---|
+| `notebooks/fig02_resistance_landscape.py:110`, via `paper1/style.py:38` | `SUBTYPE_ORDER = ("A1", "C", "D", "recombinant")` | the notebook does `s for s in SUBTYPE_ORDER if ...height > 0`, so **any label not in the tuple is silently dropped from figure 2**. `A` (1,982 rows) and `CRF01_AE` (1,890) — both newly correct — would simply not appear. `recombinant` *is* in the tuple, so its growth from 186 to 5,482 rows will show up, which makes the omission easy to miss. |
+| `phylo/build.py:113` | `EXCLUDED_SUBTYPES = frozenset({"unknown", "recombinant"})` | handled gracefully — `build_partition_report` iterates over every observed label and emits an audit row with a decision, so new labels are accounted for rather than dropped. Two consequences: trees would now be *attempted* for `A` and `CRF01_AE` (both well over `min_taxa = 20`), and the A1 tree loses the 3,407 rows that were mislabelled A1 and are now `recombinant`, i.e. excluded by policy. The A1 tree shrinks substantially. |
+| `foundation_models/prepare_training_data.py:157` | `holdout_train_subtypes = ("A1", "C", "D")` | `A` is in neither the train tuple nor B, so its 1,982 rows land in the held-out *test* arm while A1 trains. Defensible, but it is a decision about Paper 3's thesis, not a default. |
+| `cluster/features.py:42` | `REPORTED_SUBTYPES = ("A1", "C", "D")` | documented to let other subtypes "contribute to entropy but not to the fraction columns", so this degrades rather than breaks — but `recombinant` at 5,482 rows gets no fraction column. |
+
+Separately, `storage/loader.py` maps named columns explicitly, so the two
+new fields are ignored rather than crashing the Postgres load —
+`country_raw` and `country_source` will not reach the `sequences` table
+without an Alembic migration. No action taken; the Parquet is the source
+of truth for both.
+
 ---
 
 ## 8. What is left
@@ -439,13 +461,19 @@ labels.
 1. **Kelyn reviews the subtype relabelling** (§2) before the vintage is
    rebuilt. The `A`/`F` enum members and the 5,482-row `recombinant`
    stratum are the two decisions worth a second opinion.
-2. **Re-run ingest, then curate**, and refresh DVC. This also needs the
+2. **Decide what figure 2 and the Paper 3 split do with the new labels**
+   (§7, "four hardcoded subtype vocabularies"). `SUBTYPE_ORDER` has no
+   slot for `A` or `CRF01_AE`, and the figure-2 notebook drops anything
+   not in it — so a rebuild alone leaves ~3,900 newly-correct rows out of
+   the figure. Options are extending the tuple, rolling `A` up to `A1`
+   for display only, or giving CRFs their own row.
+3. **Re-run ingest, then curate**, and refresh DVC. This also needs the
    alignment fix from `work/cool-burnell-e07285` merged first, or the
    vintage will be rebuilt twice.
-3. **Narrow the GenBank country search** (§3). The fix makes over-matching
+4. **Narrow the GenBank country search** (§3). The fix makes over-matching
    visible; it does not stop 3,108 off-cohort records being fetched and
    parsed on every run.
-4. **CI lint is already red on `main`.** `ruff check .` has three
+5. **CI lint is already red on `main`.** `ruff check .` has three
    pre-existing auto-fixable findings (`notebooks/eda_v0.2.0.py` F541 × 2,
    `src/hivdrwatch/phylo/build.py` UP017), and `ruff format --check .`
    would reformat 10 pre-existing files (`foundation_models/` × 5,
@@ -453,12 +481,12 @@ labels.
    `tests/phylo/test_phylo.py`). Untouched here per the "don't reformat
    files you didn't change" rule, but `.github/workflows/test.yml` runs
    both and is failing on them.
-5. **mypy is not actually run in CI**, contrary to CLAUDE.md and
+6. **mypy is not actually run in CI**, contrary to CLAUDE.md and
    MODULES.md: `.github/workflows/test.yml` runs `ruff check` and
    `ruff format --check` only. `mypy src/hivdrwatch/{ingest,align}` has a
    pre-existing backlog of 22 errors (23 before this change), mostly
    missing Biopython stubs.
-6. **The six `tests/cluster/test_features.py` failures are still there** —
+7. **The six `tests/cluster/test_features.py` failures are still there** —
    polars `NoDataError`, pre-existing, noted in `ligase-hivdb.md` §9.4 and
    `align-coverage.md`. Full suite here: 617 passed, those 6 failed.
-7. **Feature-derived `gene_region`** (§5), as its own change.
+8. **Feature-derived `gene_region`** (§5), as its own change.
