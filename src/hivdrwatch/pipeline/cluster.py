@@ -42,7 +42,13 @@ from ..cluster import (
     read_distances,
     run_tn93,
 )
-from ..cluster.distance import DEFAULT_MIN_OVERLAP, compute_pairwise_distances_python
+from ..cluster.distance import (
+    DEFAULT_DISTANCE_METRIC,
+    DEFAULT_MIN_OVERLAP,
+    DISTANCE_METRICS,
+    DistanceMetric,
+    compute_pairwise_distances_python,
+)
 from ..phylo.build import MIN_ALIGNED_COVERAGE, filter_by_coverage
 
 logger = logging.getLogger(__name__)
@@ -209,20 +215,23 @@ def run_distances(
     threshold: float,
     engine: str = "python",
     min_overlap: int = DEFAULT_MIN_OVERLAP,
+    metric: DistanceMetric = DEFAULT_DISTANCE_METRIC,
 ) -> Path:
     """Compute pairwise distances → CSV of below-threshold pairs.
 
     Two engines:
 
-    * ``python`` (default) — the in-process vectorized p-distance over
-      the pairwise unambiguous overlap, monotone with TN93 for small
-      divergences. See
+    * ``python`` (default) — the in-process vectorized distance over
+      the pairwise unambiguous overlap. `metric` chooses what it scores
+      that overlap with: the uncorrected p-distance (the default) or
+      the Tamura-Nei 1993 correction that HIV-TRACE thresholds. See
       ``cluster/distance.py::compute_pairwise_distances_python``.
     * ``docker`` — the pinned `tn93` container, the reference
-      implementation. The zero-pair runs recorded against the old
-      v1.0.13 image were an aarch64 miscompile in tn93's FASTA reader,
-      not a property of the cohort; the image is pinned at v1.0.17 and
-      reads multi-record FASTA correctly
+      implementation. It computes the TN93 correction by construction,
+      so `metric` does not reach it. The zero-pair runs recorded
+      against the old v1.0.13 image were an aarch64 miscompile in
+      tn93's FASTA reader, not a property of the cohort; the image is
+      pinned at v1.0.17 and reads multi-record FASTA correctly
       (``docs/evaluations/cluster-distance-denominator.md`` §11).
     """
     log = get_run_logger()
@@ -230,12 +239,26 @@ def run_distances(
     output_csv = work_dir / "distances.csv"
     if engine == "docker":
         run_tn93(aligned_fasta, output_csv, threshold=threshold)
-        log.info("tn93 (docker) distances → %s", output_csv)
+        log.info(
+            "tn93 (docker) distances → %s; the reference binary computes the "
+            "TN93 correction itself, so --distance-metric=%s does not apply to it",
+            output_csv,
+            metric,
+        )
     else:
         compute_pairwise_distances_python(
-            aligned_fasta, output_csv, threshold=threshold, min_overlap=min_overlap
+            aligned_fasta,
+            output_csv,
+            threshold=threshold,
+            min_overlap=min_overlap,
+            metric=metric,
         )
-        log.info("python distances → %s (min overlap %d sites)", output_csv, min_overlap)
+        log.info(
+            "python %s distances → %s (min overlap %d sites)",
+            metric,
+            output_csv,
+            min_overlap,
+        )
     n_pairs = max(0, sum(1 for _ in output_csv.open()) - 1)
     log.info("distances CSV: %d below-threshold pairs at t=%.4f", n_pairs, threshold)
     return output_csv
@@ -310,6 +333,7 @@ def cluster_flow(
     threshold: float = DEFAULT_THRESHOLD,
     to_postgres: bool | None = None,
     distance_engine: str = "python",
+    distance_metric: DistanceMetric = DEFAULT_DISTANCE_METRIC,
     min_overlap: int = DEFAULT_MIN_OVERLAP,
     min_coverage: float = MIN_ALIGNED_COVERAGE,
 ) -> tuple[Path, Path]:
@@ -323,6 +347,7 @@ def cluster_flow(
         threshold,
         engine=distance_engine,
         min_overlap=min_overlap,
+        metric=distance_metric,
     )
     cluster_df = cluster(distances_csv, curated, threshold)
     features_df = outbreak_rollup(curated, cluster_df)
@@ -380,6 +405,21 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--distance-metric",
+        choices=DISTANCE_METRICS,
+        default=DEFAULT_DISTANCE_METRIC,
+        help=(
+            "What the in-process engine scores a pair's overlap with. Default "
+            "'p-distance' — the uncorrected mismatch fraction, which is what "
+            "every run to date has used. 'tn93' applies the Tamura-Nei 1993 "
+            "correction to the same overlap, which is the convention HIV-TRACE "
+            "thresholds; at 0.015 it moves 197 of 35,852 pairs and 3 of 3,397 "
+            "accessions, so it is opt-in until Paper 1's cut is settled. See "
+            "docs/evaluations/cluster-distance-denominator.md §12 and §13. "
+            "Ignored by --distance-engine=docker, which computes TN93 itself."
+        ),
+    )
+    parser.add_argument(
         "--min-overlap",
         type=int,
         default=DEFAULT_MIN_OVERLAP,
@@ -415,6 +455,7 @@ def main(argv: list[str] | None = None) -> int:
         threshold=args.threshold,
         to_postgres=args.to_postgres or None,
         distance_engine=args.distance_engine,
+        distance_metric=args.distance_metric,
         min_overlap=args.min_overlap,
         min_coverage=args.min_coverage,
     )

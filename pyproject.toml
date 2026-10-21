@@ -85,8 +85,13 @@ testpaths = ["tests"]
 # empty `tests/<name>/__init__.py` shadows a top-level package of the
 # same name (e.g. `tests/causal/` was shadowing our real `causal/`).
 # See: https://docs.pytest.org/en/stable/explanation/pythonpath.html
-addopts = "-v --strict-markers --cov=hivdrwatch --cov=causal --cov-report=term-missing --import-mode=importlib"
+# `-m "not reference_image"` keeps the default run free of anything that
+# needs a container; a `-m` on the command line overrides it.
+addopts = "-v --strict-markers --cov=hivdrwatch --cov=causal --cov-report=term-missing --import-mode=importlib -m \"not reference_image\""
 pythonpath = ["src", "."]
+markers = [
+    "reference_image: needs a Docker daemon and the built hivdrwatch/tn93 image; opt in with `-m reference_image`",
+]
 
 [tool.ruff]
 line-length = 95

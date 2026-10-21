@@ -5,9 +5,12 @@ per pair at or below the threshold — above-threshold pairs are
 billions of useless zeros):
 
 * `compute_pairwise_distances_python` — the production engine, used by
-  `pipeline/cluster.py` and by the Fig 3 validation harness. Divides
-  the mismatch count by the **pairwise unambiguous overlap** and
-  refuses pairs that overlap in fewer than `DEFAULT_MIN_OVERLAP` sites.
+  `pipeline/cluster.py` and by the Fig 3 validation harness. Scores
+  every pair over the **pairwise unambiguous overlap** and refuses
+  pairs that overlap in fewer than `DEFAULT_MIN_OVERLAP` sites. It can
+  score that overlap two ways: the uncorrected mismatch fraction
+  (`p-distance`, the default) or the Tamura-Nei 1993 correction
+  (`tn93`), which is what HIV-TRACE thresholds.
 * `run_tn93` — the pinned tn93 docker image, kept as the reference
   implementation for A/B comparison.
 """
@@ -18,6 +21,7 @@ import logging
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -36,7 +40,25 @@ DEFAULT_MIN_OVERLAP = 100
 # absence of sequence and an IUPAC ambiguity code is a site the
 # depositor could not call; neither is evidence that two sequences
 # agree, so neither belongs in the denominator.
+#
+# The order is tn93's own (`ValidChars` in `src/tn93_shared.cc` opens
+# "ACGT"), and `_tn93_distances` indexes its base frequencies by it, so
+# it is load-bearing rather than alphabetical by accident.
 UNAMBIGUOUS_BASES = b"ACGT"
+
+# How a pair's overlap is scored. `p-distance` is the uncorrected
+# mismatch fraction and the only metric that has ever shipped; `tn93`
+# applies the Tamura-Nei 1993 correction to the same overlap, which is
+# the convention HIV-TRACE — and Paper 1's methods section — thresholds.
+# Which of the two Paper 1 should claim is Kelyn's call, so the default
+# is unchanged and the correction is reachable only by asking for it
+# (`docs/evaluations/cluster-distance-denominator.md` §12, §13).
+type DistanceMetric = Literal["p-distance", "tn93"]
+DISTANCE_METRICS: tuple[DistanceMetric, ...] = ("p-distance", "tn93")
+DEFAULT_DISTANCE_METRIC: DistanceMetric = "p-distance"
+
+# Base code for a column that is a gap or an IUPAC ambiguity code.
+_NOT_A_BASE = 255
 
 
 @dataclass(frozen=True)
@@ -260,12 +282,122 @@ def _read_alignment(fasta_path: Path) -> tuple[list[str], np.ndarray]:
     return accessions, np.vstack(seqs)
 
 
+def _base_codes(matrix: np.ndarray) -> np.ndarray:
+    """Map an ASCII alignment onto base indices: A/C/G/T → 0/1/2/3, else 255."""
+    codes = np.full(matrix.shape, _NOT_A_BASE, dtype=np.uint8)
+    for index, base in enumerate(UNAMBIGUOUS_BASES):
+        codes[matrix == base] = index
+    return codes
+
+
+def _substitution_cells(query: np.ndarray, block: np.ndarray) -> np.ndarray:
+    """Per-pair 4×4 substitution counts over each pair's unambiguous overlap.
+
+    `query` is one sequence's base codes and `block` is `[m, width]`
+    codes for the m sequences it is compared against. Cell `[b1, b2, k]`
+    counts the columns where `query` carries base `b1` and pair `k`
+    carries base `b2`. A column where either side is a gap or an IUPAC
+    code lands in no cell, which is tn93's `-a skip`.
+
+    Slicing the block to the columns where `query` holds each base
+    partitions the width, so all sixteen counts cost about four passes
+    over the block rather than sixteen.
+    """
+    cells = np.zeros((4, 4, block.shape[0]), dtype=np.int64)
+    for b1 in range(4):
+        columns = block[:, query == b1]
+        for b2 in range(4):
+            cells[b1, b2] = (columns == b2).sum(axis=1)
+    return cells
+
+
+def _tn93_distances(cells: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Tamura-Nei 1993 distance per pair; returns `(overlap, distance)`.
+
+    Follows `computeTN93` in tn93 v1.0.17 (`src/tn93_shared.cc`) term
+    for term, including the two branches a vectorized rewrite is most
+    likely to drop:
+
+    * **Base frequencies are the pair's own, averaged over both of its
+      sequences.** tn93 accumulates `nucFreq` from both the row and the
+      column of every cell and divides by twice the overlap, so each
+      pair is corrected against its own composition — not the cohort's,
+      and not one sequence's.
+    * **A pair missing one of the four bases falls back to Kimura
+      2-parameter.** With a zero frequency the TN93 rate parameters
+      divide by zero, so tn93 switches formula rather than producing a
+      NaN. Short or low-complexity overlaps really do hit this.
+
+    Where a logarithm's argument is not positive the pair is infinitely
+    divergent under the model. tn93 returns its `TN93_MAX_DIST`
+    sentinel (1000.0) and this returns `inf`; either is far above any
+    surveillance threshold, so the pair gets no row — the same
+    treatment a `min_overlap` refusal gets, rather than a number that
+    would read as a distance.
+    """
+    overlap = cells.sum(axis=(0, 1))
+    # Pairs with no overlap at all are refused on `min_overlap` by the
+    # caller; keeping the divisor at 1 here just avoids dividing by it.
+    sites = np.maximum(overlap, 1)
+
+    base_totals = cells.sum(axis=1) + cells.sum(axis=0)
+    frequency = base_totals / (2 * sites)
+
+    purine = (cells[0, 2] + cells[2, 0]) / sites
+    pyrimidine = (cells[1, 3] + cells[3, 1]) / sites
+    identical = (cells[0, 0] + cells[1, 1] + cells[2, 2] + cells[3, 3]) / sites
+    transversion = 1.0 - identical - purine - pyrimidine
+
+    distance = np.full(overlap.shape, np.inf, dtype=np.float64)
+    degenerate = (base_totals == 0).any(axis=0)
+
+    full = ~degenerate
+    if full.any():
+        f_a, f_c, f_g, f_t = (frequency[b][full] for b in range(4))
+        f_r = f_a + f_g
+        f_y = f_c + f_t
+        k1 = 2.0 * f_a * f_g / f_r
+        k2 = 2.0 * f_c * f_t / f_y
+        k3 = 2.0 * (f_r * f_y - f_a * f_g * f_y / f_r - f_c * f_t * f_r / f_y)
+        tv = transversion[full]
+        w_purine = 1.0 - purine[full] / k1 - 0.5 * tv / f_r
+        w_pyrimidine = 1.0 - pyrimidine[full] / k2 - 0.5 * tv / f_y
+        w_transversion = 1.0 - 0.5 * tv / (f_y * f_r)
+        inside = (w_purine > 0.0) & (w_pyrimidine > 0.0) & (w_transversion > 0.0)
+        corrected = np.full(tv.shape, np.inf)
+        corrected[inside] = (
+            -k1[inside] * np.log(w_purine[inside])
+            - k2[inside] * np.log(w_pyrimidine[inside])
+            - k3[inside] * np.log(w_transversion[inside])
+        )
+        distance[full] = corrected
+
+    if degenerate.any():
+        tv = transversion[degenerate]
+        ti = purine[degenerate] + pyrimidine[degenerate]
+        w_transition = 1.0 - 2.0 * ti - tv
+        w_transversion = 1.0 - 2.0 * tv
+        inside = (w_transition > 0.0) & (w_transversion > 0.0)
+        corrected = np.full(tv.shape, np.inf)
+        corrected[inside] = -0.5 * np.log(w_transition[inside]) - 0.25 * np.log(
+            w_transversion[inside]
+        )
+        distance[degenerate] = corrected
+
+    # A pair identical over its overlap sums to -0.0, every term being
+    # -k x log(1.0), and would be written "-0". Adding +0.0 maps -0.0 to
+    # +0.0 under IEEE 754 and leaves every other value untouched.
+    distance += 0.0
+    return overlap, distance
+
+
 def compute_pairwise_distances_python(
     fasta_path: Path,
     output_csv: Path,
     *,
     threshold: float = DEFAULT_THRESHOLD,
     min_overlap: int = DEFAULT_MIN_OVERLAP,
+    metric: DistanceMetric = DEFAULT_DISTANCE_METRIC,
 ) -> Path:
     """In-process pairwise nucleotide distance over the pairwise overlap.
 
@@ -300,28 +432,45 @@ def compute_pairwise_distances_python(
     The default matches the `-l 100` default of tn93 itself, whose
     semantics are the same: refuse the pair, do not clamp its distance.
 
-    ## Relationship to TN93
+    ## The two metrics
 
-    This returns the **uncorrected** p-distance, and the threshold is
-    applied to it. The Tamura-Nei 93 correction is monotone in p only
-    for a fixed substitution pattern and base composition; across pairs
-    it is not, because it weights purine and pyrimidine transitions
-    separately. So memberships are *not* guaranteed identical, and
-    measurement bears that out — on the filtered cohort the TN93-accepted
-    and TN93-rejected pairs have overlapping p-ranges, so no p-threshold
-    reproduces the TN93 pair set exactly
-    (`docs/evaluations/cluster-distance-denominator.md` §12). At 0.015
-    the two cuts differ on 197 of 35,852 pairs and 3 of 3,397
-    accessions. Which cut Paper 1 should claim is an open decision.
+    `metric="p-distance"`, the default, divides the mismatch count by
+    the overlap and thresholds that. `metric="tn93"` applies the
+    Tamura-Nei 1993 correction to the same overlap: it counts purine
+    (A↔G) and pyrimidine (C↔T) transitions and transversions
+    separately, estimates the four base frequencies from the pair's own
+    overlap, and thresholds the corrected distance. That is the
+    HIV-TRACE convention, and it is what `run_tn93` computes.
 
-    What this function also does not reproduce is tn93's `-a resolve`
-    ambiguity handling: tn93 resolves an ambiguous site against its
-    partner, where this drops the site. That is the conservative
-    direction — it shrinks the denominator rather than inventing
-    agreement. Use tn93's `-a skip` for a like-for-like A/B.
+    The correction is **not** a monotone transform of p across pairs,
+    so one metric's pair set is not the other's reordered: two pairs
+    with the same mismatch fraction get different corrected distances
+    according to their substitution pattern and composition. On the
+    filtered cohort the TN93-accepted and TN93-rejected pairs have
+    overlapping p-ranges, so no p-threshold reproduces the TN93 pair
+    set exactly (`docs/evaluations/cluster-distance-denominator.md`
+    §12). At 0.015 the two cuts differ on 197 of 35,852 pairs and 3 of
+    3,397 accessions, one of them joining or not joining a 58-member
+    cluster.
+
+    The default stays `p-distance` because the cut is a Paper 1 claim
+    awaiting Kelyn (§12.4); `tn93` is verified against the pinned
+    reference image pair for pair on the real cohort (§13) and is ready
+    for the day that decision is made.
+
+    What neither metric reproduces is tn93's `-a resolve` ambiguity
+    handling: tn93 resolves an ambiguous site against its partner,
+    where this drops the site. That is the conservative direction — it
+    shrinks the denominator rather than inventing agreement, and it is
+    tn93's `-a skip`. Pass `-a skip` for a like-for-like A/B.
 
     Emits a CSV with the same header (`ID1,ID2,Distance`) as tn93 so
-    `read_distances` consumes it identically.
+    `read_distances` consumes it identically. The uncorrected path
+    writes six decimal places, as it always has; the corrected path
+    writes six significant figures, which is tn93's own `printf("%g")`,
+    because the correction's spread across pairs at a fixed p-distance
+    lives in the fifth decimal and the band that decides a link is
+    narrower still (§12.2).
     """
     fasta_path = fasta_path.resolve()
     output_csv = output_csv.resolve()
@@ -329,17 +478,22 @@ def compute_pairwise_distances_python(
         raise FileNotFoundError(f"aligned FASTA missing: {fasta_path}")
     if min_overlap < 1:
         raise ValueError(f"min_overlap must be at least 1 site, got {min_overlap}")
+    if metric not in DISTANCE_METRICS:
+        raise ValueError(
+            f"unknown distance metric {metric!r}; expected one of {DISTANCE_METRICS}"
+        )
     output_csv.parent.mkdir(parents=True, exist_ok=True)
 
     accessions, matrix = _read_alignment(fasta_path)
     n = len(accessions)
-    logger.info("computing in-process pairwise distances for %d sequences", n)
+    logger.info("computing in-process %s distances for %d sequences", metric, n)
 
     if n < 2:
         output_csv.write_text("ID1,ID2,Distance\n")
         return output_csv
 
-    unambiguous = np.isin(matrix, np.frombuffer(UNAMBIGUOUS_BASES, dtype=np.uint8))
+    codes = _base_codes(matrix)
+    unambiguous = codes != _NOT_A_BASE
     coverage = unambiguous.sum(axis=1)
     logger.info(
         "alignment width %d; unambiguous coverage per sequence: "
@@ -354,6 +508,7 @@ def compute_pairwise_distances_python(
 
     n_written = 0
     n_refused = 0
+    precision = ".6g" if metric == "tn93" else ".6f"
     with output_csv.open("w", encoding="utf-8") as fh:
         fh.write("ID1,ID2,Distance\n")
         for i in range(n - 1):
@@ -366,21 +521,30 @@ def compute_pairwise_distances_python(
             if candidates.size == 0:
                 continue
 
-            shared = unambiguous[i + 1 :][candidates] & unambiguous[i]
-            overlap = shared.sum(axis=1)
+            if metric == "tn93":
+                overlap, distances = _tn93_distances(
+                    _substitution_cells(codes[i], codes[i + 1 :][candidates])
+                )
+            else:
+                shared = unambiguous[i + 1 :][candidates] & unambiguous[i]
+                overlap = shared.sum(axis=1)
+                diffs = ((matrix[i + 1 :][candidates] != matrix[i]) & shared).sum(axis=1)
+                distances = diffs / np.maximum(overlap, 1)
+
             keep = overlap >= min_overlap
             n_refused += int((~keep).sum())
 
-            diffs = ((matrix[i + 1 :][candidates] != matrix[i]) & shared).sum(axis=1)
-            distances = diffs / np.maximum(overlap, 1)
             for k in np.flatnonzero(keep & (distances <= threshold)):
                 j = i + 1 + int(candidates[k])
-                fh.write(f"{accessions[i]},{accessions[j]},{float(distances[k]):.6f}\n")
+                fh.write(
+                    f"{accessions[i]},{accessions[j]},{float(distances[k]):{precision}}\n"
+                )
                 n_written += 1
 
     logger.info(
-        "in-process distances → %s (%d pairs at or below threshold=%.4f; "
+        "in-process %s distances → %s (%d pairs at or below threshold=%.4f; "
         "%d pairs refused for overlap below %d sites)",
+        metric,
         output_csv,
         n_written,
         threshold,
