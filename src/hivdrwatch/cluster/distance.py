@@ -302,15 +302,23 @@ def compute_pairwise_distances_python(
 
     ## Relationship to TN93
 
-    For sequences with no ambiguities, the Tamura-Nei 93 correction is
-    a monotone function of the raw p-distance, and the clusterer only
-    ever applies `distance <= threshold` to it, so cluster memberships
-    are identical for the small divergences that matter here. What this
-    function does **not** reproduce is tn93's `-a resolve` ambiguity
-    handling: tn93 resolves an ambiguous site against its partner,
-    where this drops the site. That is the conservative direction (it
-    shrinks the denominator rather than inventing agreement) and it is
-    recorded in `docs/evaluations/cluster-distance-denominator.md`.
+    This returns the **uncorrected** p-distance, and the threshold is
+    applied to it. The Tamura-Nei 93 correction is monotone in p only
+    for a fixed substitution pattern and base composition; across pairs
+    it is not, because it weights purine and pyrimidine transitions
+    separately. So memberships are *not* guaranteed identical, and
+    measurement bears that out — on the filtered cohort the TN93-accepted
+    and TN93-rejected pairs have overlapping p-ranges, so no p-threshold
+    reproduces the TN93 pair set exactly
+    (`docs/evaluations/cluster-distance-denominator.md` §12). At 0.015
+    the two cuts differ on 197 of 35,852 pairs and 3 of 3,397
+    accessions. Which cut Paper 1 should claim is an open decision.
+
+    What this function also does not reproduce is tn93's `-a resolve`
+    ambiguity handling: tn93 resolves an ambiguous site against its
+    partner, where this drops the site. That is the conservative
+    direction — it shrinks the denominator rather than inventing
+    agreement. Use tn93's `-a skip` for a like-for-like A/B.
 
     Emits a CSV with the same header (`ID1,ID2,Distance`) as tn93 so
     `read_distances` consumes it identically.

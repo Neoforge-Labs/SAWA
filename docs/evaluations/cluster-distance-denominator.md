@@ -499,3 +499,126 @@ gap-free equal-length sequences, so the Fig 3 harness still cannot see
 this class of defect (§8). Giving the simulator ragged coverage remains
 the change that would make figure 3 a test of the input the pipeline
 actually gets.
+
+## 12. The cut: what changes if the correction is applied first
+
+§11.4 left this open. Here is the measured cost, at the level that
+matters. **Nothing is changed in the code — §3 and this both still need
+Kelyn.**
+
+Paper 1 claims the HIV-TRACE convention, and HIV-TRACE thresholds the
+**TN93-corrected** distance. We threshold the uncorrected p-distance.
+So this is not a free choice between two defensible conventions: one of
+them is the one the manuscript says we use.
+
+### 12.1 Three options, measured
+
+Same 3,397-record filtered FASTA, ambiguity handling matched throughout
+(`-a skip`), connected components via `cluster/assembly.py` at 0.015.
+
+| | pairs | clusters ≥2 | accessions clustered | largest |
+|---|---|---|---|---|
+| **A.** p-distance cut at 0.015 *(status quo)* | 35,852 | 193 | 2,121 (62.44%) | 195 |
+| **B.** TN93 cut at 0.015 *(HIV-TRACE)* | 35,655 | 192 | 2,118 (62.35%) | 195 |
+| **C.** recalibrated p cut at 0.014796 | 35,654 | 192 | 2,118 (62.35%) | 195 |
+
+**The pair-level difference mostly does not survive to membership.**
+A→B drops 197 pairs, 0.55% — but 195 of those 197 sit *inside* a cluster
+that survives on its other edges and change nothing at all. Only **2 are
+bridges**. Net effect of adopting the reference cut:
+
+* 193 → 192 clusters of size ≥ 2
+* 2,121 → 2,118 accessions in a cluster — **3 of 3,397, 0.09%**
+* largest cluster unchanged at 195
+* ARI(A, B) = **0.999336**
+
+The three accessions, and this is the honest reason to care:
+
+| accession | under A | under B |
+|---|---|---|
+| `OP039478.1` | in a 59-member cluster | singleton |
+| `MN789809.1` | paired with `MN650438.1` | singleton |
+| `MN650438.1` | paired with `MN789809.1` | singleton |
+
+Aggregate counts barely move, but `OP039478.1` is a single sequence
+joining or not joining a 58-member transmission cluster. For a
+surveillance tool that is the per-record call it exists to make, not a
+rounding error. "0.09% of the cohort" and "we report this person as part
+of that outbreak" are the same number read two ways.
+
+### 12.2 A recalibrated p-threshold gets the right answer for the wrong reason
+
+If TN93 were strictly monotone in p, some p-threshold would reproduce
+the TN93 pair set exactly and we could keep the cheap in-process engine
+untouched. **It is not, and none does.**
+
+Sweeping every candidate, the best single p-threshold is **p ≤ 0.014796**,
+which cuts the pair-level disagreement from 197 to **17** (8 we-link-they-
+don't, 9 they-link-we-don't). It cannot do better, because the p-ranges
+of the two classes *overlap*:
+
+* p of TN93-**accepted** pairs: 0.000000 .. 0.014815
+* p of TN93-**rejected** pairs: 0.014784 .. 0.014983
+
+**73 pairs sit in [0.014784, 0.014815], a band where p alone cannot
+decide.** TN93 weights purine (A↔G) and pyrimidine (C↔T) transitions
+separately and against the pair's own base composition, so two pairs
+with the same mismatch fraction get different corrected distances. In
+p ∈ (0.0145, 0.015] the correction ranges +1.62 × 10⁻⁴ to +2.55 × 10⁻⁴ —
+a 1.6× spread at essentially fixed p. That spread is the irreducible
+error of *any* p-threshold, and it is why §11's "monotone transform"
+framing is too generous. `compute_pairwise_distances_python`'s docstring
+has been corrected accordingly.
+
+And yet on this cohort option C reproduces option B's partition
+**exactly** — ARI(B, C) = 1.000000, zero accessions differ — because all
+17 of its mismatched pairs are the membership-neutral within-cluster
+kind. That is luck, not a property:
+
+* 0.014796 is a constant fitted to *this* cohort at *this* threshold. §9
+  item 2 re-curates `aligned.parquet` at asm20, which changes the
+  cohort, the coverage distribution and the base composition. The
+  constant would have to be refitted, and nothing guarantees the next 17
+  mismatches land inside clusters.
+* It is unpublishable as stated. "We threshold the p-distance at
+  0.014796, fitted to approximate TN93 at 0.015" invites exactly the
+  reviewer question a tools paper should not invite.
+
+### 12.3 What it would take to do it properly
+
+**Option D: compute TN93 in-process.** Per pair the formula needs three
+counts — purine transitions, pyrimidine transitions, transversions — and
+the four base frequencies over that pair's overlap, in place of the
+single mismatch count the engine computes now. Each is the same shape of
+vectorized boolean reduction over the same candidate block, so this is a
+contained change to one function: roughly 5–7× the inner-loop column
+work, no change to the structure, plus a domain guard for pairs where
+the logarithm's argument goes non-positive (tn93 returns −1 there).
+
+The reason this is now worth doing, and was not before: **we can verify
+it.** §11 established a working reference that agrees with us pair for
+pair under matched ambiguity handling. An in-process TN93 can be checked
+against `hivdrwatch/tn93:1.0.17` exactly, on this cohort, as a test.
+Before the image was fixed there was nothing to check it against.
+
+### 12.4 Recommendation
+
+**Option D, then re-measure.** B is the convention the manuscript
+claims, D is how to get B without shelling out to Docker on every run,
+and the cost of getting it wrong is not the 0.09% aggregate — it is
+per-record cluster membership in a surveillance tool.
+
+Ordering against §9: D is cheap and independent of the re-curation, and
+the engine change should land **before** step 5 re-runs
+`pipeline/cluster` on the new vintage, so figure 3 is generated once
+from the metric the paper claims rather than twice. If D is judged too
+much for this paper, then B — call tn93 with `-a skip` — is correct and
+available today at the cost of a Docker dependency in the pipeline path.
+
+**C is not recommended at any price.** It happens to be exactly right
+here and is not right in principle, which is the worst combination to
+put in a methods section.
+
+What is *not* on the table is leaving A in place while the manuscript
+claims the HIV-TRACE convention. Either the metric changes or the
+methods section does.
