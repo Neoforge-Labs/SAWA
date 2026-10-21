@@ -322,3 +322,180 @@ filtered rather than passed through.
 mine; they are fixed on `claude/sawa-audit-rename-3fc1d2` as b291210
 and that commit is cherry-picked here rather than re-fixed, so
 `pytest tests/cluster/` is green.
+
+## 11. The reference implementation, fixed — and what it says about ours
+
+§9 item 6 deferred three things. This closes the first two: the image is
+fixed and correctly tagged, and its pair set has been compared with ours
+on the filtered cohort. **No unexplained disagreement survived.**
+
+Nothing in `data/gold/` was regenerated and the metric is unchanged.
+§3 still needs Kelyn.
+
+### 11.1 Neither defect was what §7 took it for
+
+**The mis-tag was upstream's, not ours.** `docker/hivtrace/Dockerfile`
+cloned `--branch v1.0.13` and got exactly that commit — upstream simply
+never bumped `VERSION.txt` at that tag, so it still reads `v1.0.12`. The
+build was faithful; the binary's self-report was the tag's own slip.
+Upstream appears to have noticed: a second tag, `v.1.0.13.actual`,
+points at the same commit `a40aa62`.
+
+**The reader bug is a known upstream defect, and it is architectural,
+not version-specific.** It is veg/tn93 issue #46, fixed in **v1.0.15**
+by commit `5c14f35`, which changed one declaration:
+
+```c
+-char validFlags [256];
++signed char validFlags [256];
+```
+
+`initAlphabets` fills that table with `-1` for every byte that is not a
+sequence character, and `readFASTA`'s state machine asks
+`validFlags[currentC] >= 0` to decide whether to append a byte to the
+current sequence. Plain `char` is **unsigned on aarch64** and signed on
+x86-64. Unsigned, `-1` reads back as 255, so the test is true for every
+byte — including `>` (62) — and the reader, once past the first header,
+never recognises another record boundary. Confirmed directly in the
+image's own base: in `debian:12-slim` on linux/arm64, `((char)-1) < 0`
+is false and `f[62] = -1` reads back as 255.
+
+The record count §7 measured is the arithmetic signature of exactly
+this. A three-record file of 600 nt sequences named `seq0..seq2` was
+read as "1 sequences of length **1815**", and 1815 is what you get by
+parsing the first header correctly and then appending every subsequent
+byte, newlines and later headers included:
+
+```
+600 + 1 + len(">seq1") + 1 + 600 + 1 + len(">seq2") + 1 + 600 + 1 = 1815
+```
+
+That is why it reproduced on CRLF, on stdin, wrapped at 60 columns, on
+10 nt sequences and on the real cohort: none of those are the variable.
+The variable was the build host. It also explains the two survivors —
+`-s SECOND_FASTA` and the §1 fixtures worked because each file held one
+record, where "concatenate everything after the first header" and
+"parse correctly" coincide.
+
+So "tn93 v1.0.13 silently emits zero pairs" was never a property of
+tn93, of our FASTA writer, or of the cohort. Those claims have been
+corrected in `cluster/distance.py`, `pipeline/cluster.py`,
+`pipeline/cluster_validate.py` and `cluster/simulate.py`.
+
+### 11.2 The fix
+
+Pinned to **v1.0.17** (`ef82c1b`), the last 1.0.x patch release:
+it carries the v1.0.15 reader fix, its `VERSION.txt` matches its tag, and
+unlike v1.1.0 it adds no new subquadratic distance path to a binary whose
+only job here is to be the reference. The image is
+`hivdrwatch/tn93:1.0.17` and `tn93 -v` reports `v1.0.17`; the tag,
+`DEFAULT_IMAGE` and the binary now agree by construction. The tag was
+updated in `Makefile`, `.github/workflows/benchmarks.yml`,
+`cluster/distance.py` and `cluster/README.md`.
+
+`python3` joins the image's build-only dependencies: from v1.0.15
+tn93's `CMakeLists.txt` calls `find_package(PythonInterp 3 REQUIRED)`
+unconditionally to wire up its ctest suite, with no option to skip it.
+It is purged with the rest of the toolchain and does not reach the final
+image.
+
+**The regression check.** `RUN tn93 --help` passed throughout — it never
+reads a sequence, which is why this went unnoticed. It was also written
+as `… && ldd … | grep -q "not found" && exit 1 || true`, and that
+trailing `|| true` swallowed any failure earlier in the chain, so the
+layer could not have failed loudly as its comment claimed. Three
+assertions replace it, under `set -eux` and with no `|| true`:
+
+1. `ldd` resolves every library (the original libgomp regression).
+2. `tn93 -v` equals the tag that was cloned — the exact drift that
+   shipped a `v1.0.12` binary as `1.0.13`.
+3. A two-record FASTA, 300 shared sites differing at 4, must report
+   `"Sequences" : 2` and emit exactly one pair row. Under the aarch64
+   bug this file parsed as one concatenated sequence and produced an
+   empty CSV.
+
+Two further guards need no Docker daemon and so run in the ordinary unit
+pass (`tests/cluster/test_distance.py::TestPinnedReferenceImage`):
+`DEFAULT_IMAGE` must match the Dockerfile's `ARG TN93_VERSION`, and the
+pin must not regress below v1.0.15.
+
+### 11.3 Engine versus reference, 3,397 records at threshold 0.015
+
+`materialize_aligned_fasta` over the asm10 `aligned.parquet` yields the
+3,397-record filtered FASTA; both engines read that one file. Pairs are
+compared unordered. tn93 was also run at `-t 0.05` so that a pair it
+scores *above* threshold can be told apart from one it never scored.
+
+A **third** convention difference governs this comparison, beyond §7's
+two. `run_tn93` passes `-a resolve`, tn93's default, which resolves an
+IUPAC code to whichever base minimises the distance; our engine drops
+ambiguous sites from numerator and denominator alike. tn93's `-a skip`
+is the setting that matches ours. Both are reported.
+
+**Matched ambiguity handling (`-a skip`) — the like-for-like run:**
+
+| | pairs |
+|---|---|
+| `compute_pairwise_distances_python` @ 0.015 | 35,852 |
+| reference tn93 `-a skip` @ 0.015 | 35,655 |
+| intersection | **35,655** |
+| ours only | 197 |
+| tn93 only | **0** |
+| **unexplained** | **0** |
+
+tn93's pair set is a strict **subset** of ours, and all 197 extra pairs
+sit in the one band §7 predicted: p ∈ [0.014784, 0.014983] against a
+TN93-corrected [0.0150004, 0.0152116] — inside our cut, outside tn93's,
+every one of them. §7 measured 759 pairs in p ∈ [0.0147, 0.015] as the
+band where the conventions *can* disagree; 197 of them actually do.
+
+The `-l` boundary binds on **nothing**, as §7 expected: the coverage
+gate leaves every surviving record with ≥1,506 unambiguous sites, so no
+pair comes near the 100/101 edge.
+
+On the 35,655 shared pairs the two distances differ by
+−3.4 × 10⁻⁷ to +2.7 × 10⁻⁴, median +2.3 × 10⁻⁵ — the TN93 correction,
+which is monotone in p and adds more the more divergent the pair. The
+small negative tail is three orders of magnitude below the positive one,
+near tn93's printed precision, and it changed no link decision: it
+cannot, since tn93 emitted no pair we did not.
+
+**Production ambiguity handling (`-a resolve`):** 35,682 pairs,
+intersection 35,668, 184 ours-only, **14 tn93-only**. The 184 are again
+all in the correction band. The 14 are all pairs where our p-distance
+is just above 0.015 and tn93's is just below — and all 14 carry between
+83 and 117 sites where one sequence has an IUPAC code and the other a
+called base. Those are the sites `resolve` resolves favourably and ours
+discards, so they are the ambiguity convention, not a defect: the same
+pairs vanish under `-a skip`, where tn93-only is 0.
+
+### 11.4 What this does and does not establish
+
+It establishes that our denominator, our overlap rule and our mismatch
+count agree with the CDC reference exactly, on the real cohort, once
+ambiguity handling is matched — the independent check the pipeline has
+never had. Every disagreement is attributable to a stated convention,
+and no disagreement is attributable to our arithmetic.
+
+It does **not** settle the conventions themselves. Two decisions remain
+for Kelyn, and neither is changed here:
+
+1. **The cut** (§7). We threshold the uncorrected p-distance; Paper 1
+   claims the HIV-TRACE convention. Measured cost at 0.015: 197 pairs,
+   0.55% of ours.
+2. **Ambiguity handling.** `run_tn93` resolves, our engine discards.
+   Either match the reference, or state the rule in the methods. Only
+   `-a skip` makes the two engines comparable, so an A/B run that wants
+   to measure *our* metric should pass it.
+
+One operational note: tn93's CSV row order is not stable between runs
+on the same input (OpenMP scheduling); the pair set is. Compare pair
+sets, never file bytes.
+
+### 11.5 Still open from §9
+
+Item 6's third part is untouched: `cluster/simulate.py` still emits
+gap-free equal-length sequences, so the Fig 3 harness still cannot see
+this class of defect (§8). Giving the simulator ragged coverage remains
+the change that would make figure 3 a test of the input the pipeline
+actually gets.
