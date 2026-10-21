@@ -192,12 +192,20 @@ the binary it builds reports **v1.0.12**.
 three-record, gap-free, LF-terminated FASTA of 600 nt sequences it
 reports `"Sequences": 1`, and with `-0` (report every sequence against
 itself) it emits exactly one row. Same from stdin, same wrapped at 60
-columns, same with two 10 nt sequences, same on the real 3,397-record
-filtered FASTA. One sequence means no pairs, which is the whole of
-"tn93 silently emits zero pairs on both synthetic and real cohorts":
-not flags, not overlap, not divergence, and nothing the FASTA writer
-did. The distance code inside the binary is fine — `-s SECOND_FASTA`
-(compare file A against file B) computes correct distances.
+columns, same with CRLF line endings, same writing to stdout with an
+explicit `-f csv`, same with two 10 nt sequences, same on the real
+3,397-record filtered FASTA. One sequence means no pairs, which is the
+whole of "tn93 silently emits zero pairs on both synthetic and real
+cohorts": not flags, not overlap, not divergence, and nothing the
+FASTA writer did.
+
+The defect sits in the build's shared FASTA reader, not in tn93's
+argument handling: `seqcoverage`, a sibling tool in the same image
+built from the same `tn93_shared.cc`, reports
+`{"unique": 1, "total": 1}` on the same three-record file. The
+distance code itself is fine — `-s SECOND_FASTA` (compare file A
+against file B) reads one record from each and computes correct
+distances.
 
 This retires the hypothesis that tn93's silence was tn93 correctly
 refusing low-overlap pairs. It was not. It also means **the reference
