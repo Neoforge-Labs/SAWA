@@ -283,3 +283,43 @@ class TestReferenceInvocation:
         fasta = _write_fasta(tmp_path, {"A": _window("ACGT", 500)})
         with pytest.raises(ValueError, match="share a parent"):
             distance.run_tn93(fasta, tmp_path / "elsewhere" / "distances.csv")
+
+
+class TestPinnedReferenceImage:
+    """The reference image's tag, its source pin and its reader must agree.
+
+    Both of the defects recorded in
+    `docs/evaluations/cluster-distance-denominator.md` §11 were
+    invisible to the test suite. The image was tagged `1.0.13` while the
+    binary inside reported `v1.0.12`, and the binary could not read a
+    multi-record FASTA at all. The Dockerfile now asserts both at build
+    time; these two guards are the parts that need no Docker daemon, so
+    they run in the ordinary unit pass.
+    """
+
+    # First upstream release carrying veg/tn93 commit 5c14f35, which
+    # changed `char validFlags[256]` to `signed char`. Before it, the
+    # -1 "not a sequence character" sentinel read back as 255 wherever
+    # plain `char` is unsigned (every aarch64 host), so `>` tested as a
+    # valid base and the FASTA reader never saw a record boundary.
+    FIRST_FIXED_VERSION = (1, 0, 15)
+
+    @staticmethod
+    def _dockerfile_version() -> str:
+        dockerfile = Path(__file__).resolve().parents[2] / "docker" / "hivtrace" / "Dockerfile"
+        for line in dockerfile.read_text().splitlines():
+            if line.startswith("ARG TN93_VERSION="):
+                return line.split("=", 1)[1].strip()
+        raise AssertionError(f"no ARG TN93_VERSION in {dockerfile}")
+
+    def test_default_image_tag_matches_the_dockerfile_pin(self) -> None:
+        pinned = f"hivdrwatch/tn93:{self._dockerfile_version()}"
+        assert pinned == distance.DEFAULT_IMAGE
+
+    def test_pin_is_at_or_past_the_aarch64_fasta_reader_fix(self) -> None:
+        pinned = tuple(int(p) for p in self._dockerfile_version().split("."))
+        assert pinned >= self.FIRST_FIXED_VERSION, (
+            f"tn93 {self._dockerfile_version()} predates the signed-char fix; "
+            "the reference binary would read only the first FASTA record "
+            "on any aarch64 build host and silently emit zero pairs"
+        )
