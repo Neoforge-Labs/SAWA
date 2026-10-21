@@ -391,6 +391,23 @@ re-run of ingest against `data/raw/genbank`, not a column transform.
 The bump protocol also asks for a regenerated `data/interim/` sample in
 DVC. That is a pipeline run and is **not** done here; see §7.
 
+Coverage on every module touched, against CLAUDE.md's ≥ 70% bar — all
+four were below it before, and the new tests are offline (the GenBank one
+replays flat files out of `tmp_path` with only `_esearch_all` stubbed,
+which is also the path a vintage rebuild takes):
+
+| module | before | after |
+|---|---|---|
+| `ingest/schema.py` | 98% | 98% |
+| `ingest/merge.py` | 15% | 96% |
+| `ingest/lanl.py` | 47% | 91% |
+| `ingest/genbank.py` | 37% | 77% |
+| `align/dedup.py` | 100% | 100% |
+
+The LANL round-trip test earned its keep immediately: it caught
+`country_raw` being read from a `country` column that the canonical frame
+calls `country_name`.
+
 ---
 
 ## 7. Downstream artifacts that are now stale
@@ -441,4 +458,7 @@ labels.
    `ruff format --check` only. `mypy src/hivdrwatch/{ingest,align}` has a
    pre-existing backlog of 22 errors (23 before this change), mostly
    missing Biopython stubs.
-6. **Feature-derived `gene_region`** (§5), as its own change.
+6. **The six `tests/cluster/test_features.py` failures are still there** —
+   polars `NoDataError`, pre-existing, noted in `ligase-hivdb.md` §9.4 and
+   `align-coverage.md`. Full suite here: 617 passed, those 6 failed.
+7. **Feature-derived `gene_region`** (§5), as its own change.

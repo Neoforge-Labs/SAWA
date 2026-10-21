@@ -221,7 +221,7 @@ class LANLIngester:
                     length=len(seq),
                     gene_region="pol",
                     country=row.get("country_code"),
-                    country_raw=row.get("country"),
+                    country_raw=row.get("country_name"),
                     country_source="lanl_curated" if row.get("country_code") else None,
                     collection_year=row.get("collection_year"),
                     subtype=_subtype_enum(row.get("subtype_lanl")),
