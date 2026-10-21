@@ -20,15 +20,17 @@ treats a column where **neither** sequence has a base as evidence that
 the two agree there. Nobody sequenced it. Measured at the 0.015
 threshold, on sequences built to the shape of real curated rows:
 
-| pair | reported | linked at 0.015? | true divergence in overlap |
-|---|---|---|---|
-| two all-gap rows (3,012 dashes each) | 0.000000 | **yes** | undefined — no overlap |
-| 300 shared nt, 10% divergent there | 0.009960 | **yes** | 0.100, ~7x the threshold |
-| 99 shared nt, identical there | 0.000000 | **yes** | 0.000 from 99 sites |
+| pair | old: reported | linked at 0.015? | fixed | reference tn93 (§7) |
+|---|---|---|---|---|
+| two all-gap rows (3,012 dashes each) | 0.000000 | **yes** | no pair | no pair |
+| 300 shared nt, 10% divergent there | 0.009960 | **yes** | 0.100000 | 0.127706 |
+| 99 shared nt, identical there | 0.000000 | **yes** | no pair | no pair |
+| two 500 nt rows covering different columns | 0.332005 | no | no pair | no pair |
 
 Its docstring said it was the validation-harness path. The pipeline
 disagreed: `pipeline/cluster.py` defaults `--distance-engine` to
-`python`, and has since 452bfda. §5 settles which was intended.
+`python`, and has since 452bfda. §6 and §7 settle which was
+intended.
 
 **`pipeline/cluster.py::materialize_aligned_fasta`** applied no filter
 at all — it wrote every row whose `seq` was truthy, and a string of
@@ -55,8 +57,21 @@ denominator a representative whose own unambiguous coverage is below
 copy of itself, so its accessions expand to singletons instead of
 collapsing. Scoring that wrongly is what resurrects the all-gap block.
 
+Two eligibility counts appear below and they differ by 7 records.
+`phylo.build.filter_by_coverage` measures coverage as the non-`-`
+fraction, so an `N` or an `R` counts as covered; the distance engine's
+overlap counts only A/C/G/T. The pipeline's own gate (phylo's
+definition, since that is the helper being reused) admits **3,397**
+records; the probe, which used the stricter ACGT definition
+throughout, admits 3,390. The 7 extra records are singletons under
+either denominator and move nothing: end-to-end the engine produces
+1,469 clusters where the probe predicted 1,462, and the two agree
+exactly on the 7 extra singletons, on the largest component and on the
+whole top-ten. That cross-check is what licenses the probe's numbers
+for the columns too large to run end-to-end.
+
 Scripts are in this change's scratch, not committed — the measurement
-is a one-off against a vintage that is about to be replaced (§6).
+is a one-off against a vintage that is about to be replaced (§9).
 
 ## 3. The fixes
 
@@ -93,13 +108,22 @@ eligible on this vintage.
 | | A: as the code stands | B: filter only | C: denominator only | D: both (new default) |
 |---|---|---|---|---|
 | sequences in | 36,510 | 3,390 | 36,510 | 3,390 |
-| pairs below threshold | 175,917 | 15,926 | 110,578 | 21,775 |
+| distinct-sequence pairs below threshold | 175,917 | 15,926 | 110,578 | 21,775 |
 | clusters | 8,103 | 1,596 | 27,060 | **1,462** |
 | singletons | 7,200 | 1,393 | 25,947 | 1,269 |
 | sequences in a cluster of ≥2 | 29,310 (80.3%) | 1,997 | 10,563 | 2,121 |
 | clusters of ≥10 | 116 | 62 | 47 | 63 |
 | clusters of ≥100 | 16 | 1 | 4 | 2 |
 | **largest component** | **19,164** | 150 | 6,307 | **195** |
+
+The pair row counts pairs of *distinct sequences*, which is what the
+probe computes; the engine emits one row per pair of accessions, so on
+the real FASTA for column D it writes 35,852 rows for the same 21,775
+distinct-sequence pairs — 4,029 of them at distance exactly 0, the
+identical records behind `align-coverage.md` §7 item 3. Run end to end
+on the filtered FASTA the engine gives **3,397 sequences → 1,469
+clusters, 1,276 singletons, largest component 195**, 63 clusters of
+≥10 and 2 of ≥100.
 
 Largest ten components, A: 19164, 1212, 1192, 476, 449, 438, 379, 256,
 211, 210. D: 195, 105, 62, 59, 50, 47, 36, 34, 34, 32.
@@ -145,7 +169,7 @@ returns the same answer. The coverage gate, not `min_overlap`, is what
 controls this. `min_overlap` earns its place for the unfiltered path
 and for a lower `--min-coverage`, not as something to tune.
 
-## 6. The published artifact is a zero-cluster run, which is its own finding
+## 6. The published artifact is a zero-cluster run
 
 `data/gold/cluster_assignments.parquet` holds 36,510 rows in **36,510
 clusters — every sequence a singleton**, and
@@ -155,18 +179,58 @@ So the published cluster artifact is the *docker tn93* run, the one
 that emitted zero pairs. None of column A above was ever shipped; it is
 what the current code would produce on this vintage if it were run.
 
-That reframes tn93's silence. tn93's `-l` default is the same 100-site
-minimum overlap, and it was handed a FASTA that was 52.5% all-gap rows
-with the rest truncated by the asm10 preset. Refusing those pairs is
-the correct behaviour, not a bug in the binary, and the Python engine
-was adopted as a workaround for it: "empirically the only engine that
-produces non-empty output" is true, and the reason it was the only one
-is that it was the only one counting absent columns as agreement. How
-much of tn93's zero is explained by that, versus by genuine
-above-threshold divergence in a cross-country GenBank cohort, is not
-settled here — §8 item 1.
+## 7. Why tn93 emitted zero pairs, and what it says once it works
 
-## 7. Figure 3 and the HIV-TRACE parity numbers
+`make images` had never been run here, so this is the first time the
+pinned reference has been executed at all. Two things came out of it.
+
+**The image is mis-tagged.** `docker/hivtrace/Dockerfile` clones
+`--branch v1.0.13` and tags the image `hivdrwatch/tn93:1.0.13`, but
+the binary it builds reports **v1.0.12**.
+
+**Its single-file FASTA parser reads only the first record.** Given a
+three-record, gap-free, LF-terminated FASTA of 600 nt sequences it
+reports `"Sequences": 1`, and with `-0` (report every sequence against
+itself) it emits exactly one row. Same from stdin, same wrapped at 60
+columns, same with two 10 nt sequences, same on the real 3,397-record
+filtered FASTA. One sequence means no pairs, which is the whole of
+"tn93 silently emits zero pairs on both synthetic and real cohorts":
+not flags, not overlap, not divergence, and nothing the FASTA writer
+did. The distance code inside the binary is fine — `-s SECOND_FASTA`
+(compare file A against file B) computes correct distances.
+
+This retires the hypothesis that tn93's silence was tn93 correctly
+refusing low-overlap pairs. It was not. It also means **the reference
+implementation has never validated our distance engine**, which is the
+part that matters for a tools paper: for as long as the pipeline has
+existed there has been no independent check on the numbers figure 3
+rests on. Fixing the image belongs with the regeneration (§9).
+
+Through the two-file path, which does work, the reference agrees with
+the fix on every fixture in §1 — the all-gap pair, the disjoint pair
+and the 99-site pair all emit nothing; the 300-nt 10%-divergent pair
+is reported at 0.127706, far above threshold, where the old denominator
+said 0.009960 and linked it. Two differences are worth recording:
+
+* **`-l` is strictly greater than, not at least.** tn93's help says
+  "overlap over at least OVERLAP nucleotides", but at the default the
+  binary refuses a 100-site overlap and accepts 101. This
+  implementation uses `overlap >= min_overlap`, the documented
+  reading. With the coverage gate in force every surviving record
+  carries ≥1,506 sites, so the one-site boundary cannot bind.
+* **We apply the threshold to the uncorrected p-distance.** TN93 is a
+  monotone transform of it, so memberships are identical *at a
+  matched cut* — but the cut is not matched. Measured: a full-length
+  pair at p = 0.014940 is reported by tn93 as 0.0151563, so it falls
+  inside our 0.015 and outside tn93's. On the filtered cohort **759 of
+  35,852 pairs sit in p ∈ [0.0147, 0.015]**, the band where the two
+  conventions can disagree; 14 sit in the last 0.0001. Paper 1 claims
+  the HIV-TRACE convention, so this is a decision for Kelyn: either
+  apply the correction, or state in the methods that the threshold is
+  applied to the uncorrected p-distance. It is not changed here —
+  changing it changes the number again.
+
+## 8. Figure 3 and the HIV-TRACE parity numbers
 
 **Both sides of the parity comparison shared the same denominator, so
 the parity numbers are internally comparable.** `cluster_validate`
@@ -193,7 +257,7 @@ start/end per sequence from the real coverage distribution — is what
 would make figure 3 a test of the thing being claimed. It is not done
 here.
 
-## 8. What is left, and the order figure 3 needs
+## 9. What is left, and the order figure 3 needs
 
 Every number in §4 and §5 is measured against the **asm10** vintage of
 `aligned.parquet`, the one `align-coverage.md` showed to be wrong. They
@@ -226,12 +290,14 @@ Order:
    *labelled* is not.
 5. **Re-run `pipeline/cluster`** on the new vintage, then
    `outbreak_rollup`, then regenerate figure 3's cohort panel.
-6. **Then** the open questions: run the reference tn93 on the filtered
-   FASTA and compare pair sets with ours (§6 — needs `make images`);
-   and give the simulator ragged coverage so the harness can see this
-   class of defect (§7).
+6. **Then** the open questions: fix the tn93 image so the reference
+   can read a multi-record FASTA, re-tag it at the version it actually
+   builds, and compare its pair set with ours on the filtered cohort
+   (§7); decide the p-distance-vs-TN93 cut (§7); and give the
+   simulator ragged coverage so the harness can see this class of
+   defect (§8).
 
-## 9. Tests
+## 10. Tests
 
 `tests/cluster/test_distance.py` — the all-gap pair, the 300-nt
 10%-divergent pair and the 99-site refusal, each with the number the
