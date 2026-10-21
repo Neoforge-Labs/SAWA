@@ -10,10 +10,12 @@ from __future__ import annotations
 import polars as pl
 import pytest
 
+from hivdrwatch.paper1 import SUBTYPE_ORDER
 from hivdrwatch.paper1.fig02_aggregate import (
     MIN_CELL_N,
     RESISTANT_LEVELS,
     aggregate_resistance_landscape,
+    subtypes_omitted_by,
 )
 
 
@@ -173,3 +175,92 @@ class TestConstants:
 
     def test_min_cell_n_is_five(self) -> None:
         assert MIN_CELL_N == 5
+
+
+class TestSubtypesOmittedByDisplayOrder:
+    """The heatmap draws one column per SUBTYPE_ORDER entry and skips the
+    rest, so the omission has to be visible. `A` and `CRF01_AE` are the
+    labels ingest 0.2.0 started resolving that no display order covers.
+    """
+
+    def _landscape(self, *subtypes: str) -> pl.DataFrame:
+        dr = _dr(
+            [
+                {"accession": f"S{i}", "drug_class": "NRTI", "level": "high"}
+                for i, _ in enumerate(subtypes)
+            ]
+        )
+        curated = _curated(
+            [
+                {
+                    "accession": f"S{i}",
+                    "country": "KE",
+                    "collection_year": 2020,
+                    "subtype": s,
+                }
+                for i, s in enumerate(subtypes)
+            ]
+        )
+        landscape, _ = aggregate_resistance_landscape(dr, curated, min_cell_n=1)
+        return landscape
+
+    def test_reports_labels_with_no_column(self) -> None:
+        landscape = self._landscape("A1", "C", "A", "CRF01_AE")
+        omitted = subtypes_omitted_by(landscape, SUBTYPE_ORDER)
+        assert omitted.labels == ("A", "CRF01_AE")
+        assert omitted.n_cells == 2
+        assert omitted.n_observations == 2
+        assert bool(omitted) is True
+        assert "CRF01_AE" in omitted.describe()
+
+    def test_empty_when_the_order_covers_everything(self) -> None:
+        landscape = self._landscape("A1", "C", "D")
+        omitted = subtypes_omitted_by(landscape, SUBTYPE_ORDER)
+        assert omitted.labels == ()
+        assert omitted.n_cells == 0
+        assert bool(omitted) is False
+        assert "no observed subtype is omitted" in omitted.describe()
+
+    def test_counts_every_drug_class_cell(self) -> None:
+        dr = _dr(
+            [
+                {"accession": "S0", "drug_class": "NRTI", "level": "high"},
+                {"accession": "S0", "drug_class": "NNRTI", "level": "high"},
+                {"accession": "S0", "drug_class": "INSTI", "level": "susceptible"},
+            ]
+        )
+        curated = _curated(
+            [
+                {
+                    "accession": "S0",
+                    "country": "KE",
+                    "collection_year": 2020,
+                    "subtype": "CRF01_AE",
+                }
+            ]
+        )
+        landscape, _ = aggregate_resistance_landscape(dr, curated, min_cell_n=1)
+        omitted = subtypes_omitted_by(landscape, SUBTYPE_ORDER)
+        assert omitted.labels == ("CRF01_AE",)
+        # One sequence, three drug classes: three cells, three observations.
+        assert omitted.n_cells == 3
+        assert omitted.n_observations == 3
+
+    def test_warns_so_a_dropped_stratum_cannot_pass_silently(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        landscape = self._landscape("A1", "CRF01_AE")
+        with caplog.at_level("WARNING"):
+            subtypes_omitted_by(landscape, SUBTYPE_ORDER)
+        assert any("CRF01_AE" in r.getMessage() for r in caplog.records)
+
+    def test_requires_a_subtype_column(self) -> None:
+        with pytest.raises(ValueError, match="missing 'subtype' column"):
+            subtypes_omitted_by(pl.DataFrame({"country": ["KE"]}), SUBTYPE_ORDER)
+
+    def test_current_display_order_has_no_slot_for_parent_clades_or_crfs(self) -> None:
+        """Pins the gap itself: if SUBTYPE_ORDER is widened, this fails and
+        the figure-2 decision in docs/evaluations/ingest-provenance.md has
+        been made."""
+        assert "A" not in SUBTYPE_ORDER
+        assert not any(s.startswith("CRF") for s in SUBTYPE_ORDER)
