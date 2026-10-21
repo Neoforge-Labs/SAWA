@@ -200,9 +200,7 @@ class TestPartitionReport:
         assert row.min_coverage_used == 0.7
 
     def test_write_partition_report_roundtrip(self, tmp_path: Path) -> None:
-        df = self._frame(
-            {"A1": (30, "A" * 3012), "unknown": (10, "A" * 3012)}
-        )
+        df = self._frame({"A1": (30, "A" * 3012), "unknown": (10, "A" * 3012)})
         report = build_partition_report(df)
         out = tmp_path / "partition_report.parquet"
         write_partition_report(report, out)

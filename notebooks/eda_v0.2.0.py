@@ -567,12 +567,14 @@ def _(RESISTANT_LEVELS, curated, dr, mo, pl):
     if "drug_class" not in dr.columns:
         _insti_summary = mo.md("> `drug_class` missing from dr_results.")
     else:
-        _insti = dr.filter(pl.col("drug_class") == "INSTI").join(
-            curated.select(["accession", "country", "collection_year"]),
-            on="accession",
-            how="inner",
-        ).filter(
-            pl.col("country").is_not_null() & pl.col("collection_year").is_not_null()
+        _insti = (
+            dr.filter(pl.col("drug_class") == "INSTI")
+            .join(
+                curated.select(["accession", "country", "collection_year"]),
+                on="accession",
+                how="inner",
+            )
+            .filter(pl.col("country").is_not_null() & pl.col("collection_year").is_not_null())
         )
         if _insti.height == 0:
             _insti_summary = mo.md("> No INSTI rows after join.")
@@ -600,16 +602,18 @@ def _(RESISTANT_LEVELS, curated, dr, mo, pl):
                 )
                 .sort(["drug", "epoch"])
             )
-            _insti_summary = mo.vstack([
-                mo.md(
-                    "### INSTI spotlight — pre vs post DTG rollout\n\n"
-                    "Feeds Paper 1 Fig 4 headline. Excludes rollout year 2019 "
-                    "as an implementation buffer. `n_calls` = number of "
-                    "(sequence, drug) pairs Sierra scored; `n_resistant` = "
-                    "calls at Sierra level ∈ {intermediate, high}."
-                ),
-                _rollup,
-            ])
+            _insti_summary = mo.vstack(
+                [
+                    mo.md(
+                        "### INSTI spotlight — pre vs post DTG rollout\n\n"
+                        "Feeds Paper 1 Fig 4 headline. Excludes rollout year 2019 "
+                        "as an implementation buffer. `n_calls` = number of "
+                        "(sequence, drug) pairs Sierra scored; `n_resistant` = "
+                        "calls at Sierra level ∈ {intermediate, high}."
+                    ),
+                    _rollup,
+                ]
+            )
     _insti_summary
     return
 
@@ -650,17 +654,19 @@ def _(RESISTANT_LEVELS, dr, mo, pl):
                 .sort(["drug_class", "rank_in_class"])
                 .rename({"mutations": "mutation"})
             )
-            _top_muts_out = mo.vstack([
-                mo.md(
-                    "### Top-10 mutations per drug class (in resistant-calling sequences)\n\n"
-                    "Ranked by number of distinct sequences carrying the mutation "
-                    "among sequences whose Sierra call was intermediate or high "
-                    "for at least one drug in that class. Includes accessory + "
-                    "known DRAMs — Sierra's `mutations` column is the full "
-                    "mutation profile, not a filtered DRAM list."
-                ),
-                _top_by_class,
-            ])
+            _top_muts_out = mo.vstack(
+                [
+                    mo.md(
+                        "### Top-10 mutations per drug class (in resistant-calling sequences)\n\n"
+                        "Ranked by number of distinct sequences carrying the mutation "
+                        "among sequences whose Sierra call was intermediate or high "
+                        "for at least one drug in that class. Includes accessory + "
+                        "known DRAMs — Sierra's `mutations` column is the full "
+                        "mutation profile, not a filtered DRAM list."
+                    ),
+                    _top_by_class,
+                ]
+            )
     _top_muts_out
     return
 
@@ -727,9 +733,7 @@ def _(REPO_ROOT, mo, pl):
                 pl.col("n_after_coverage").alias("expected_n_taxa"),
             )
             _joined = _ml_only.join(_expected, on="subtype", how="full").select(
-                pl.coalesce([pl.col("subtype"), pl.col("subtype_right")]).alias(
-                    "subtype"
-                ),
+                pl.coalesce([pl.col("subtype"), pl.col("subtype_right")]).alias("subtype"),
                 pl.col("n_taxa").alias("manifest_n_taxa"),
                 pl.col("expected_n_taxa"),
             )
@@ -825,9 +829,7 @@ def _(REPO_ROOT, mo, pl, plt):
             _tt_walls = [r["wall_seconds"] or 0.0 for r in _tt.iter_rows(named=True)]
             _x = list(range(len(_subtypes)))
             _axes[2].bar(_x, _ml_walls, color="#0072B2", label="IQ-TREE (ML)")
-            _axes[2].bar(
-                _x, _tt_walls, bottom=_ml_walls, color="#009E73", label="TreeTime"
-            )
+            _axes[2].bar(_x, _tt_walls, bottom=_ml_walls, color="#009E73", label="TreeTime")
             _axes[2].set_xticks(_x)
             _axes[2].set_xticklabels(_subtypes)
             _axes[2].set_title("Wall-time per subtype", fontsize=10)
@@ -956,9 +958,8 @@ def _(REPO_ROOT, curated, mo, pl, plt):
                 how="left",
             )
             # Cross-border: cluster spans ≥ 2 distinct countries.
-            _cluster_countries = (
-                _joined.group_by("cluster_id")
-                .agg(pl.col("country").n_unique().alias("n_countries"))
+            _cluster_countries = _joined.group_by("cluster_id").agg(
+                pl.col("country").n_unique().alias("n_countries")
             )
             _n_cross = _cluster_countries.filter(pl.col("n_countries") > 1).height
             _n_total = _cluster_countries.height
@@ -970,18 +971,22 @@ def _(REPO_ROOT, curated, mo, pl, plt):
                 .group_by("cluster_id")
                 .agg(pl.col("subtype").first().alias("dominant_subtype"))
             )
-            _mix_summary = _subtype_mix.group_by("dominant_subtype").agg(
-                pl.len().alias("n_clusters")
-            ).sort("n_clusters", descending=True)
-            _comp_out = mo.vstack([
-                mo.md(
-                    f"### Cluster geographic + subtype composition\n\n"
-                    f"* multi-member clusters: **{_n_total:,}**\n"
-                    f"* cross-border (≥ 2 countries): **{_n_cross:,}** "
-                    f"({100 * _n_cross / _n_total:.1f}%)"
-                ),
-                _mix_summary,
-            ])
+            _mix_summary = (
+                _subtype_mix.group_by("dominant_subtype")
+                .agg(pl.len().alias("n_clusters"))
+                .sort("n_clusters", descending=True)
+            )
+            _comp_out = mo.vstack(
+                [
+                    mo.md(
+                        f"### Cluster geographic + subtype composition\n\n"
+                        f"* multi-member clusters: **{_n_total:,}**\n"
+                        f"* cross-border (≥ 2 countries): **{_n_cross:,}** "
+                        f"({100 * _n_cross / _n_total:.1f}%)"
+                    ),
+                    _mix_summary,
+                ]
+            )
     _comp_out
     return
 
@@ -1207,7 +1212,11 @@ def _(REPO_ROOT, mo, platform, subprocess, sys):
         _dirty = subprocess.check_output(
             ["git", "status", "--porcelain"], cwd=REPO_ROOT, text=True
         ).strip()
-        _dirty_note = f"⚠️ working tree dirty ({len(_dirty.splitlines())} files)" if _dirty else "✅ clean working tree"
+        _dirty_note = (
+            f"⚠️ working tree dirty ({len(_dirty.splitlines())} files)"
+            if _dirty
+            else "✅ clean working tree"
+        )
     except Exception:
         _dirty_note = "unknown"
     try:
@@ -1258,9 +1267,7 @@ def _(Path, REPO_ROOT, mo, pl):
         _p = REPO_ROOT / _relpath
         if _p.exists():
             _stat = _p.stat()
-            _mtime = _dt.datetime.fromtimestamp(_stat.st_mtime).isoformat(
-                timespec="seconds"
-            )
+            _mtime = _dt.datetime.fromtimestamp(_stat.st_mtime).isoformat(timespec="seconds")
             # Pull schema_version from the parquet if the column exists.
             try:
                 _sv_series = pl.read_parquet(_p, columns=["schema_version"])
@@ -1288,18 +1295,20 @@ def _(Path, REPO_ROOT, mo, pl):
                 }
             )
     _prov_table = pl.from_dicts(_rows)
-    mo.vstack([
-        mo.md(
-            "### Data-artifact provenance\n\n"
-            "Every downstream claim in this notebook (and in the manuscripts) "
-            "traces back to one of these files. `schema_version` lets you "
-            "verify the parser you're using matches the file you're reading — "
-            "a version bump means the semantics changed. `mtime` is your "
-            "quickest check for whether a stage has been re-run since the "
-            "last upstream stage."
-        ),
-        _prov_table,
-    ])
+    mo.vstack(
+        [
+            mo.md(
+                "### Data-artifact provenance\n\n"
+                "Every downstream claim in this notebook (and in the manuscripts) "
+                "traces back to one of these files. `schema_version` lets you "
+                "verify the parser you're using matches the file you're reading — "
+                "a version bump means the semantics changed. `mtime` is your "
+                "quickest check for whether a stage has been re-run since the "
+                "last upstream stage."
+            ),
+            _prov_table,
+        ]
+    )
     return
 
 
@@ -1313,15 +1322,17 @@ def _(REPO_ROOT, mo, pl):
         _m = pl.read_parquet(_mp).select(
             ["subtype", "kind", "tool_version", "random_seed", "built_at"]
         )
-        _tools_out = mo.vstack([
-            mo.md(
-                "### Tool versions (from tree manifest)\n\n"
-                "Every tree row records the exact IQ-TREE / TreeTime version "
-                "and RNG seed used. A reviewer wanting to reproduce a tree "
-                "run needs only this row + the frozen curated Parquet."
-            ),
-            _m,
-        ])
+        _tools_out = mo.vstack(
+            [
+                mo.md(
+                    "### Tool versions (from tree manifest)\n\n"
+                    "Every tree row records the exact IQ-TREE / TreeTime version "
+                    "and RNG seed used. A reviewer wanting to reproduce a tree "
+                    "run needs only this row + the frozen curated Parquet."
+                ),
+                _m,
+            ]
+        )
     _tools_out
     return
 
@@ -1355,9 +1366,9 @@ def _(REPO_ROOT, mo):
         for _name, _relpath, _pointer in _tracked:
             _txt = _pointer.read_text().strip()
             _lines.append(f"* `{_name}` → `{_relpath}.dvc`")
-            _lines.append(f"    ```yaml")
+            _lines.append("    ```yaml")
             _lines.append(f"    {_txt}")
-            _lines.append(f"    ```")
+            _lines.append("    ```")
     if _untracked:
         _lines.append("")
         _lines.append(

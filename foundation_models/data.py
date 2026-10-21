@@ -141,8 +141,7 @@ def build_fm_dataset(
             )
     elif sequence_column not in curated.columns:
         raise ValueError(
-            f"sequence_column={sequence_column!r} not in curated columns: "
-            f"{curated.columns}"
+            f"sequence_column={sequence_column!r} not in curated columns: {curated.columns}"
         )
 
     logger.info("using sequence column %r (strip_gaps=%s)", sequence_column, strip_gaps)

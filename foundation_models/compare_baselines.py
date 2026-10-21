@@ -61,11 +61,7 @@ def _load_splits(manifest_path: Path, drug_class: str, strategy: str):
     manifest = json.loads(manifest_path.read_text())
     runs = manifest.get("runs", [])
     match = next(
-        (
-            r
-            for r in runs
-            if r["drug_class"] == drug_class and r["strategy"] == strategy
-        ),
+        (r for r in runs if r["drug_class"] == drug_class and r["strategy"] == strategy),
         None,
     )
     if match is None:
@@ -131,9 +127,7 @@ def _score_esm2(
             model_name, num_labels=2, attn_implementation="sdpa"
         )
     except (ValueError, TypeError):
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_name, num_labels=2
-        )
+        model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     model.load_state_dict(ckpt["model_state_dict"])
     model = model.to(device).eval()
@@ -149,9 +143,7 @@ def _score_esm2(
             return len(self.xs)
 
         def __getitem__(self, i):
-            return tokenizer(
-                self.xs[i], truncation=True, max_length=max_length, padding=False
-            )
+            return tokenizer(self.xs[i], truncation=True, max_length=max_length, padding=False)
 
     loader = DataLoader(_Ds(seqs), batch_size=batch_size, collate_fn=collator)
     probs: list[float] = []
@@ -320,9 +312,7 @@ def main(argv: list[str] | None = None) -> int:
         "--strategy", choices=("stratified", "subtype_holdout"), default="stratified"
     )
     parser.add_argument("--out-dir", type=Path, default=Path("data/gold/fm"))
-    parser.add_argument(
-        "--esm-ckpt-dir", type=Path, default=Path("data/gold/fm/checkpoints")
-    )
+    parser.add_argument("--esm-ckpt-dir", type=Path, default=Path("data/gold/fm/checkpoints"))
     parser.add_argument("--esm-model-name", default="facebook/esm2_t6_8M_UR50D")
     parser.add_argument(
         "--skip-esm",
@@ -338,9 +328,7 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    manifest_path = args.manifest or (
-        args.out_dir / f"manifest_{args.strategy}.json"
-    )
+    manifest_path = args.manifest or (args.out_dir / f"manifest_{args.strategy}.json")
     if not manifest_path.exists():
         parser.error(
             f"manifest not found: {manifest_path}. Run "
