@@ -42,7 +42,65 @@ from ..cluster import (
     read_distances,
     run_tn93,
 )
-from ..cluster.distance import compute_pairwise_distances_python
+from ..cluster.distance import DEFAULT_MIN_OVERLAP, compute_pairwise_distances_python
+from ..phylo.build import MIN_ALIGNED_COVERAGE, filter_by_coverage
+
+logger = logging.getLogger(__name__)
+
+
+def eligible_accessions(
+    curated: pl.DataFrame,
+    *,
+    seq_col: str = "aligned_pol",
+    require_qc_pass: bool = True,
+    min_coverage: float = MIN_ALIGNED_COVERAGE,
+) -> list[str]:
+    """Accessions whose alignment is fit to compute distances from.
+
+    `phylo/build.py` has filtered its tree input on `passes_qc` and
+    `MIN_ALIGNED_COVERAGE` since it was written; the cluster path never
+    did, which is how 21,358 rows of 3,012 dashes reached the distance
+    engine (`docs/evaluations/align-coverage.md` §6). The same two
+    gates, applied with the same helper, so the tree and the network
+    are built from the same cohort.
+
+    Returns one accession per record, first row wins. The curated table
+    carries the same accession up to three times (one row per country
+    query that returned it — `align-coverage.md` §7 item 3), and a
+    FASTA with repeated identifiers makes the distance CSV ambiguous
+    about which record a pair refers to.
+    """
+    if seq_col not in curated.columns:
+        raise ValueError(f"curated frame lacks '{seq_col}' column; cannot materialize FASTA")
+
+    df = curated.filter(pl.col(seq_col).is_not_null() & (pl.col(seq_col).str.len_chars() > 0))
+    n_present = df.height
+
+    if require_qc_pass and "passes_qc" in df.columns:
+        df = df.filter(pl.col("passes_qc"))
+    n_qc = df.height
+
+    df = filter_by_coverage(df, seq_col=seq_col, min_coverage=min_coverage)
+    n_covered = df.height
+
+    accessions = df["accession"].to_list()
+    deduped = list(dict.fromkeys(accessions))
+    logger.info(
+        "distance-engine eligibility: %d rows with a sequence → %d passing QC "
+        "→ %d with coverage ≥ %.0f%% → %d distinct accessions",
+        n_present,
+        n_qc,
+        n_covered,
+        min_coverage * 100,
+        len(deduped),
+    )
+    if len(deduped) < n_covered:
+        logger.warning(
+            "dropped %d duplicate accession rows; the curated table stores "
+            "the same record once per country query",
+            n_covered - len(deduped),
+        )
+    return deduped
 
 
 @task
@@ -50,48 +108,98 @@ def materialize_aligned_fasta(
     aligned_fasta: Path,
     curated_parquet: Path,
     work_dir: Path,
+    *,
+    require_qc_pass: bool = True,
+    min_coverage: float = MIN_ALIGNED_COVERAGE,
 ) -> Path:
-    """Ensure a per-accession aligned FASTA exists on disk for tn93.
+    """Write the aligned FASTA the distance engine consumes.
 
-    The curate stage writes only Parquet (`aligned_pol` column); tn93
-    needs a FASTA. If `aligned_fasta` doesn't exist we materialize it
-    from the Parquet's `aligned_pol` column into `work_dir/aligned.fasta`
-    and return the new path; otherwise pass through.
+    Sequences come from the curated Parquet's `aligned_pol` column, or
+    from `aligned_fasta` when the curate stage already wrote one. Either
+    way the record set is restricted to `eligible_accessions` — the
+    Parquet is the only place `passes_qc` and the coverage of each
+    alignment are recorded, so it decides what is eligible even when the
+    sequences themselves come from a file.
     """
     log = get_run_logger()
-    if aligned_fasta.exists() and aligned_fasta.stat().st_size > 0:
-        log.info("aligned FASTA present — using %s", aligned_fasta)
-        return aligned_fasta
-
     work_dir.mkdir(parents=True, exist_ok=True)
-    out = work_dir / "aligned.fasta"
     curated = pl.read_parquet(curated_parquet)
-    if "aligned_pol" not in curated.columns:
+    eligible = eligible_accessions(
+        curated,
+        require_qc_pass=require_qc_pass,
+        min_coverage=min_coverage,
+    )
+    if not eligible:
         raise ValueError(
-            f"curated Parquet {curated_parquet} lacks 'aligned_pol' column; "
-            "cannot materialize FASTA for tn93"
+            f"no eligible records in {curated_parquet}: every row is empty, "
+            f"QC-failed, or below {min_coverage:.0%} aligned coverage"
         )
-    seq_col = "aligned_pol"
+    keep = set(eligible)
+
+    out = work_dir / "aligned.fasta"
+    if aligned_fasta.exists() and aligned_fasta.stat().st_size > 0:
+        n_written, n_dropped = _filter_fasta(aligned_fasta, out, keep)
+        log.info(
+            "filtered %s → %s (%d records kept, %d dropped as ineligible)",
+            aligned_fasta,
+            out,
+            n_written,
+            n_dropped,
+        )
+    else:
+        n_written = _write_fasta_from_curated(curated, out, eligible)
+        log.info(
+            "materialized aligned FASTA from %s → %s (%d records)",
+            curated_parquet,
+            out,
+            n_written,
+        )
+
+    if n_written == 0:
+        raise ValueError(f"wrote 0 records to {out}: no eligible accession carried a sequence")
+    return out
+
+
+def _write_fasta_from_curated(
+    curated: pl.DataFrame,
+    out: Path,
+    accessions: list[str],
+) -> int:
+    """Write one record per accession in `accessions`, in that order."""
+    by_accession = {
+        row["accession"]: row["aligned_pol"]
+        for row in curated.select(["accession", "aligned_pol"]).iter_rows(named=True)
+    }
     n_written = 0
     with out.open("w", encoding="utf-8") as fh:
-        for row in curated.select(["accession", seq_col]).iter_rows(named=True):
-            seq = row[seq_col]
+        for accession in accessions:
+            seq = by_accession.get(accession)
             if not seq:
                 continue
-            fh.write(f">{row['accession']}\n{seq}\n")
+            fh.write(f">{accession}\n{seq}\n")
             n_written += 1
-    log.info(
-        "materialized aligned FASTA from %s → %s (%d records)",
-        curated_parquet,
-        out,
-        n_written,
-    )
-    if n_written == 0:
-        raise ValueError(
-            f"materialized 0 records from {curated_parquet}: "
-            "aligned_pol column is empty or all-null"
-        )
-    return out
+    return n_written
+
+
+def _filter_fasta(source: Path, out: Path, keep: set[str]) -> tuple[int, int]:
+    """Copy `source` to `out` keeping only records whose id is in `keep`."""
+    n_written = 0
+    n_dropped = 0
+    seen: set[str] = set()
+    with source.open("r", encoding="utf-8") as fh, out.open("w", encoding="utf-8") as sink:
+        keeping = False
+        for raw in fh:
+            if raw.startswith(">"):
+                accession = raw[1:].strip().split()[0] if raw[1:].strip() else ""
+                keeping = accession in keep and accession not in seen
+                if keeping:
+                    seen.add(accession)
+                    n_written += 1
+                else:
+                    n_dropped += 1
+            if keeping:
+                sink.write(raw)
+    return n_written, n_dropped
 
 
 @task(retries=1)
@@ -100,19 +208,22 @@ def run_distances(
     work_dir: Path,
     threshold: float,
     engine: str = "python",
+    min_overlap: int = DEFAULT_MIN_OVERLAP,
 ) -> Path:
-    """Compute pairwise TN93 distances → CSV of below-threshold pairs.
+    """Compute pairwise distances → CSV of below-threshold pairs.
 
     Two engines:
 
-    * ``python`` (default) — in-process vectorized p-distance, which is
-      monotone with TN93 for small divergences. Empirically the only
-      engine that produces non-empty output for our workflow. See
+    * ``python`` (default) — the in-process vectorized p-distance over
+      the pairwise unambiguous overlap, monotone with TN93 for small
+      divergences. See
       ``cluster/distance.py::compute_pairwise_distances_python``.
-    * ``docker`` — the historical `tn93` Docker container. Silently
-      emits zero pairs on both synthetic and real cohorts at v1.0.13
-      (confirmed via diagnostic re-run at t=1.0). Retained for
-      reference / A/B comparison against future tn93 releases.
+    * ``docker`` — the pinned `tn93` container, the reference
+      implementation. At v1.0.13 it emitted zero pairs on both the
+      synthetic and the real cohort; its own 100-site minimum overlap
+      is one reason why, since the FASTA it was handed was half
+      all-gap rows (``docs/evaluations/align-coverage.md``). Retained
+      for A/B comparison.
     """
     log = get_run_logger()
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -122,9 +233,9 @@ def run_distances(
         log.info("tn93 (docker) distances → %s", output_csv)
     else:
         compute_pairwise_distances_python(
-            aligned_fasta, output_csv, threshold=threshold
+            aligned_fasta, output_csv, threshold=threshold, min_overlap=min_overlap
         )
-        log.info("tn93 (python vectorized) distances → %s", output_csv)
+        log.info("python distances → %s (min overlap %d sites)", output_csv, min_overlap)
     n_pairs = max(0, sum(1 for _ in output_csv.open()) - 1)
     log.info("distances CSV: %d below-threshold pairs at t=%.4f", n_pairs, threshold)
     return output_csv
@@ -199,10 +310,20 @@ def cluster_flow(
     threshold: float = DEFAULT_THRESHOLD,
     to_postgres: bool | None = None,
     distance_engine: str = "python",
+    min_overlap: int = DEFAULT_MIN_OVERLAP,
+    min_coverage: float = MIN_ALIGNED_COVERAGE,
 ) -> tuple[Path, Path]:
     curated = load_curated(curated_parquet)
-    aligned_fasta = materialize_aligned_fasta(aligned_fasta, curated_parquet, work_dir)
-    distances_csv = run_distances(aligned_fasta, work_dir, threshold, engine=distance_engine)
+    aligned_fasta = materialize_aligned_fasta(
+        aligned_fasta, curated_parquet, work_dir, min_coverage=min_coverage
+    )
+    distances_csv = run_distances(
+        aligned_fasta,
+        work_dir,
+        threshold,
+        engine=distance_engine,
+        min_overlap=min_overlap,
+    )
     cluster_df = cluster(distances_csv, curated, threshold)
     features_df = outbreak_rollup(curated, cluster_df)
     cluster_path, features_path = write_gold(cluster_df, features_df, gold_dir)
@@ -250,11 +371,31 @@ def main(argv: list[str] | None = None) -> int:
         choices=("python", "docker"),
         default="python",
         help=(
-            "Distance backend. Default 'python' — vectorized in-process "
-            "p-distance, the only engine that produces non-empty output on "
-            "our workflow. 'docker' runs tn93 v1.0.13 which silently emits "
-            "zero pairs on both synthetic and real cohorts; kept for "
-            "reference / A-B testing against future tn93 releases."
+            "Distance backend. Default 'python' — the in-process "
+            "vectorized p-distance over the pairwise unambiguous overlap. "
+            "'docker' runs the pinned tn93 container as the reference "
+            "implementation; at v1.0.13 it emitted zero pairs on this "
+            "cohort, see docs/evaluations/align-coverage.md."
+        ),
+    )
+    parser.add_argument(
+        "--min-overlap",
+        type=int,
+        default=DEFAULT_MIN_OVERLAP,
+        help=(
+            "Fewest shared unambiguous sites a pair needs before a distance "
+            f"is reported for it (default {DEFAULT_MIN_OVERLAP}, matching "
+            "tn93's own -l default). Pairs below it are not emitted."
+        ),
+    )
+    parser.add_argument(
+        "--min-coverage",
+        type=float,
+        default=MIN_ALIGNED_COVERAGE,
+        help=(
+            "Least non-gap fraction of the alignment a record needs to enter "
+            f"the distance engine (default {MIN_ALIGNED_COVERAGE:.0%}, the "
+            "same gate phylo/ applies to tree input)."
         ),
     )
     parser.add_argument("--verbose", action="store_true")
@@ -273,6 +414,8 @@ def main(argv: list[str] | None = None) -> int:
         threshold=args.threshold,
         to_postgres=args.to_postgres or None,
         distance_engine=args.distance_engine,
+        min_overlap=args.min_overlap,
+        min_coverage=args.min_coverage,
     )
     return 0
 
