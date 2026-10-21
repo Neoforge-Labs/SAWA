@@ -81,10 +81,9 @@ class SimulationResult:
         """Emit the alignment as FASTA — ordered clusters then singletons.
 
         Default is single-line-per-sequence (wrap=0). This matches what
-        the previous successful cluster-validate run used and what tn93
-        v1.0.13 parses correctly. Pass `wrap=60` for NCBI-style wrapped
-        output if you need to feed the FASTA to a tool with a fixed
-        line buffer.
+        the previous successful cluster-validate run used. Pass
+        `wrap=60` for NCBI-style wrapped output if you need to feed the
+        FASTA to a tool with a fixed line buffer.
         """
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
