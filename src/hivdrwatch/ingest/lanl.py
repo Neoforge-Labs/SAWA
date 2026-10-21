@@ -43,7 +43,14 @@ from pathlib import Path
 import polars as pl
 from pydantic import ValidationError
 
-from .schema import SCHEMA_VERSION, SequenceRecord, Source, Subtype
+from .schema import (
+    SCHEMA_VERSION,
+    SequenceRecord,
+    Source,
+    Subtype,
+    country_name_to_code,
+    subtype_from_designation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +221,8 @@ class LANLIngester:
                     length=len(seq),
                     gene_region="pol",
                     country=row.get("country_code"),
+                    country_raw=row.get("country_name"),
+                    country_source="lanl_curated" if row.get("country_code") else None,
                     collection_year=row.get("collection_year"),
                     subtype=_subtype_enum(row.get("subtype_lanl")),
                     subtype_source="lanl_curated" if row.get("subtype_lanl") else None,
@@ -438,19 +447,15 @@ def parse_lanl_fasta(path: Path) -> dict[str, str]:
 
 
 def _coerce_subtype(raw: str | None) -> str:
+    """LANL Subtype column → canonical subtype value.
+
+    Delegates to the shared classifier so a LANL "A1/D" and a GenBank
+    note saying "subtype: A1/D" cannot disagree.
+    """
     if raw is None:
         return Subtype.UNKNOWN.value
-    token = raw.strip().upper().replace(" ", "_")
-    # Common LANL prefixes/suffixes
-    token = token.removeprefix("HIV-1_").removeprefix("HIV1_")
-    for st in Subtype:
-        if token == st.value.upper():
-            return st.value
-    if token.startswith("CRF"):
-        return Subtype.RECOMBINANT.value
-    if "_" in token or "/" in token:  # e.g. "A1/D", "A1_D"
-        return Subtype.RECOMBINANT.value
-    return Subtype.UNKNOWN.value
+    token = raw.strip().removeprefix("HIV-1_").removeprefix("HIV1_")
+    return subtype_from_designation(token).value
 
 
 def _subtype_enum(raw: str | None) -> Subtype:
@@ -474,29 +479,6 @@ def _coerce_bool(raw: str | None) -> bool | None:
     return None
 
 
-# Minimal country map — extend as you ingest new geographies
-_COUNTRY_NAME_TO_CODE: dict[str, str] = {
-    "kenya": "KE",
-    "uganda": "UG",
-    "tanzania": "TZ",
-    "united republic of tanzania": "TZ",
-    "rwanda": "RW",
-    "burundi": "BI",
-    "ethiopia": "ET",
-    "south sudan": "SS",
-    "somalia": "SO",
-    "south africa": "ZA",
-    "zambia": "ZM",
-    "malawi": "MW",
-    "botswana": "BW",
-    "united states": "US",
-    "usa": "US",
-    "united kingdom": "GB",
-    "uk": "GB",
-}
-
-
 def _country_name_to_code(raw: str | None) -> str | None:
-    if raw is None:
-        return None
-    return _COUNTRY_NAME_TO_CODE.get(raw.strip().lower())
+    """LANL Country column → ISO code, via the shared name map."""
+    return country_name_to_code(raw)

@@ -18,6 +18,7 @@ the matplotlib import cost.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 import polars as pl
@@ -136,3 +137,60 @@ def aggregate_resistance_landscape(
         min_cell_n,
     )
     return landscape, counts
+
+
+@dataclass(frozen=True)
+class OmittedSubtypes:
+    """Observed subtypes a figure's display order does not cover."""
+
+    labels: tuple[str, ...]
+    n_cells: int
+    # One sequence contributes once per drug class, so this counts
+    # sequence-by-drug-class observations, not sequences.
+    n_observations: int
+
+    def __bool__(self) -> bool:
+        return bool(self.labels)
+
+    def describe(self) -> str:
+        if not self.labels:
+            return "no observed subtype is omitted by the display order"
+        return (
+            f"{len(self.labels)} observed subtype(s) omitted by the display "
+            f"order: {', '.join(self.labels)} "
+            f"({self.n_cells} cells, {self.n_observations} sequence-class observations)"
+        )
+
+
+def subtypes_omitted_by(landscape: pl.DataFrame, reported: Iterable[str]) -> OmittedSubtypes:
+    """Which observed subtypes `reported` leaves out of the figure.
+
+    The aggregation above groups by every subtype present in the data, but
+    the heatmap renders one column per entry in a fixed display order and
+    skips any label not in it. That was invisible while the only omitted
+    labels were `unknown` and a few singletons. It stopped being harmless
+    once ingest started resolving CRFs and parent clades correctly: `A` and
+    `CRF01_AE` together are ~3,900 curated rows that no display order
+    currently has a slot for.
+
+    Call this before rendering, so a stratum cannot leave the figure
+    without anyone noticing. Whether to widen the display order, roll
+    parent clades into their sub-clades for display, or give CRFs their own
+    column is a presentation decision — this only makes the omission
+    visible.
+    """
+    if "subtype" not in landscape.columns:
+        raise ValueError("landscape frame missing 'subtype' column")
+
+    reported_set = set(reported)
+    omitted = landscape.filter(~pl.col("subtype").is_in(list(reported_set)))
+    labels = tuple(sorted(omitted["subtype"].unique().to_list()))
+    n_observations = (
+        int(omitted["n_sequences"].sum()) if "n_sequences" in omitted.columns else 0
+    )
+    result = OmittedSubtypes(
+        labels=labels, n_cells=omitted.height, n_observations=n_observations
+    )
+    if result:
+        logger.warning("fig02: %s", result.describe())
+    return result

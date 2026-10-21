@@ -126,7 +126,7 @@ def _resolve_device(pref: str) -> str:
     logger.warning(
         "no GPU visible to torch — falling back to CPU. Diagnose with:\n"
         "  python -c 'import torch; "
-        'print(dict(cuda=torch.cuda.is_available(), '
+        "print(dict(cuda=torch.cuda.is_available(), "
         'mps=getattr(torch.backends, \\"mps\\", None) and torch.backends.mps.is_available()))'
         "'\n"
         "  If both False on a Mac, reinstall torch WITHOUT --index-url overrides.\n"
@@ -142,11 +142,7 @@ def _load_splits(manifest_path: Path, drug_class: str, strategy: str):
     manifest = json.loads(manifest_path.read_text())
     runs = manifest.get("runs", [])
     match = next(
-        (
-            r
-            for r in runs
-            if r["drug_class"] == drug_class and r["strategy"] == strategy
-        ),
+        (r for r in runs if r["drug_class"] == drug_class and r["strategy"] == strategy),
         None,
     )
     if match is None:
@@ -238,9 +234,7 @@ def _metrics(labels, probs) -> tuple[float, float]:
     probs = np.asarray(probs)
     if labels.sum() == 0 or labels.sum() == labels.size:
         return (float("nan"), float("nan"))
-    return float(roc_auc_score(labels, probs)), float(
-        average_precision_score(labels, probs)
-    )
+    return float(roc_auc_score(labels, probs)), float(average_precision_score(labels, probs))
 
 
 def _evaluate(model, loader, device) -> tuple[float, float, list[int], list[float]]:
@@ -461,9 +455,7 @@ def train_from_manifest(
         if mlf is not None:
             import mlflow
 
-            mlflow.log_metrics(
-                {"val_auroc": val_auroc, "val_auprc": val_auprc}, step=epoch
-            )
+            mlflow.log_metrics({"val_auroc": val_auroc, "val_auprc": val_auprc}, step=epoch)
 
         if val_auroc > best_val_auroc:
             best_val_auroc = val_auroc
@@ -480,9 +472,7 @@ def train_from_manifest(
         model.load_state_dict(best_state)
     test_auroc, test_auprc, _, _ = _evaluate(model, test_loader, device)
     wall = time.time() - t0
-    logger.info(
-        "test AUROC=%.4f AUPRC=%.4f | wall=%.1fs", test_auroc, test_auprc, wall
-    )
+    logger.info("test AUROC=%.4f AUPRC=%.4f | wall=%.1fs", test_auroc, test_auprc, wall)
 
     ckpt_dir = Path(ckpt_dir) / cfg.drug_class.lower() / cfg.strategy
     ckpt_dir.mkdir(parents=True, exist_ok=True)
@@ -542,13 +532,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--freeze-backbone", action="store_true")
     parser.add_argument("--no-fp16", action="store_true")
-    parser.add_argument(
-        "--smoke", action="store_true", help="1 epoch on 500 rows, no MLflow"
-    )
+    parser.add_argument("--smoke", action="store_true", help="1 epoch on 500 rows, no MLflow")
     parser.add_argument("--device", default="auto")
-    parser.add_argument(
-        "--ckpt-dir", type=Path, default=Path("data/gold/fm/checkpoints")
-    )
+    parser.add_argument("--ckpt-dir", type=Path, default=Path("data/gold/fm/checkpoints"))
     parser.add_argument("--mlflow-uri", default=None)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)

@@ -183,8 +183,12 @@ def _(fig_path_pdf, fig_path_png, summary):
     print("DTG case study:")
     print(f"  N pre  = {summary.n_pre_seqs:,}")
     print(f"  N post = {summary.n_post_seqs:,}")
-    print(f"  primary strata: {summary.n_strata_primary} (signal: {summary.n_signal_primary}, BH-headline: {summary.n_headline_after_fdr})")
-    print(f"  secondary (exploratory) strata: {summary.n_strata_secondary} (signal: {summary.n_signal_secondary})")
+    print(
+        f"  primary strata: {summary.n_strata_primary} (signal: {summary.n_signal_primary}, BH-headline: {summary.n_headline_after_fdr})"
+    )
+    print(
+        f"  secondary (exploratory) strata: {summary.n_strata_secondary} (signal: {summary.n_signal_secondary})"
+    )
     print()
     print("figures:")
     print(f"  PDF → {fig_path_pdf}")

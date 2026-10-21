@@ -201,6 +201,8 @@ def qc_flags(
 ) -> list[QCFlag]:
     """Aggregate all QC signals into a list of flags."""
     flags: list[QCFlag] = []
+    if region_coverage and not any(c > 0.0 for c in region_coverage.values()):
+        flags.append(QCFlag.NO_ALIGNMENT)
     if ambiguity > MAX_AMBIGUITY_FRACTION:
         flags.append(QCFlag.HIGH_AMBIGUITY)
     if apobec_ratio is not None and apobec_ratio > APOBEC_RATIO_THRESHOLD:
@@ -223,12 +225,19 @@ def qc_flags(
 # throw away >95% of real data. Downstream feature builders already
 # emit per-position `covered` flags, so a sequence that only covers
 # RT still contributes to NRTI/NNRTI features with zero on PR/IN.
+#
+# NO_ALIGNMENT *does* block. A row with no PR, RT or IN site covered is
+# not a short sequence, it is the absence of one, and the 3012 dashes it
+# carries are indistinguishable from data to anything that only checks
+# the string is non-empty — which is how 21,358 all-gap rows reached
+# tn93 as `passes_qc=True`. See `docs/evaluations/align-coverage.md`.
 BLOCKING_QC_FLAGS = frozenset(
     {
         QCFlag.HIGH_AMBIGUITY,
         QCFlag.APOBEC_HYPERMUT,
         QCFlag.STOP_CODON,
         QCFlag.LOW_COMPLEXITY,
+        QCFlag.NO_ALIGNMENT,
     }
 )
 

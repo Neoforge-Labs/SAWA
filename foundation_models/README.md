@@ -56,11 +56,10 @@ from foundation_models.evaluate import per_subtype_metrics
 dr = pl.read_parquet("data/interim/dr_results.parquet")
 # curated schema at v0.2.0+ exposes `aligned_pol`; build_fm_dataset
 # auto-detects and gap-strips. Pass sequence_column= to override.
-curated = pl.read_parquet("data/interim/curated/aligned.parquet").filter(
-    pl.col("passes_qc")
+curated = pl.read_parquet("data/interim/curated/aligned.parquet").filter(pl.col("passes_qc"))
+ds = build_fm_dataset(
+    dr, curated, strategy="subtype_holdout", seed=42, holdout_train_subtypes=("A1", "C", "D")
 )
-ds = build_fm_dataset(dr, curated, strategy="subtype_holdout", seed=42,
-                      holdout_train_subtypes=("A1", "C", "D"))
 
 # 2. Fit + predict per drug
 per_drug_test = ds.test.partition_by("drug", as_dict=True)

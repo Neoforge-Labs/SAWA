@@ -28,7 +28,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Literal
 
@@ -76,6 +76,7 @@ class PartitionRow:
     min_coverage_used: float
     generated_at: str  # ISO-8601 UTC timestamp
     schema_version: str = PARTITION_REPORT_SCHEMA_VERSION
+
 
 MIN_TAXA_FOR_TREE = 20
 
@@ -368,7 +369,7 @@ def build_partition_report(
     if "subtype" not in curated.columns:
         raise ValueError("curated frame missing 'subtype' column")
 
-    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    generated_at = datetime.now(UTC).isoformat(timespec="seconds")
 
     non_null = curated.filter(
         pl.col("subtype").is_not_null()
@@ -449,8 +450,7 @@ def write_partition_report(rows: list[PartitionRow], out_path: Path) -> Path:
     df = pl.from_dicts([r.__dict__ for r in rows])
     df.write_parquet(out_path, compression="zstd", compression_level=6)
     logger.info(
-        "wrote tree partition report: %d subtype rows → %s "
-        "(decisions: %s)",
+        "wrote tree partition report: %d subtype rows → %s (decisions: %s)",
         len(rows),
         out_path,
         {r.subtype: r.decision for r in rows},
@@ -485,9 +485,7 @@ def build_all_trees(
     and `EXCLUDED_SUBTYPES` used for the run.
     """
     if partition_report_path is not None:
-        report = build_partition_report(
-            curated, min_taxa=min_taxa, min_coverage=min_coverage
-        )
+        report = build_partition_report(curated, min_taxa=min_taxa, min_coverage=min_coverage)
         write_partition_report(report, partition_report_path)
 
     partitions = partition_by_subtype(curated, min_taxa=min_taxa)

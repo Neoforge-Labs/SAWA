@@ -52,22 +52,70 @@ logger = logging.getLogger(__name__)
 
 # Standard genetic code (nuc triplet → 1-letter AA).
 _CODON_TABLE: dict[str, str] = {
-    "TTT": "F", "TTC": "F", "TTA": "L", "TTG": "L",
-    "CTT": "L", "CTC": "L", "CTA": "L", "CTG": "L",
-    "ATT": "I", "ATC": "I", "ATA": "I", "ATG": "M",
-    "GTT": "V", "GTC": "V", "GTA": "V", "GTG": "V",
-    "TCT": "S", "TCC": "S", "TCA": "S", "TCG": "S",
-    "CCT": "P", "CCC": "P", "CCA": "P", "CCG": "P",
-    "ACT": "T", "ACC": "T", "ACA": "T", "ACG": "T",
-    "GCT": "A", "GCC": "A", "GCA": "A", "GCG": "A",
-    "TAT": "Y", "TAC": "Y", "TAA": "*", "TAG": "*",
-    "CAT": "H", "CAC": "H", "CAA": "Q", "CAG": "Q",
-    "AAT": "N", "AAC": "N", "AAA": "K", "AAG": "K",
-    "GAT": "D", "GAC": "D", "GAA": "E", "GAG": "E",
-    "TGT": "C", "TGC": "C", "TGA": "*", "TGG": "W",
-    "CGT": "R", "CGC": "R", "CGA": "R", "CGG": "R",
-    "AGT": "S", "AGC": "S", "AGA": "R", "AGG": "R",
-    "GGT": "G", "GGC": "G", "GGA": "G", "GGG": "G",
+    "TTT": "F",
+    "TTC": "F",
+    "TTA": "L",
+    "TTG": "L",
+    "CTT": "L",
+    "CTC": "L",
+    "CTA": "L",
+    "CTG": "L",
+    "ATT": "I",
+    "ATC": "I",
+    "ATA": "I",
+    "ATG": "M",
+    "GTT": "V",
+    "GTC": "V",
+    "GTA": "V",
+    "GTG": "V",
+    "TCT": "S",
+    "TCC": "S",
+    "TCA": "S",
+    "TCG": "S",
+    "CCT": "P",
+    "CCC": "P",
+    "CCA": "P",
+    "CCG": "P",
+    "ACT": "T",
+    "ACC": "T",
+    "ACA": "T",
+    "ACG": "T",
+    "GCT": "A",
+    "GCC": "A",
+    "GCA": "A",
+    "GCG": "A",
+    "TAT": "Y",
+    "TAC": "Y",
+    "TAA": "*",
+    "TAG": "*",
+    "CAT": "H",
+    "CAC": "H",
+    "CAA": "Q",
+    "CAG": "Q",
+    "AAT": "N",
+    "AAC": "N",
+    "AAA": "K",
+    "AAG": "K",
+    "GAT": "D",
+    "GAC": "D",
+    "GAA": "E",
+    "GAG": "E",
+    "TGT": "C",
+    "TGC": "C",
+    "TGA": "*",
+    "TGG": "W",
+    "CGT": "R",
+    "CGC": "R",
+    "CGA": "R",
+    "CGG": "R",
+    "AGT": "S",
+    "AGC": "S",
+    "AGA": "R",
+    "AGG": "R",
+    "GGT": "G",
+    "GGC": "G",
+    "GGA": "G",
+    "GGG": "G",
 }
 _UNKNOWN_AA = "X"
 
@@ -187,9 +235,7 @@ def prepare_drug_class(
 
     if use_primary_gene_only and primary_gene and primary_gene in curated.columns:
         # Scientifically-aligned path: only the Sierra-scored subgene.
-        curated_prepped = curated.with_columns(
-            pl.col(primary_gene).alias("sequence")
-        )
+        curated_prepped = curated.with_columns(pl.col(primary_gene).alias("sequence"))
         sequence_source = f"{primary_gene} (primary gene only)"
     elif per_gene_cols.issubset(curated.columns):
         # Legacy path: concatenated pol. Kept for A/B comparison but no
@@ -250,9 +296,7 @@ def prepare_drug_class(
                         / pl.col("sequence_aa").str.len_chars().cast(pl.Float64)
                     ).alias("_x_frac")
                 )
-                frame = frame.filter(pl.col("_x_frac") <= max_aa_x_fraction).drop(
-                    "_x_frac"
-                )
+                frame = frame.filter(pl.col("_x_frac") <= max_aa_x_fraction).drop("_x_frac")
                 dropped = before - frame.height
                 if dropped > 0:
                     logger.info(
@@ -311,8 +355,7 @@ def prepare_drug_class(
         test_parquet=str(test_path),
     )
     logger.info(
-        "%s/%s: train=%d val=%d test=%d, +rate train=%.2f%% test=%.2f%%, "
-        "aa_stop_rate=%.2f%%",
+        "%s/%s: train=%d val=%d test=%d, +rate train=%.2f%% test=%.2f%%, aa_stop_rate=%.2f%%",
         drug_class,
         strategy,
         summary.n_train,

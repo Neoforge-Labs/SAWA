@@ -90,6 +90,12 @@ def assign_patient_groups(
     first_year: dict[tuple[str, str, str | None], int] = {}
     for row in materialized:
         cohort, token = extract_patient_token(row.get("sequence_name"))
+        if cohort == "unknown" and not row.get("sequence_name"):
+            # Honour the contract in this module's docstring: a sequence
+            # with no name is its own patient. GenBank rows carry no
+            # `sequence_name` at all, so the shared "no_name" token put
+            # every one of them in a single group per country.
+            token = row.get("accession") or token
         year = row.get("collection_year")
         country = row.get("country")
         # first_year is derived from the group, so we build a preliminary key

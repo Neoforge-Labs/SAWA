@@ -44,6 +44,8 @@ def merge_sources(
     else:
         joined = _join_genbank_with_lanl(genbank_df, lanl_df)
 
+    joined = _collapse_duplicate_accessions(joined)
+
     joined = joined.with_columns(
         merged_at=pl.lit(date.today()),
         merged_schema_version=pl.lit(SCHEMA_VERSION),
@@ -58,6 +60,30 @@ def merge_sources(
 
 
 # ---- internals ----
+
+
+def _collapse_duplicate_accessions(df: pl.DataFrame) -> pl.DataFrame:
+    """One row per accession — an accession is the record's identity.
+
+    `fetch_country` runs one search per country, and the country search
+    over-matches, so a record returned by three of them was appended three
+    times. Those copies are not three observations of anything: they are
+    one GenBank record counted three times, and every country-stratified
+    count downstream inherited the multiple.
+    """
+    if "accession" not in df.columns or df.height == 0:
+        return df
+    deduped = df.unique(subset=["accession"], keep="first", maintain_order=True)
+    dropped = df.height - deduped.height
+    if dropped:
+        logger.warning(
+            "collapsed %d duplicate accession rows (%d → %d); "
+            "a record returned by several country searches is one record",
+            dropped,
+            df.height,
+            deduped.height,
+        )
+    return deduped
 
 
 def _join_genbank_with_lanl(genbank_df: pl.DataFrame, lanl_df: pl.DataFrame) -> pl.DataFrame:

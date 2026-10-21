@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from hivdrwatch.cluster.schema import CLUSTER_SCHEMA_VERSION
+from hivdrwatch.ingest.schema import SCHEMA_VERSION as INGEST_SCHEMA_VERSION
+from hivdrwatch.storage.schema import STORAGE_SCHEMA_VERSION
+
 
 class TestHealth:
     def test_returns_ok(self, client: TestClient) -> None:
@@ -31,15 +35,20 @@ class TestVersion:
         assert r.status_code == 200
         body = r.json()
         # In a full 3.12 env with every schema module importable these
-        # are all "0.1.0". In restricted envs (missing bio deps, older
-        # Python) they degrade to "unknown" per the /version endpoint's
-        # graceful-degradation contract — but the response must still be
-        # 200 and every key must be present.
-        for key in ("ingest_schema", "cluster_schema", "storage_schema"):
-            assert body[key] in {"0.1.0", "unknown"}, f"{key}={body[key]!r}"
+        # report their module's own SCHEMA_VERSION. In restricted envs
+        # (missing bio deps, older Python) they degrade to "unknown" per
+        # the /version endpoint's graceful-degradation contract — but the
+        # response must still be 200 and every key must be present.
+        expected = {
+            "ingest_schema": INGEST_SCHEMA_VERSION,
+            "cluster_schema": CLUSTER_SCHEMA_VERSION,
+            "storage_schema": STORAGE_SCHEMA_VERSION,
+        }
+        for key, version in expected.items():
+            assert body[key] in {version, "unknown"}, f"{key}={body[key]!r}"
         # storage schema is pure-Python and always importable — this one
         # is the canary for "did the version endpoint even work?"
-        assert body["storage_schema"] == "0.1.0"
+        assert body["storage_schema"] == STORAGE_SCHEMA_VERSION
         assert body["api_schema"] == "0.1.0"
 
 
