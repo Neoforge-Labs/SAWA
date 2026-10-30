@@ -287,6 +287,20 @@ def test_meta_records_provenance_without_asserting_data_values() -> None:
     assert meta["n_accessions_scored"] == 3
     assert meta["n_accessions_ingested"] == 4
     assert meta["n_calls"] == 7
+    assert meta["n_distinct_sequences"] == 3
+
+
+def test_distinct_sequences_are_counted_apart_from_accessions() -> None:
+    # SYN1 and SYN2 are given one sequence between them: three accessions, two sequences.
+    df = _synthetic().with_columns(
+        pl.when(pl.col("accession") == "SYN000002.1")
+        .then(pl.lit(hashlib.sha256(b"SYN000001.1").hexdigest()))
+        .otherwise(pl.col("sequence_sha256"))
+        .alias("sequence_sha256")
+    )
+    meta = _build(df)["meta"]
+    assert meta["n_accessions_scored"] == 3
+    assert meta["n_distinct_sequences"] == 2
 
 
 def test_pointer_digest_and_file_digest_are_recorded_under_distinct_keys() -> None:

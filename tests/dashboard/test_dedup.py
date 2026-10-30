@@ -58,7 +58,9 @@ def test_dedup_removes_exact_duplicate_rows() -> None:
     df = _synthetic_dr_frame(rows=[_row("AB1", "3TC"), _row("AB1", "3TC"), _row("AB1", "AZT")])
     out, report = dedup_dr_results(df)
     assert out.height == 2
-    assert report == DedupReport(n_rows_in=3, n_rows_out=2, n_redundant=1)
+    assert report == DedupReport(
+        n_rows_in=3, n_rows_out=2, n_redundant=1, n_distinct_sequences=1
+    )
 
 
 def test_dedup_raises_when_duplicates_carry_different_values() -> None:
@@ -85,7 +87,9 @@ def test_dedup_keeps_a_frame_with_no_duplicates_unchanged() -> None:
     df = _synthetic_dr_frame(rows=[_row("AB1", "3TC"), _row("AB2", "3TC", mutations=[])])
     out, report = dedup_dr_results(df)
     assert out.equals(df)
-    assert report == DedupReport(n_rows_in=2, n_rows_out=2, n_redundant=0)
+    assert report == DedupReport(
+        n_rows_in=2, n_rows_out=2, n_redundant=0, n_distinct_sequences=1
+    )
 
 
 def test_dedup_treats_rows_differing_only_in_mutations_as_conflicting() -> None:
@@ -130,4 +134,25 @@ def test_dedup_accepts_an_empty_frame() -> None:
     out, report = dedup_dr_results(empty)
     assert out.height == 0
     assert out.schema == empty.schema
-    assert report == DedupReport(n_rows_in=0, n_rows_out=0, n_redundant=0)
+    assert report == DedupReport(
+        n_rows_in=0, n_rows_out=0, n_redundant=0, n_distinct_sequences=0
+    )
+
+
+def test_distinct_sequences_are_fewer_than_accessions_when_accessions_share_a_hash() -> None:
+    shared = "c" * 64
+    rows = [
+        _row("AB1", "3TC", sha=shared),
+        _row("AB2", "3TC", sha=shared),
+        _row("AB3", "3TC", sha="d" * 64),
+    ]
+    out, report = dedup_dr_results(_synthetic_dr_frame(rows=rows))
+    assert out["accession"].n_unique() == 3
+    assert report.n_distinct_sequences == 2
+
+
+def test_distinct_sequences_count_each_hash_once_however_many_drugs_it_has() -> None:
+    rows = [_row("AB1", drug) for drug in ("3TC", "AZT", "TDF")]
+    rows += [_row("AB2", drug, sha="e" * 64) for drug in ("3TC", "AZT", "TDF")]
+    _, report = dedup_dr_results(_synthetic_dr_frame(rows=rows))
+    assert report.n_distinct_sequences == 2

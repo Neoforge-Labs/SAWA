@@ -6,6 +6,21 @@ per-stage `*_SCHEMA_VERSION` constants, not a package version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 
+## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.2.0 — 2026-10-30
+
+**The page's schema gate refuses any `summary.json` not at 1.2.0; a 1.1.0
+file exists only in this branch's own history, never in a release.**
+
+### Changed
+
+- Summary schema 1.1.0 → 1.2.0 (minor: new required field). `meta` gains
+  `n_distinct_sequences`, the number of distinct `sequence_sha256` values
+  among the scored accessions. Every count the page publishes is of
+  accessions, and several accessions carry one sequence, so the page needs
+  this number to state the unit and how far it differs from distinct
+  sequences. Any 1.1.0 file lacks it and must be re-exported.
+- `DedupReport` gains `n_distinct_sequences`.
+
 ## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.1.0 — 2026-10-30
 
 **New module. The page's schema gate refuses any `summary.json` not at

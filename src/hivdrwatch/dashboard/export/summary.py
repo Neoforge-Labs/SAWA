@@ -12,7 +12,7 @@ that hold for any vintage fail the export: lossless deduplication (raised by
 `dedup_dr_results`) and a single algorithm version, publish date and call date
 across the frame. The summary makes no geographic claim about the sequences.
 
-Summary schema 1.1.0: `meta` (provenance and counts) and `views` (four lists of
+Summary schema 1.2.0: `meta` (provenance and counts) and `views` (four lists of
 row dicts: prevalence_by_drug_class, levels_by_drug, gene_coverage, sdrm_frequency).
 
 Migration 1.0.0 -> 1.1.0 (minor: new required fields). `meta` gained
@@ -21,6 +21,12 @@ the measured size of the single-state attribution rule instead of a typed-in fig
 and `input_file_md5`, the digest of the file actually read, kept apart from
 `input_dvc_md5`, which is only what the DVC pointer claims. The static page requires
 all three, so a 1.0.0 file is refused by its schema gate rather than half-drawn.
+
+Migration 1.1.0 -> 1.2.0 (minor: new required field). `meta` gained `n_distinct_sequences`,
+the number of distinct `sequence_sha256` values among the scored accessions. Every count
+in the summary is of accessions, and several accessions can carry one sequence, so the
+page needs this number to say how far the unit differs from distinct sequences. The static
+page requires it, so a 1.1.0 file is refused by its schema gate rather than half-drawn.
 """
 
 from __future__ import annotations
@@ -46,7 +52,7 @@ from hivdrwatch.resistance.schema import DR_SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
 
-SUMMARY_SCHEMA_VERSION: str = "1.1.0"
+SUMMARY_SCHEMA_VERSION: str = "1.2.0"
 
 FLOAT_PLACES: int = 4
 
@@ -205,6 +211,7 @@ def build_summary(
         "n_rows_raw": report.n_rows_in,
         "n_calls": report.n_rows_out,
         "n_accessions_scored": deduped["accession"].n_unique(),
+        "n_distinct_sequences": report.n_distinct_sequences,
         "n_accessions_ingested": n_accessions_ingested,
         "n_sdrm_observations": n_observations,
         "n_sdrm_observations_multistate": n_multistate,

@@ -6,6 +6,12 @@ dropping them is lossless, but only if two things hold: a copy is
 identical in every column, and each accession maps to one sequence. Both
 are checked here rather than assumed, because every count the dashboard
 publishes is taken from the frame this returns.
+
+The converse is not true and is reported, not asserted: several accessions can
+carry the same sequence (identical submissions inside one study, mostly), so
+`DedupReport.n_distinct_sequences` can be smaller than the accession count.
+Every published count is of accessions; this number is what lets the page say
+how far that differs from distinct sequences.
 """
 
 from __future__ import annotations
@@ -32,11 +38,12 @@ class AmbiguousSequenceHashError(ValueError):
 
 @dataclass(frozen=True)
 class DedupReport:
-    """Row counts before and after dropping exact duplicates."""
+    """Row counts before and after dropping exact duplicates, and distinct sequences kept."""
 
     n_rows_in: int
     n_rows_out: int
     n_redundant: int
+    n_distinct_sequences: int
 
 
 def dedup_dr_results(df: pl.DataFrame) -> tuple[pl.DataFrame, DedupReport]:
@@ -78,11 +85,13 @@ def dedup_dr_results(df: pl.DataFrame) -> tuple[pl.DataFrame, DedupReport]:
         n_rows_in=df.height,
         n_rows_out=deduped.height,
         n_redundant=df.height - deduped.height,
+        n_distinct_sequences=deduped["sequence_sha256"].n_unique(),
     )
     logger.info(
-        "dr_results dedup: %d rows in, %d out, %d redundant",
+        "dr_results dedup: %d rows in, %d out, %d redundant, %d distinct sequences",
         report.n_rows_in,
         report.n_rows_out,
         report.n_redundant,
+        report.n_distinct_sequences,
     )
     return deduped, report
