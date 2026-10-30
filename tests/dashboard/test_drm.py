@@ -148,11 +148,12 @@ def test_insertion_beside_a_non_sdrm_residue_is_not_an_sdrm():
     assert match_sdrm("K65K_K", _panel("RT_NRTI")) is None
 
 
-def test_literal_ins_marker_does_not_invent_residues():
-    # Read as I, N, S this would match the 215 states I and S; it must not.
-    assert match_sdrm("A554INS", _panel("RT_NRTI")) is None
-    assert match_sdrm("T215TFINSY", _panel("RT_NRTI")) == "T215F"
-    assert match_sdrm("T215TINS", _panel("RT_NRTI")) is None
+def test_ins_letters_in_a_mixture_are_ordinary_residues():
+    panel = _panel("RT_NRTI")
+    # Matched set is {F, I, S, Y}; the label is the smallest.
+    assert match_sdrm("T215TFINSY", panel) == "T215F"
+    # 215 lists I and S, both carried by the I-N-S run.
+    assert match_sdrm("T215TINS", panel) == "T215I"
 
 
 @pytest.mark.parametrize(
@@ -182,10 +183,12 @@ def test_same_mutation_does_not_match_in_the_wrong_panel():
         ("M46I_E", (46, frozenset({"I", "ins"}))),
         ("T69S_SS", (69, frozenset({"S", "ins"}))),
         ("K65K_K", (65, frozenset({"K", "ins"}))),
-        # A literal INS inside the state string is an insertion marker, not I, N and S.
-        ("A554INS", (554, frozenset({"ins"}))),
-        ("T215TFINSY", (215, frozenset({"T", "F", "ins", "Y"}))),
-        ("T128TINS", (128, frozenset({"T", "ins"}))),
+        # Sierra writes a mixture as the retained consensus residue (if any) followed by
+        # the variant residues in alphabetical order, so the I-N-S run in these strings is
+        # three adjacent letters, not an insertion marker.
+        ("A554INS", (554, frozenset({"I", "N", "S"}))),
+        ("I47INST", (47, frozenset({"I", "N", "S", "T"}))),
+        ("T215TFINSY", (215, frozenset({"T", "F", "I", "N", "S", "Y"}))),
     ],
 )
 def test_parse_mutation(raw, expected):

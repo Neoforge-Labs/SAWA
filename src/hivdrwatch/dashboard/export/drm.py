@@ -38,8 +38,6 @@ _SUBSTITUTION = re.compile(r"^([A-Z])(\d+)([A-Z]+)$")
 # Exactly one residue before the underscore; longer or non-letter forms (`A538ADEVG_X`,
 # `A299L_LACAL*PH`) are ambiguous and deliberately fall through to None.
 _SUBSTITUTION_WITH_INSERTION = re.compile(r"^([A-Z])(\d+)([A-Z])_[A-Z]+$")
-# Some records spell an insertion as a literal `INS` inside the state string.
-_INSERTION_MARKER = "INS"
 
 
 class MissingPanelError(ValueError):
@@ -85,16 +83,6 @@ def load_sdrm_panels(path: Path) -> tuple[tuple[SdrmPanel, ...], str]:
     return panels, version
 
 
-def _states(residues: str) -> frozenset[str]:
-    # Read `INS` as the marker before reading letters, or it is split into I, N and S.
-    states: set[str] = set()
-    for i, chunk in enumerate(residues.split(_INSERTION_MARKER)):
-        if i > 0:
-            states.add(_INSERTION_STATE)
-        states.update(chunk)
-    return frozenset(states)
-
-
 def _parse(raw: str) -> tuple[str, int, frozenset[str]] | None:
     # Stop codons and deletions never match either pattern: `*` and lowercase `del`
     # fall outside [A-Z].
@@ -107,7 +95,7 @@ def _parse(raw: str) -> tuple[str, int, frozenset[str]] | None:
         )
     substitution = _SUBSTITUTION.match(raw)
     if substitution:
-        return substitution[1], int(substitution[2]), _states(substitution[3])
+        return substitution[1], int(substitution[2]), frozenset(substitution[3])
     return None
 
 
