@@ -22,7 +22,7 @@
 
     <p id="algorithm">Algorithm <span data-bind="meta.algorithm_version"></span>, published <span data-bind="meta.algorithm_publish_date"></span>; calls made <span data-bind="meta.called_at"></span>.</p>
 
-    <p id="limitation" class="note">Geographic and subtype breakdowns are deliberately absent. The <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/docs/evaluations/ingest-provenance.md">ingest provenance evaluation</a> found that this vintage&rsquo;s country and subtype fields were written from the wrong source: every country value reflects the search query rather than the record, and it counts 3,108 accessions that state a country outside the targeted region. Those views return after a provenance rebuild.</p>
+    <p id="limitation" class="note">Geographic and subtype breakdowns are deliberately absent. The <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/docs/evaluations/ingest-provenance.md">ingest provenance evaluation</a> found that in this vintage the country field was written from the search query rather than from the record, and counts 3,108 accessions that state a country outside the targeted region. It also found that the subtype field was misparsed: the matcher compared substrings, so every CRF was stored as subtype C. Those views return after a provenance rebuild.</p>
 
     <noscript><p class="note">This page draws its figures from <code>summary.json</code> with a small script. Without JavaScript, the data file is still readable on its own.</p></noscript>
   </header>
@@ -63,7 +63,7 @@
       <figcaption>The most frequent surveillance mutations in each gene, ranked by the number of sequences carrying them, as a share of sequences scored for that gene.</figcaption>
     </figure>
     <p id="sdrm-scope" class="note">Integrase mutations are not shown. The vendored surveillance list predates the dolutegravir era: Bennett et al. 2009 has no integrase component, and the integrase block in the reference file is the raltegravir/elvitegravir-era list, missing R263K, G118R and E138K. Showing it would attribute to Bennett a list it does not contain.</p>
-    <p id="mixture-convention" class="note">Counting convention: a mixture counts as carrying a surveillance mutation when any of its states is one. Where a mixture matches more than one state, it is attributed to a single one. That affects <span data-bind="derived.pct_sdrm_multistate"></span> of observations (<span data-bind="meta.n_sdrm_observations_multistate"></span> of <span data-bind="meta.n_sdrm_observations"></span>), so at positions with several surveillance states a mutation&rsquo;s count can be slightly understated.</p>
+    <p id="mixture-convention" class="note">Counting convention: a mixture counts as carrying a surveillance mutation when any of its states is one. Where a mixture matches more than one state, it is attributed to the alphabetically first matching state. That affects <span data-bind="derived.pct_sdrm_multistate"></span> of observations (<span data-bind="meta.n_sdrm_observations_multistate"></span> of <span data-bind="meta.n_sdrm_observations"></span>). The effect is not spread evenly: at a position with several surveillance states, the alphabetically earlier mutation&rsquo;s count is slightly inflated and the later one&rsquo;s understated.</p>
   </section>
 
   <section id="coverage" aria-labelledby="coverage-h">
