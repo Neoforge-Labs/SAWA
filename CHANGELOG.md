@@ -6,6 +6,53 @@ per-stage `*_SCHEMA_VERSION` constants, not a package version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 
+## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.3.0 — 2026-10-30
+
+**The page's schema gate refuses any `summary.json` not at 1.3.0; a 1.2.0
+file lacks the landscape view and the fields the page binds to, and must be
+re-exported.**
+
+### Added
+
+- `views.resistance_landscape`: the share of sequences resistant to a drug
+  class per country and collection year, from
+  `paper1.fig02_aggregate.aggregate_resistance_landscape` (called, not
+  reimplemented) summed over subtype with the `MIN_CELL_N` floor applied
+  again to the sum, and restricted to the ingest search region
+  (`EAST_AFRICA_COUNTRIES`). The page draws it as one heatmap per class;
+  cells under the floor render as grey "not enough data", never in the
+  colour ramp, and each carries its n.
+- `meta`: `curated_dvc_md5` and `curated_file_md5` (the curated table's
+  pointer and file digests, apart from the Sierra input's);
+  `landscape_min_cell_n`; `landscape_countries`; and an accounting of every
+  scored accession that sums to `n_accessions_scored`:
+  `landscape_n_accessions`, `landscape_n_excluded_out_of_region`,
+  `landscape_n_excluded_no_country`, `landscape_n_excluded_no_year`,
+  `landscape_n_excluded_other`.
+- `--curated` and `--curated-pointer` on the export, resolved like
+  `--input` and `--pointer`; `make dashboard` passes the curated table under
+  `INTERIM_DIR`.
+
+### Changed
+
+- `check_input_not_stale` takes the curated pointer as a third, required
+  argument and fails if either pointer moved since the export. The
+  `summary-input-drift` job passes both. The page's digest notice covers
+  both inputs.
+- The page's limitation note no longer says geographic breakdowns are
+  absent: the vintage was rebuilt with record-derived country, and the
+  geographic view is shown. It now says subtype breakdowns remain absent
+  because the landscape sums across subtypes, not because the subtype field
+  is wrong. The old "3,108 accessions state a country outside the targeted
+  region" figure is dropped from the page; the live count is bound from
+  `meta`.
+- The export refuses a curated table with a repeated accession and cells
+  that disagree with the accession accounting.
+
+### Not done
+
+- A subtype-stratified view.
+
 ## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.2.0 — 2026-10-30
 
 **The page's schema gate refuses any `summary.json` not at 1.2.0; a 1.1.0
