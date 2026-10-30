@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>SAWA resistance summary</title>
+<meta name="description" content="HIV-1 drug-resistance calls on public pol sequences, with the denominator behind every figure.">
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="app.js"></script>
+</head>
+<body data-summary-schema="1.0.0">
+<div id="schema-banner" class="banner" role="alert" hidden></div>
+
+<main>
+  <header id="provenance" class="band">
+    <p class="eyebrow">SAWA &middot; open HIV-1 drug-resistance surveillance</p>
+    <h1>Resistance calls on public HIV-1 <em>pol</em> sequences</h1>
+    <p class="lede">SAWA is an open, reproducible pipeline that ingests public HIV-1 <em>pol</em> sequences, calls resistance with Stanford HIVdb Sierra, and publishes the denominator behind every figure. This page summarises one data vintage; it makes no live calls and is drawn from a committed JSON file.</p>
+
+    <p id="cohort">The cohort is public HIV-1 <em>pol</em> sequences retrieved by an East-Africa-targeted LANL/GenBank query. That names the query, not the sequences. <span data-bind="meta.n_accessions_scored"></span> of <span data-bind="meta.n_accessions_ingested"></span> ingested accessions returned a Sierra result (<span data-bind="derived.n_unscored"></span> did not), giving <span data-bind="meta.n_calls"></span> resistance calls across <span data-bind="derived.n_drugs"></span> drugs in <span data-bind="derived.n_classes"></span> classes.</p>
+
+    <p id="algorithm">Algorithm <span data-bind="meta.algorithm_version"></span>, published <span data-bind="meta.algorithm_publish_date"></span>; calls made <span data-bind="meta.called_at"></span>.</p>
+
+    <p id="limitation" class="note">Geographic and subtype breakdowns are deliberately absent. In this vintage the country and subtype fields were written from the wrong source: every country value reflects the search query rather than the record, and 3,108 accessions state a country outside the targeted region. Those views return after a provenance rebuild. The reasoning is in the <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/docs/evaluations/ingest-provenance.md">ingest provenance evaluation</a>.</p>
+
+    <noscript><p class="note">This page draws its figures from <code>summary.json</code> with a small script. Without JavaScript, the data file is still readable on its own.</p></noscript>
+  </header>
+
+  <section id="prevalence" aria-labelledby="prevalence-h">
+    <h2 id="prevalence-h">Resistance prevalence by drug class</h2>
+    <p>A sequence counts as resistant to a class if any drug in it scores intermediate or high-level resistance in HIVdb. Classes are in manuscript order.</p>
+    <figure>
+      <div id="chart-prevalence" class="chart" data-chart="prevalence"></div>
+      <figcaption>Share of sequences scored for the class&rsquo;s gene. Each bar states its own denominator, and the denominators differ.</figcaption>
+    </figure>
+    <p id="denominator-note" class="note">The denominator is &ldquo;Sierra returned a score for this gene&rdquo;. That is not the same as &ldquo;the surveillance codons were sequenced&rdquo;: the data carry no per-gene coordinates, so true codon coverage cannot be computed without re-calling Sierra, and a sequence that stops short of a codon counts as unmutated there. Only <span data-bind="gene.IN"></span> of <span data-bind="meta.n_accessions_scored"></span> sequences have integrase coverage, because most deposited <em>pol</em> sequences cover PR and RT only.</p>
+  </section>
+
+  <section id="levels" aria-labelledby="levels-h">
+    <h2 id="levels-h">Resistance level by drug</h2>
+    <p>Every drug across Sierra&rsquo;s five levels, grouped by class. Bars are anchored on high-level resistance so drugs can be compared along one edge.</p>
+    <ul id="legend-levels" class="legend" aria-label="Resistance levels"></ul>
+    <figure>
+      <div id="chart-levels" class="chart" data-chart="levels"></div>
+      <figcaption>Each bar sums to the sequences scored for that drug. The right-hand figure is the share scoring high-level resistance. Integrase drugs rest on a thinner denominator than the others.</figcaption>
+    </figure>
+  </section>
+
+  <section id="sdrm" aria-labelledby="sdrm-h">
+    <h2 id="sdrm-h">Surveillance resistance mutations</h2>
+    <p>Sierra reports every variant relative to consensus, and the most frequent are natural polymorphisms, not resistance. Only positions and states on the <span data-bind="meta.sdrm_list_version"></span> surveillance list (Bennett et al. 2009, updated 2019) are counted, for protease (PR) and reverse transcriptase (RT).</p>
+    <ul class="legend" aria-label="Mutation panels">
+      <li><span class="swatch swatch-PR"></span>PR</li>
+      <li><span class="swatch swatch-RT_NRTI"></span>RT, NRTI list</li>
+      <li><span class="swatch swatch-RT_NNRTI"></span>RT, NNRTI list</li>
+    </ul>
+    <figure>
+      <div id="chart-sdrm-rt" class="chart" data-chart="sdrm" data-gene="RT"></div>
+      <div id="chart-sdrm-pr" class="chart" data-chart="sdrm" data-gene="PR"></div>
+      <figcaption>The most frequent surveillance mutations in each gene, ranked by the number of sequences carrying them, as a share of sequences scored for that gene.</figcaption>
+    </figure>
+    <p id="sdrm-scope" class="note">Integrase mutations are not shown. The vendored surveillance list predates the dolutegravir era: Bennett et al. 2009 has no integrase component, and the integrase block in the reference file is the raltegravir/elvitegravir-era list, missing R263K, G118R and E138K. Showing it would attribute to Bennett a list it does not contain.</p>
+    <p id="mixture-convention" class="note">Counting convention: a mixture counts as carrying a surveillance mutation when any of its states is one. Where a mixture matches more than one state, it is attributed to a single one. That affects 1.6% of observations (427 of 27,391), so at positions with several surveillance states a mutation&rsquo;s count can be slightly understated.</p>
+  </section>
+
+  <section id="coverage" aria-labelledby="coverage-h">
+    <h2 id="coverage-h">Gene coverage</h2>
+    <p>Sequences with a Sierra score for each gene, as a share of the <span data-bind="meta.n_accessions_scored"></span> scored accessions. This is what sets the denominators above.</p>
+    <figure>
+      <div id="chart-coverage" class="chart" data-chart="coverage"></div>
+      <figcaption>Genes in order along <em>pol</em>: protease, reverse transcriptase, integrase.</figcaption>
+    </figure>
+  </section>
+</main>
+
+<footer id="footer">
+  <p>
+    <a href="https://github.com/Neoforge-Labs/SAWA">github.com/Neoforge-Labs/SAWA</a> &middot;
+    cite via <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/CITATION.cff">CITATION.cff</a> &middot;
+    data file <a href="summary.json">summary.json</a>
+  </p>
+  <p>
+    Algorithm <span data-bind="meta.algorithm_version"></span> &middot;
+    data vintage <span data-bind="meta.called_at"></span> &middot;
+    generated at commit <a data-bind="meta.git_sha" data-trunc="7" data-href="https://github.com/Neoforge-Labs/SAWA/commit/{value}"></a> &middot;
+    input md5 <span data-bind="meta.input_dvc_md5" data-trunc="8"></span>
+  </p>
+</footer>
+</body>
+</html>
