@@ -4,7 +4,7 @@
     "algorithm_version": "HIVDB_10.2",
     "called_at": "2026-08-17",
     "dr_schema_version": "0.1.0",
-    "git_sha": "1d46fc46d925d40aa268ce8f84c24743e926702c",
+    "git_sha": "4ebab902b862058dc4f1e1169952085b8563c713",
     "input_dvc_md5": "a8279a4d652ada4f9e55d4ebacd42141",
     "input_file_md5": "a8279a4d652ada4f9e55d4ebacd42141",
     "n_accessions_ingested": 36510,
