@@ -31,6 +31,12 @@ file exists only in this branch's own history, never in a release.**
   non-empty or could not be read, so a summary built from uncommitted code
   says so. `make dashboard` no longer defaults `INGESTED_COUNT`; it must be
   passed.
+- The page states the unit (accessions, with the measured count that
+  repeat a sequence), that treatment history is not recorded so the
+  prevalence figures are not pretreatment-resistance estimates, which way
+  the mixture rule biases counts, and separates the country and subtype
+  provenance defects. A null `algorithm_publish_date` renders as a dash; a
+  null in any other bound value trips the page's shape banner.
 
 ## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.1.0 — 2026-10-30
 
