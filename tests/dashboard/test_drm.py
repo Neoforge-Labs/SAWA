@@ -86,15 +86,35 @@ def test_known_drms_match_their_panel(raw, panel_name, expected):
 def test_mixture_counts_as_carrying_any_matching_state():
     # Surveillance convention (spec §7.2): any state in the mixture counts.
     assert match_sdrm("M184MV", _panel("RT_NRTI")) == "M184V"
-    assert match_sdrm("T215TFILMS", _panel("RT_NRTI")) is not None
+    # F, I and S are all 215 states; sorted order picks F.
+    assert match_sdrm("T215TFILMS", _panel("RT_NRTI")) == "T215F"
 
 
-def test_mixture_matching_several_states_resolves_deterministically():
-    # F, I and S are all SDRM states at 215; the label must not depend on the
-    # order the states were written in or on set iteration order.
-    panel = _panel("RT_NRTI")
-    labels = {match_sdrm(raw, panel) for raw in ("T215TFIS", "T215TSIF", "T215SIFT")}
-    assert labels == {"T215F"}
+@pytest.mark.parametrize(
+    ("raws", "panel_name"),
+    [
+        (("T215TFIS", "T215TSIF", "T215SIFT"), "RT_NRTI"),
+        (("T215TFILMS", "T215YFTSCD", "T215DSCYE"), "RT_NRTI"),
+        (("A82AFTSLMC", "A82CMLSTF", "A82TFA"), "PR"),
+        (("K65KRNE", "K65ENRK", "K65NK"), "RT_NRTI"),
+    ],
+)
+def test_mixture_label_is_the_smallest_matching_state(raws, panel_name):
+    # The label must not depend on the order the states were written in or on
+    # set iteration order, so it is pinned to the smallest matching state.
+    panel = _panel(panel_name)
+    for raw in raws:
+        parsed = _parse_with_reference(raw)
+        reference, position, observed = parsed
+        expected = f"{reference}{position}{min(panel.positions[position] & observed)}"
+        assert match_sdrm(raw, panel) == expected
+
+
+def _parse_with_reference(raw: str) -> tuple[str, int, frozenset[str]]:
+    parsed = parse_mutation(raw)
+    assert parsed is not None
+    position, states = parsed
+    return raw[0], position, states
 
 
 def test_mixture_with_no_matching_state_does_not_match():
@@ -118,6 +138,31 @@ def test_rt69_insertion_matches_the_ins_state():
     assert match_sdrm("T69S_SS", _panel("RT_NRTI")) == "T69ins"
 
 
+def test_substitution_beside_an_insertion_is_still_counted():
+    assert match_sdrm("M46I_E", _panel("PR")) == "M46I"
+    assert match_sdrm("M230L_C", _panel("RT_NNRTI")) == "M230L"
+
+
+def test_insertion_beside_a_non_sdrm_residue_is_not_an_sdrm():
+    # 65 lists E/N/R, so K65K_K is neither a substitution nor an insertion SDRM.
+    assert match_sdrm("K65K_K", _panel("RT_NRTI")) is None
+
+
+def test_literal_ins_marker_does_not_invent_residues():
+    # Read as I, N, S this would match the 215 states I and S; it must not.
+    assert match_sdrm("A554INS", _panel("RT_NRTI")) is None
+    assert match_sdrm("T215TFINSY", _panel("RT_NRTI")) == "T215F"
+    assert match_sdrm("T215TINS", _panel("RT_NRTI")) is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["A299L_LACAL*PH", "A538ADEVG_X", "D549N_TWMVLQASTS*SR*SR", "T69_S", "T69SS_S"],
+)
+def test_messy_underscore_forms_stay_rejected(raw):
+    assert parse_mutation(raw) is None
+
+
 def test_sdrm_position_with_non_sdrm_state_does_not_match():
     assert match_sdrm("K103R", _panel("RT_NNRTI")) is None
 
@@ -132,7 +177,15 @@ def test_same_mutation_does_not_match_in_the_wrong_panel():
     [
         ("M184V", (184, frozenset({"V"}))),
         ("T215TFILMS", (215, frozenset("TFILMS"))),
-        ("T69S_SS", (69, frozenset({"ins"}))),
+        # The residue before the underscore is a substitution at the position and
+        # the part after it is an insertion; both are carried.
+        ("M46I_E", (46, frozenset({"I", "ins"}))),
+        ("T69S_SS", (69, frozenset({"S", "ins"}))),
+        ("K65K_K", (65, frozenset({"K", "ins"}))),
+        # A literal INS inside the state string is an insertion marker, not I, N and S.
+        ("A554INS", (554, frozenset({"ins"}))),
+        ("T215TFINSY", (215, frozenset({"T", "F", "ins", "Y"}))),
+        ("T128TINS", (128, frozenset({"T", "ins"}))),
     ],
 )
 def test_parse_mutation(raw, expected):
