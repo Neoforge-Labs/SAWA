@@ -201,6 +201,14 @@ def test_drift_check_passes_when_hashes_agree(tmp_path: Path) -> None:
     assert check_input_not_stale(summary, pointer) == 0
 
 
+def test_committed_summary_is_not_stale_against_the_committed_dvc_pointer() -> None:
+    # CI runs this check as an advisory job (branch protection is off), so the same check
+    # runs here: `pytest tests/ -q` fails locally if `dvc add` moved the pointer after the
+    # committed summary was exported.
+    committed = REPO / "src" / "hivdrwatch" / "dashboard" / "static" / "summary.json"
+    assert check_input_not_stale(committed, POINTER) == 0
+
+
 def test_drift_check_fails_when_the_pointer_moved(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:

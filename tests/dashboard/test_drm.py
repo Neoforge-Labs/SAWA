@@ -110,6 +110,29 @@ def test_mixture_label_is_the_smallest_matching_state(raws, panel_name):
         assert match_sdrm(raw, panel) == expected
 
 
+@pytest.mark.parametrize(
+    ("raw", "panel_name", "attributed", "other_matching_state"),
+    [
+        ("M46IL", "PR", "M46I", "L"),
+        ("M46LI", "PR", "M46I", "L"),
+        ("V82AF", "PR", "V82A", "F"),
+        ("V82FA", "PR", "V82A", "F"),
+    ],
+)
+def test_a_mixture_is_attributed_to_the_alphabetically_first_matching_state(
+    raw: str, panel_name: str, attributed: str, other_matching_state: str
+):
+    # The page tells readers that a multi-state mixture goes to the alphabetically first
+    # matching state, which inflates the earlier label at the later one's expense. That
+    # sentence is only true while this holds, so a matcher change (counting every state, or
+    # the last one) must fail here and send someone to the copy.
+    panel = _panel(panel_name)
+    position = int(raw[1:3])
+    assert other_matching_state in panel.positions[position]
+    assert match_sdrm(raw, panel) == attributed
+    assert attributed[-1] < other_matching_state
+
+
 def _parse_with_reference(raw: str) -> tuple[str, int, frozenset[str]]:
     parsed = parse_mutation(raw)
     assert parsed is not None
@@ -199,3 +222,32 @@ def test_parse_mutation(raw, expected):
 def test_malformed_strings_are_rejected_without_raising(raw):
     assert parse_mutation(raw) is None
     assert match_sdrm(raw, _panel("RT_NRTI")) is None
+
+
+GOLDEN_PANELS_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "tests"
+    / "fixtures"
+    / "dashboard"
+    / "sdrm_panels_golden.json"
+)
+
+
+def test_surveillance_panels_are_exactly_the_positions_and_states_pinned_in_the_golden():
+    # The page attributes these panels to Bennett et al. 2009 (updated 2019), while the data
+    # file's own notes call them candidate model features, and nothing here checks them
+    # against a published list. Until that is verified, any edit to a position or state
+    # changes what the page publishes under that citation, so it must be a deliberate edit
+    # to the golden in the same commit and read as one in review. Deliberately not wired to
+    # `--update-golden`: regenerating this file wholesale would defeat the point.
+    golden = json.loads(GOLDEN_PANELS_PATH.read_text())
+    panels, version = load_sdrm_panels(REFERENCE_PATH)
+    assert version == golden["algorithm_version_pinned"]
+    assert [p.name for p in panels] == list(golden["panels"])
+    for panel in panels:
+        pinned = {int(pos): states for pos, states in golden["panels"][panel.name].items()}
+        loaded = {pos: sorted(states) for pos, states in panel.positions.items()}
+        assert loaded == pinned, (
+            f"{panel.name} differs from the pinned golden; if the change is intended, edit "
+            f"{GOLDEN_PANELS_PATH.name} in the same commit"
+        )

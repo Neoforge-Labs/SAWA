@@ -17,15 +17,20 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from hivdrwatch.dashboard.export.aggregate import LEVEL_ORDER
 from hivdrwatch.dashboard.export.summary import SUMMARY_SCHEMA_VERSION
 from hivdrwatch.paper1.style import COLORBLIND_PALETTE, DRUG_CLASS_ORDER
+from hivdrwatch.resistance.schema import DRResult
 
 REPO = Path(__file__).resolve().parents[2]
 STATIC = REPO / "src" / "hivdrwatch" / "dashboard" / "static"
@@ -109,6 +114,8 @@ def _bound_value(path: str, attrs: dict[str, str]) -> str:
             - SUMMARY["meta"]["n_accessions_scored"],
             "n_drugs": len({r["drug"] for r in views["levels_by_drug"]}),
             "n_classes": len({r["drug_class"] for r in views["levels_by_drug"]}),
+            "n_repeated_sequences": SUMMARY["meta"]["n_accessions_scored"]
+            - SUMMARY["meta"]["n_distinct_sequences"],
             "pct_sdrm_multistate": _share(
                 SUMMARY["meta"]["n_sdrm_observations_multistate"],
                 SUMMARY["meta"]["n_sdrm_observations"],
@@ -159,6 +166,12 @@ def _js_frozen_array(name: str) -> list[str]:
     match = re.search(rf"const {name} = Object\.freeze\(\[([^\]]*)\]\)", APP_JS.read_text())
     assert match, f"{name} is not declared as a frozen array"
     return re.findall(r'"([^"]+)"', match.group(1))
+
+
+def _js_frozen_map(name: str) -> dict[str, str]:
+    match = re.search(rf"const {name} = Object\.freeze\(\{{([^}}]*)\}}\)", APP_JS.read_text())
+    assert match, f"{name} is not declared as a frozen object"
+    return dict(re.findall(r'(\w+):\s*"([^"]+)"', match.group(1)))
 
 
 PAGE = _parse(INDEX.read_text())
@@ -288,6 +301,21 @@ def test_prevalence_keeps_the_exported_order_and_shows_each_denominator() -> Non
     assert "n_sequences" in body and "n_resistant" in body
 
 
+def test_class_to_gene_map_agrees_with_the_denominators_the_data_exports() -> None:
+    # The page prints "N of M sequences scored for <gene>" from CLASS_GENE, a hand-typed copy
+    # of which class lives on which gene. A wrong entry would mislabel a denominator and
+    # nothing else would fail, so each class's exported denominator must equal the coverage
+    # of the gene the map names. Exact on this vintage, where every sequence with a gene
+    # score is scored for every class on it; a vintage where that stops being true should
+    # fail here and be looked at.
+    class_gene = _js_frozen_map("CLASS_GENE")
+    assert set(class_gene) == set(DRUG_CLASS_ORDER)
+    coverage = {r["gene"]: r["n_sequences"] for r in SUMMARY["views"]["gene_coverage"]}
+    for row in SUMMARY["views"]["prevalence_by_drug_class"]:
+        gene = class_gene[row["drug_class"]]
+        assert row["n_sequences"] == coverage[gene], (row["drug_class"], gene)
+
+
 def test_sdrm_panel_ranks_by_sequence_count_not_by_the_exported_name_order() -> None:
     body = _js_function("topSdrm")
     assert re.search(r"\.sort\(\(a, b\) => b\.n_sequences - a\.n_sequences", body)
@@ -331,6 +359,54 @@ def test_cohort_line_states_scored_of_ingested_and_the_shortfall() -> None:
     assert f"giving {meta['n_calls']:,} resistance calls across" in cohort
 
 
+def test_prevalence_is_caveated_as_not_a_pretreatment_resistance_estimate() -> None:
+    prevalence = _by_id(PAGE, "prevalence")
+    note = _by_id(PAGE, "treatment-history")
+    chart = next(n for n in _walk(prevalence) if n.attrs.get("data-chart") == "prevalence")
+    in_page_order = [n for n in _walk(prevalence) if n is note or n is chart]
+    assert in_page_order == [note, chart], (
+        "the caveat must sit in the section and before the bars"
+    )
+    text = _note("treatment-history")
+    assert text.startswith("Treatment history is not recorded for these sequences.")
+    assert "not pretreatment-resistance estimates" in text
+    assert "surveillance, treatment-failure and trial sequences in unknown proportion" in text
+    assert not re.search(r"\d", text)
+
+
+def test_nothing_else_on_the_page_presents_the_figures_as_pretreatment_or_drug_naive() -> None:
+    caveat = _squash(_rendered_text(_by_id(PAGE, "treatment-history")))
+    elsewhere = _squash(_rendered_text(PAGE)).replace(caveat, "")
+    assert not re.search(
+        r"pre-?treatment|drug[- ]naive|treatment[- ]naive|\bPDR\b", elsewhere, re.I
+    )
+
+
+def test_resistance_rows_carry_no_treatment_history_for_the_page_to_report() -> None:
+    # The caveat says treatment history is not recorded. If a treatment field is ever added to
+    # the resistance rows the summary is built from, that sentence needs rewriting and the
+    # prevalence stratifying, not leaving.
+    assert not [f for f in DRResult.model_fields if re.search(r"naive|treat|therap|art_", f)]
+
+
+def test_unit_is_stated_as_accessions_with_the_measured_count_of_repeated_sequences() -> None:
+    meta = SUMMARY["meta"]
+    scored, distinct = meta["n_accessions_scored"], meta["n_distinct_sequences"]
+    assert 0 < distinct <= scored
+    note = _note("unit-note")
+    assert note.startswith("Every figure on this page counts accessions")
+    assert "“sequences” means accessions" in note
+    expected = (
+        f"The {scored:,} scored accessions hold {distinct:,} distinct sequences, "
+        f"so {scored - distinct:,} repeat a sequence already present under another accession."
+    )
+    assert expected in note
+    assert "Patient identity is not recorded, so these are not independent patients." in note
+    assert not re.search(r"\d", _squash(_raw_text(_by_id(PAGE, "unit-note")))), (
+        "a count is typed into the unit note instead of bound"
+    )
+
+
 def test_denominator_is_defined_in_words_and_is_not_confused_with_codon_coverage() -> None:
     note = _note("denominator-note")
     assert "“Sierra returned a score for this gene”" in note
@@ -354,8 +430,10 @@ def test_mixture_convention_and_its_measured_limit_are_both_stated() -> None:
     assert (
         "a mixture counts as carrying a surveillance mutation when any of its states" in note
     )
-    assert "attributed to a single one" in note
+    assert "attributed to the alphabetically first matching state" in note
     assert "That affects" in note and "of observations" in note
+    # The direction of the bias is part of the disclosure, not only its size.
+    assert "earlier mutation" in note and "inflated" in note and "understated" in note
 
 
 def test_mixture_percentage_is_computed_from_the_summary_counts() -> None:
@@ -388,6 +466,25 @@ def test_limitation_note_links_the_provenance_evaluation_that_exists() -> None:
     assert "deliberately absent" in _note("limitation")
 
 
+def test_limitation_describes_the_country_and_subtype_defects_as_the_different_things_they_are() -> (
+    None
+):
+    note = _note("limitation")
+    assert "wrong source" not in note, "the two fields were not written from one wrong source"
+    sentences = re.split(r"(?<=\.) ", note)
+    (country,) = [sent for sent in sentences if "country field" in sent]
+    (subtype,) = [sent for sent in sentences if "subtype field" in sent]
+    assert "search query rather than from the record" in country and "subtype" not in country
+    assert "misparsed" in subtype and "search query" not in subtype
+    # A reader who follows the link must find what the page says: the evaluation's section on
+    # the subtype defect is about CRFs being stored as subtype C.
+    document = (REPO / "docs/evaluations/ingest-provenance.md").read_text()
+    assert re.search(r"^## 2\. .*every CRF was stored as subtype C", document, re.MULTILINE), (
+        "the evaluation no longer describes the subtype defect the page cites"
+    )
+    assert "every CRF was stored as subtype C" in subtype
+
+
 def test_the_out_of_region_count_is_a_citation_of_the_evaluation_not_a_live_claim() -> None:
     figure = "3,108"
     for path in (INDEX, STYLES, APP_JS):
@@ -396,7 +493,7 @@ def test_the_out_of_region_count_is_a_citation_of_the_evaluation_not_a_live_clai
     sentences = re.split(r"(?<=\.) ", _note("limitation"))
     (carrier,) = [sent for sent in sentences if figure in sent]
     assert carrier.startswith("The ingest provenance evaluation found that")
-    assert f"it counts {figure} accessions" in carrier
+    assert f"counts {figure} accessions" in carrier
     # The attribution is only honest if the cited document says it, of the right set: the
     # accessions that state a country outside the targeted region, as a whole number (not
     # the tail of a larger one such as 13,108).
@@ -451,6 +548,99 @@ def test_digest_mismatch_notice_is_hidden_until_the_digests_differ() -> None:
     assert 'getElementById("digest-note").hidden = !digestsDiffer(meta)' in sync
     main = _js_function("main")
     assert main.index("syncDigestNote(summary.meta)") > main.index("applyBindings(")
+
+
+# --- null handling, run in node because the browser is not available -----------------------
+
+_NODE = shutil.which("node")
+_HARNESS_TAIL = "\nglobalThis.__page = { resolveBinding, boundText };\n"
+
+
+def _run_page_functions(script: str) -> Any:
+    """Load app.js as a module with its `main()` call removed, run `script`, return its JSON."""
+    source, replaced = re.subn(r"^main\(\);\s*$", "", APP_JS.read_text(), flags=re.MULTILINE)
+    assert replaced == 1, "app.js no longer ends in a bare main() call; update this harness"
+    harness = source + _HARNESS_TAIL + f"\nconst page = globalThis.__page;\n{script}\n"
+    done = subprocess.run(
+        [_NODE or "node", "--input-type=module"],
+        input=harness,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+
+needs_node = pytest.mark.skipif(_NODE is None, reason="node is not installed")
+
+
+@needs_node
+def test_null_in_a_required_meta_value_is_rejected_rather_than_rendered() -> None:
+    required = sorted(
+        {
+            n.attrs["data-bind"]
+            for n in _walk(PAGE)
+            if n.attrs.get("data-bind", "").startswith("meta.")
+        }
+        - {"meta.algorithm_publish_date"}
+    )
+    assert {"meta.algorithm_version", "meta.called_at"} <= set(required)
+    outcome = _run_page_functions(
+        f"""
+        const summary = {json.dumps(SUMMARY)};
+        const out = {{}};
+        for (const path of {json.dumps(required)}) {{
+          const broken = structuredClone(summary);
+          broken.meta[path.split(".")[1]] = null;
+          try {{ out[path] = "rendered " + String(page.resolveBinding(path, broken, {{}})); }}
+          catch (error) {{ out[path] = "threw"; }}
+        }}
+        console.log(JSON.stringify(out));
+        """
+    )
+    assert set(outcome.values()) == {"threw"}, outcome
+
+
+@needs_node
+def test_a_null_publish_date_reads_as_a_dash_and_never_as_the_word_null() -> None:
+    outcome = _run_page_functions(
+        f"""
+        const summary = {json.dumps(SUMMARY)};
+        summary.meta.algorithm_publish_date = null;
+        const value = page.resolveBinding("meta.algorithm_publish_date", summary, {{}});
+        console.log(JSON.stringify({{ value, text: page.boundText(value, undefined) }}));
+        """
+    )
+    assert outcome["value"] is None
+    assert outcome["text"] == "\u2014"
+    assert "null" not in outcome["text"].lower()
+
+
+@needs_node
+def test_a_value_absent_from_the_summary_is_still_an_error() -> None:
+    outcome = _run_page_functions(
+        f"""
+        const summary = {json.dumps(SUMMARY)};
+        delete summary.meta.called_at;
+        try {{ page.resolveBinding("meta.called_at", summary, {{}}); console.log('"returned"'); }}
+        catch (error) {{ console.log('"threw"'); }}
+        """
+    )
+    assert outcome == "threw"
+
+
+@needs_node
+def test_bound_text_formats_numbers_truncates_strings_and_leaves_other_strings_whole() -> None:
+    outcome = _run_page_functions(
+        """
+        console.log(JSON.stringify([
+          page.boundText(35777, undefined), page.boundText(0, undefined),
+          page.boundText("0123456789abcdef", "7"), page.boundText("HIVDB_10.2", undefined),
+        ]));
+        """
+    )
+    assert outcome == ["35,777", "0", "0123456", "HIVDB_10.2"]
 
 
 # --- no external requests, no framework --------------------------------------------------
