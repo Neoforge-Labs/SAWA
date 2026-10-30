@@ -22,6 +22,7 @@ import subprocess
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -99,31 +100,86 @@ def _share(part: int, whole: int) -> str:
     return f"{part / whole * 100:.1f}%" if whole else "0.0%"
 
 
+def _landscape_cell(cls: str, country: str, year: str) -> dict[str, Any]:
+    (row,) = [
+        r
+        for r in SUMMARY["views"]["resistance_landscape"]
+        if (r["drug_class"], r["country"], r["collection_year"]) == (cls, country, int(year))
+    ]
+    return row
+
+
+def _names(names: list[str]) -> str:
+    """Python twin of `listNames` (Intl.ListFormat, English, long conjunction)."""
+    if len(names) <= 1:
+        return "".join(names)
+    if len(names) == 2:
+        return f"{names[0]} and {names[1]}"
+    return f"{', '.join(names[:-1])}, and {names[-1]}"
+
+
+def _drawn_cell_sizes() -> list[int]:
+    rows = SUMMARY["views"]["resistance_landscape"]
+    return [r["n_sequences"] for r in rows if r["frac_resistant"] is not None]
+
+
+def _median(values: list[int]) -> float:
+    ordered = sorted(values)
+    mid = len(ordered) // 2
+    return ordered[mid] if len(ordered) % 2 else (ordered[mid - 1] + ordered[mid]) / 2
+
+
 def _bound_value(path: str, attrs: dict[str, str]) -> str:
     """Python twin of `resolveBinding` + `applyBindings` in app.js."""
-    scope, key = path.split(".")
+    scope, *rest = path.split(".")
+    meta = SUMMARY["meta"]
     views = SUMMARY["views"]
+    value: Any
     if scope == "meta":
-        value = SUMMARY["meta"][key]
+        value = meta[rest[0]]
     elif scope == "gene":
-        value = next(r["n_sequences"] for r in views["gene_coverage"] if r["gene"] == key)
+        value = next(r["n_sequences"] for r in views["gene_coverage"] if r["gene"] == rest[0])
+    elif scope == "cell":
+        cls, country, year, field = rest
+        row = _landscape_cell(cls, country, year)
+        value = row["n_sequences"] if field == "n" else f"{row['frac_resistant'] * 100:.1f}%"
+    elif scope == "ratio":
+        cls, country_a, year_a, country_b, year_b = rest
+        a = _landscape_cell(cls, country_a, year_a)["frac_resistant"]
+        b = _landscape_cell(cls, country_b, year_b)["frac_resistant"]
+        value = round(a / b)
     elif scope == "derived":
+        absent = [
+            c["name"]
+            for c in meta["landscape_countries"]
+            if not any(
+                r["country"] == c["code"] and r["frac_resistant"] is not None
+                for r in views["resistance_landscape"]
+            )
+        ]
         value = {
-            "n_unscored": SUMMARY["meta"]["n_accessions_ingested"]
-            - SUMMARY["meta"]["n_accessions_scored"],
+            "n_unscored": meta["n_accessions_ingested"] - meta["n_accessions_scored"],
             "n_drugs": len({r["drug"] for r in views["levels_by_drug"]}),
             "n_classes": len({r["drug_class"] for r in views["levels_by_drug"]}),
-            "n_repeated_sequences": SUMMARY["meta"]["n_accessions_scored"]
-            - SUMMARY["meta"]["n_distinct_sequences"],
+            "n_repeated_sequences": meta["n_accessions_scored"] - meta["n_distinct_sequences"],
             "pct_sdrm_multistate": _share(
-                SUMMARY["meta"]["n_sdrm_observations_multistate"],
-                SUMMARY["meta"]["n_sdrm_observations"],
+                meta["n_sdrm_observations_multistate"], meta["n_sdrm_observations"]
             ),
-        }[key]
+            "landscape_max_cell_n": max(_drawn_cell_sizes()),
+            "landscape_median_cell_n": _median(_drawn_cell_sizes()),
+            "landscape_region_names": _names([c["name"] for c in meta["landscape_countries"]]),
+            "landscape_absent_countries": _names(absent),
+            "pct_landscape_undated": _share(
+                meta["landscape_n_excluded_no_year"],
+                meta["landscape_n_accessions"] + meta["landscape_n_excluded_no_year"],
+            ),
+        }[rest[0]]
     else:
         raise AssertionError(f"unknown binding scope {scope!r}")
     if isinstance(value, int):
         return f"{value:,}"
+    if isinstance(value, float):
+        return f"{value:,.0f}" if value == int(value) else f"{value:,}"
     text = str(value)
     return text[: int(attrs["data-trunc"])] if "data-trunc" in attrs else text
 
@@ -331,16 +387,38 @@ def test_sections_appear_in_the_designed_order() -> None:
         n.attrs["id"]
         for n in _walk(PAGE)
         if n.attrs.get("id")
-        in {"provenance", "prevalence", "levels", "sdrm", "coverage", "footer"}
+        in {"provenance", "prevalence", "landscape", "levels", "sdrm", "coverage", "footer"}
     ]
-    assert ids == ["provenance", "prevalence", "levels", "sdrm", "coverage", "footer"]
+    assert ids == [
+        "provenance",
+        "prevalence",
+        "landscape",
+        "levels",
+        "sdrm",
+        "coverage",
+        "footer",
+    ]
 
 
-def test_page_makes_no_region_claim_in_any_shipped_file() -> None:
-    banned = re.compile(r"africa|kenya|uganda|tanzania|rwanda|burundi|ethiopia|saharan", re.I)
-    for path in (INDEX, STYLES, APP_JS):
+_REGION_WORDS = re.compile(
+    r"africa|kenya|uganda|tanzania|rwanda|burundi|ethiopia|somalia|south sudan|saharan", re.I
+)
+
+
+def test_only_the_landscape_section_names_a_country_and_nothing_claims_the_cohort_is_regional() -> (
+    None
+):
+    # Country names belong to the landscape view, which shows them by construction. Everywhere
+    # else, and in the script and stylesheet, they stay out: the cohort is described by its
+    # retrieval process, and the page must not call it East African, because 3,000-odd of its
+    # accessions state a country elsewhere.
+    landscape = _by_id(PAGE, "landscape")
+    elsewhere = _squash(_raw_text(PAGE)).replace(_squash(_raw_text(landscape)), "")
+    assert not _REGION_WORDS.search(elsewhere.replace(_RETRIEVAL_PHRASE, "")), elsewhere
+    for path in (STYLES, APP_JS):
         text = path.read_text().replace(_RETRIEVAL_PHRASE, "")
-        assert not banned.search(text), f"{path.name}: {banned.search(text)}"
+        assert not _REGION_WORDS.search(text), f"{path.name}: {_REGION_WORDS.search(text)}"
+    assert "country-name" not in APP_JS.read_text()
 
 
 def test_cohort_is_described_by_its_retrieval_process() -> None:
@@ -374,8 +452,12 @@ def test_prevalence_is_caveated_as_not_a_pretreatment_resistance_estimate() -> N
 
 
 def test_nothing_else_on_the_page_presents_the_figures_as_pretreatment_or_drug_naive() -> None:
-    caveat = _squash(_rendered_text(_by_id(PAGE, "treatment-history")))
-    elsewhere = _squash(_rendered_text(PAGE)).replace(caveat, "")
+    # The two caveats are the only places the word appears, and both use it to deny the
+    # reading. Everything else is scanned for it.
+    caveats = [_note("treatment-history"), _note("landscape-cohort-note")]
+    elsewhere = _squash(_rendered_text(PAGE))
+    for caveat in caveats:
+        elsewhere = elsewhere.replace(caveat, "")
     assert not re.search(
         r"pre-?treatment|drug[- ]naive|treatment[- ]naive|\bPDR\b", elsewhere, re.I
     )
@@ -461,44 +543,55 @@ def test_limitation_note_links_the_provenance_evaluation_that_exists() -> None:
     target = "docs/evaluations/ingest-provenance.md"
     assert any(h.endswith(f"/blob/main/{target}") for h in hrefs), hrefs
     assert (REPO / target).is_file()
-    assert "deliberately absent" in _note("limitation")
 
 
-def test_limitation_describes_the_country_and_subtype_defects_as_the_different_things_they_are() -> (
-    None
-):
+def test_limitation_says_geography_is_shown_and_no_longer_says_it_is_absent() -> None:
+    note = _note("limitation")
+    assert note.startswith("Geography is now shown")
+    assert "rebuilt" in note and "record" in note
+    assert "source kept per row" in note
+    # The old note's claim, which is false now that the vintage is rebuilt.
+    assert "deliberately absent" not in note
+    assert "return after a provenance rebuild" not in note
+
+
+def test_limitation_keeps_the_history_of_the_two_defects_as_separate_things() -> None:
     note = _note("limitation")
     assert "wrong source" not in note, "the two fields were not written from one wrong source"
     sentences = re.split(r"(?<=\.) ", note)
     (country,) = [sent for sent in sentences if "country field" in sent]
-    (subtype,) = [sent for sent in sentences if "subtype field" in sent]
-    assert "search query rather than from the record" in country and "subtype" not in country
-    assert "misparsed" in subtype and "search query" not in subtype
+    assert "search query rather than from the record" in country
+    assert "misparsed" in country and "every CRF was stored as subtype C" in country
     # A reader who follows the link must find what the page says: the evaluation's section on
     # the subtype defect is about CRFs being stored as subtype C.
     document = (REPO / "docs/evaluations/ingest-provenance.md").read_text()
     assert re.search(r"^## 2\. .*every CRF was stored as subtype C", document, re.MULTILINE), (
         "the evaluation no longer describes the subtype defect the page cites"
     )
-    assert "every CRF was stored as subtype C" in subtype
+    assert re.search(r"^## 3\. .*the country was the search query", document, re.MULTILINE)
 
 
-def test_the_out_of_region_count_is_a_citation_of_the_evaluation_not_a_live_claim() -> None:
-    figure = "3,108"
+def test_subtype_breakdowns_are_said_to_remain_absent_and_the_reason_is_the_rollup_not_the_field() -> (
+    None
+):
+    note = _note("limitation")
+    assert "subtype breakdowns are not" in note.lower()
+    assert "remain absent although the subtype field is now correct" in note
+    assert "sums across subtypes" in note
+    intro = _note("landscape-intro")
+    assert "sums across subtypes" in intro
+    assert "Figure 2 stratifies by subtype and this page does not" in intro
+
+
+def test_the_old_out_of_region_citation_is_gone_and_the_live_count_is_bound_not_typed() -> (
+    None
+):
+    # 3,108 was the evaluation's count on the earlier vintage. On this one the count is
+    # measured, so a typed copy of the old figure would contradict the bound one beside it.
     for path in (INDEX, STYLES, APP_JS):
-        expected = 1 if path is INDEX else 0
-        assert path.read_text().count(figure) == expected, path.name
-    sentences = re.split(r"(?<=\.) ", _note("limitation"))
-    (carrier,) = [sent for sent in sentences if figure in sent]
-    assert carrier.startswith("The ingest provenance evaluation found that")
-    assert f"counts {figure} accessions" in carrier
-    # The attribution is only honest if the cited document says it, of the right set: the
-    # accessions that state a country outside the targeted region, as a whole number (not
-    # the tail of a larger one such as 13,108).
-    document = (REPO / "docs/evaluations/ingest-provenance.md").read_text()
-    assert re.search(
-        rf"^\|\s*stated, elsewhere[^|]*\|\s*{re.escape(figure)}\s*\|", document, re.MULTILINE
-    )
+        assert "3,108" not in path.read_text(), path.name
+    raw = _squash(_raw_text(_by_id(PAGE, "landscape-exclusions-note")))
+    assert not re.search(r"\d", raw), f"a count is typed into the exclusions note: {raw}"
 
 
 def test_footer_carries_repo_citation_algorithm_vintage_and_commit() -> None:
@@ -520,11 +613,13 @@ def test_footer_carries_repo_citation_algorithm_vintage_and_commit() -> None:
 
 def test_footer_labels_the_pointer_digest_and_the_file_digest_separately() -> None:
     meta = SUMMARY["meta"]
-    for key in ("input_dvc_md5", "input_file_md5"):
+    for key in ("input_dvc_md5", "input_file_md5", "curated_dvc_md5", "curated_file_md5"):
         assert re.fullmatch(r"[0-9a-f]{32}", meta[key]), key
     text = _squash(_rendered_text(_by_id(PAGE, "footer")))
     assert f"DVC pointer md5 {meta['input_dvc_md5'][:8]}" in text
     assert f"input file md5 {meta['input_file_md5'][:8]}" in text
+    assert f"curated table pointer md5 {meta['curated_dvc_md5'][:8]}" in text
+    assert f"curated table file md5 {meta['curated_file_md5'][:8]}" in text
     assert "input md5" not in text, "an unlabelled digest is ambiguous about what it hashes"
 
 
@@ -538,10 +633,7 @@ def test_digest_mismatch_notice_is_hidden_until_the_digests_differ() -> None:
         "notice sits outside the footer"
     )
     # The branch that is written but rarely run: the comparison, the unhide, and the call.
-    assert re.search(
-        r"function digestsDiffer\(meta\) \{\s*return meta\.input_file_md5 !== meta\.input_dvc_md5;\s*\}",
-        APP_JS.read_text(),
-    )
+    assert "digestsDiffer(" in _js_function("syncDigestNote")
     sync = _js_function("syncDigestNote")
     assert 'getElementById("digest-note").hidden = !digestsDiffer(meta)' in sync
     main = _js_function("main")
@@ -551,14 +643,42 @@ def test_digest_mismatch_notice_is_hidden_until_the_digests_differ() -> None:
 # --- null handling, run in node because the browser is not available -----------------------
 
 _NODE = shutil.which("node")
-_HARNESS_TAIL = "\nglobalThis.__page = { resolveBinding, boundText };\n"
+_HARNESS_TAIL = """
+globalThis.__page = {
+  resolveBinding, boundText, deriveFigures, digestsDiffer, landscapeModel, columnLayout, yearLabels,
+  rampColor, textTone, renderLandscape, describeLandscapeCell, RAMP_STOPS,
+};
+"""
+
+# A stand-in for the DOM, enough for the SVG builders: elements that remember what they were given.
+_FAKE_DOM = """
+class FakeEl {
+  constructor(tag) { this.tag = tag; this.attrs = {}; this.children = []; this.text = null; this.handlers = {}; }
+  setAttribute(name, value) { this.attrs[name] = value; }
+  append(...kids) { this.children.push(...kids); }
+  set textContent(value) { this.text = value; }
+  get textContent() { return this.text; }
+  addEventListener(type, fn) { this.handlers[type] = fn; }
+}
+globalThis.document = { createElementNS: (_ns, tag) => new FakeEl(tag) };
+const walk = (el, out = []) => { out.push(el); for (const k of el.children) if (typeof k === "object") walk(k, out); return out; };
+const cellsOf = (svg) => svg.children.filter((el) => el.attrs.class === "hm-cell").map((g) => ({
+  rect: g.children.find((k) => k.tag === "rect").attrs,
+  slash: g.children.some((k) => k.tag === "line"),
+  n: g.children.find((k) => k.tag === "text")?.text ?? null,
+  title: g.children.find((k) => k.tag === "title")?.text ?? null,
+  click: Boolean(g.handlers.click),
+}));
+"""
 
 
 def _run_page_functions(script: str) -> Any:
     """Load app.js as a module with its `main()` call removed, run `script`, return its JSON."""
     source, replaced = re.subn(r"^main\(\);\s*$", "", APP_JS.read_text(), flags=re.MULTILINE)
     assert replaced == 1, "app.js no longer ends in a bare main() call; update this harness"
-    harness = source + _HARNESS_TAIL + f"\nconst page = globalThis.__page;\n{script}\n"
+    harness = (
+        source + _HARNESS_TAIL + _FAKE_DOM + f"\nconst page = globalThis.__page;\n{script}\n"
+    )
     done = subprocess.run(
         [_NODE or "node", "--input-type=module"],
         input=harness,
@@ -719,3 +839,529 @@ def test_phone_layout_has_a_viewport_meta_and_a_sixteen_pixel_gutter() -> None:
     assert "--gutter: 16px" in css
     assert re.search(r"main, footer, \.banner\s*\{[^}]*padding-inline:\s*var\(--gutter\)", css)
     assert re.search(r"\.chart svg\s*\{[^}]*width:\s*100%", css)
+
+
+# --- the landscape heatmap ------------------------------------------------------------------
+
+_LANDSCAPE = SUMMARY["views"]["resistance_landscape"]
+_FLOOR = SUMMARY["meta"]["landscape_min_cell_n"]
+
+
+def _rgb(hex_colour: str) -> tuple[int, int, int]:
+    return int(hex_colour[1:3], 16), int(hex_colour[3:5], 16), int(hex_colour[5:7], 16)
+
+
+def _luminance(hex_colour: str) -> float:
+    def channel(c: int) -> float:
+        v = c / 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (channel(c) for c in _rgb(hex_colour))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def test_the_committed_landscape_view_is_internally_consistent() -> None:
+    # Structural properties that hold for any vintage, so a regenerated file passes and a
+    # corrupted one does not. The page refuses a cell where these disagree; this says the
+    # shipped file is not one.
+    targeted = [c["code"] for c in SUMMARY["meta"]["landscape_countries"]]
+    assert _LANDSCAPE, "the landscape view is empty"
+    for row in _LANDSCAPE:
+        assert row["country"] in targeted and row["drug_class"] in DRUG_CLASS_ORDER
+        assert (row["n_sequences"] < _FLOOR) == (row["frac_resistant"] is None), row
+        assert 0 <= row["n_resistant"] <= row["n_sequences"], row
+        if row["frac_resistant"] is not None:
+            assert row["frac_resistant"] == pytest.approx(
+                row["n_resistant"] / row["n_sequences"], abs=5e-5
+            )
+    keys = [(r["drug_class"], r["country"], r["collection_year"]) for r in _LANDSCAPE]
+    assert len(keys) == len(set(keys)), "a (class, country, year) cell appears twice"
+
+
+def test_the_landscape_accounting_in_meta_sums_to_the_scored_cohort() -> None:
+    meta = SUMMARY["meta"]
+    excluded = sum(v for k, v in meta.items() if k.startswith("landscape_n_excluded_"))
+    assert meta["landscape_n_accessions"] + excluded == meta["n_accessions_scored"]
+
+
+def test_the_page_has_one_heatmap_per_class_in_manuscript_order_each_with_its_own_readout() -> (
+    None
+):
+    figure = _by_id(PAGE, "landscape-figure")
+    charts = [n for n in _walk(figure) if n.attrs.get("data-chart") == "landscape"]
+    assert [n.attrs["data-class"] for n in charts] == list(DRUG_CLASS_ORDER)
+    for node in charts:
+        cls = node.attrs["data-class"]
+        assert node.attrs["id"] == f"chart-landscape-{cls}"
+        _by_id(PAGE, f"readout-landscape-{cls}")
+        _by_id(PAGE, f"omitted-landscape-{cls}")
+
+
+def test_the_cohort_composition_caveat_sits_before_the_heatmaps_and_the_caption_points_back_to_it() -> (
+    None
+):
+    section = _by_id(PAGE, "landscape")
+    note = _by_id(PAGE, "landscape-cohort-note")
+    figure = _by_id(PAGE, "landscape-figure")
+    first_chart = next(n for n in _walk(section) if n.attrs.get("data-chart") == "landscape")
+    order = [n for n in _walk(section) if n in (note, first_chart)]
+    assert order == [note, first_chart], "the caveat must precede the first heatmap"
+    assert any(n is note for n in _walk(section)) and not any(n is note for n in _walk(figure))
+    text = _note("landscape-cohort-note")
+    assert text.startswith(
+        "Cell-to-cell differences may reflect cohort composition rather than epidemiology."
+    )
+    assert "records no treatment history" in text
+    assert "not as a trend over time or a comparison between countries" in text
+    caption = _note("landscape-caption")
+    assert "cohort caveat above applies to every cell" in caption
+    assert any(
+        n.tag == "figcaption" and n.attrs.get("id") == "landscape-caption"
+        for n in _walk(figure)
+    )
+
+
+def test_the_cohort_caveat_quotes_two_real_cells_and_the_spread_between_them_is_real() -> None:
+    low = _landscape_cell("NNRTI", "KE", "2010")
+    high = _landscape_cell("NNRTI", "UG", "2016")
+    for row in (low, high):
+        assert row["frac_resistant"] is not None and row["n_sequences"] >= 100
+    # The sentence says "a roughly N-fold spread between two large cells": it must stay true
+    # of whatever vintage is shipped, or the example no longer illustrates the point.
+    fold = high["frac_resistant"] / low["frac_resistant"]
+    assert fold >= 10
+    text = _note("landscape-cohort-note")
+    expected = (
+        f"Kenya in 2010 shows {low['frac_resistant'] * 100:.1f}% of {low['n_sequences']:,} "
+        f"sequences resistant to an NNRTI; Uganda in 2016 shows "
+        f"{high['frac_resistant'] * 100:.1f}% of {high['n_sequences']:,}. "
+        f"That is a roughly {round(fold)}-fold spread"
+    )
+    assert expected in text
+    raw = _squash(_raw_text(_by_id(PAGE, "landscape-cohort-note")))
+    undated = re.sub(
+        r"\b(?:19|20)\d\d\b", "", raw
+    )  # the years name the cells; they are not vintage figures
+    assert not re.search(r"\d", undated), "a figure is typed into the caveat instead of bound"
+
+
+def test_a_binding_that_cites_a_cell_under_the_floor_is_an_error_not_a_blank() -> None:
+    assert "frac_resistant === null ? null" in _js_function("cellBinding")
+    assert "disagrees with the floor" in _js_function("landscapeModel")
+
+
+def test_the_exclusions_note_states_every_measured_count_and_why_the_out_of_region_ones_exist() -> (
+    None
+):
+    meta = SUMMARY["meta"]
+    text = _note("landscape-exclusions-note")
+    assert (
+        f"Of {meta['n_accessions_scored']:,} scored accessions, "
+        f"{meta['landscape_n_accessions']:,} are drawn."
+    ) in text
+    assert (
+        f"{meta['landscape_n_excluded_out_of_region']:,} state a country outside the targeted "
+        "region"
+    ) in text
+    assert f"{meta['landscape_n_excluded_no_country']:,} state no country." in text
+    assert (
+        f"{meta['landscape_n_excluded_no_year']:,} are from the targeted region but record no "
+        "collection year, so they have no column"
+    ) in text
+    assert (
+        "the search over-matched" in text and "these records state their own country" in text
+    )
+    assert "The prevalence figures above include every scored accession" in text
+    names = ", ".join(c["name"] for c in meta["landscape_countries"][:-1])
+    assert f"({names}, and {meta['landscape_countries'][-1]['name']})" in text
+    links = [
+        n.attrs["href"]
+        for n in _walk(_by_id(PAGE, "landscape-exclusions-note"))
+        if n.tag == "a"
+    ]
+    assert any(h.endswith("docs/evaluations/ingest-provenance.md") for h in links)
+
+
+def test_the_undated_share_is_of_the_regions_accessions_not_of_everything_scored() -> None:
+    meta = SUMMARY["meta"]
+    undated = meta["landscape_n_excluded_no_year"]
+    in_region = meta["landscape_n_accessions"] + undated
+    assert undated > 0, "this vintage has no undated accessions; the sentence needs rewording"
+    assert f"({_share(undated, in_region)} of the region" in _note("landscape-exclusions-note")
+
+
+def test_the_sampling_note_states_the_range_and_median_of_cell_sizes() -> None:
+    sizes = _drawn_cell_sizes()
+    text = _note("landscape-sampling-note")
+    assert text.startswith("Sampling effort is not uniform.")
+    assert f"between {_FLOOR} and {max(sizes):,} sequences" in text
+    assert f"half of them hold {_median(sizes):,.0f} or fewer" in text
+    assert min(sizes) >= _FLOOR
+
+
+def test_the_absent_countries_sentence_is_hidden_by_script_when_there_are_none() -> None:
+    sentence = _by_id(PAGE, "landscape-absent")
+    assert "hidden" in sentence.attrs
+    sync = _js_function("syncLandscapeAbsent")
+    assert 'getElementById("landscape-absent").hidden = absent.length === 0' in sync
+    assert "syncLandscapeAbsent(summary)" in _js_function("main")
+
+
+def test_the_heatmap_styles_keep_not_enough_data_apart_from_the_ramp() -> None:
+    css = STYLES.read_text()
+    assert re.search(r"\.hm-nodata\s*\{\s*fill:\s*var\(--nodata\)", css)
+    assert re.search(r"\.hm-slash\s*\{[^}]*stroke:", css)
+    root = _root_block(css)
+    nodata = re.search(r"--nodata:\s*(#[0-9a-fA-F]{6})", root)
+    assert nodata
+    r, g, b = _rgb(nodata.group(1))
+    assert max(r, g, b) - min(r, g, b) <= 16, "the not-enough-data fill must be a neutral grey"
+    dark = re.search(r"@media \(prefers-color-scheme: dark\)\s*\{(.*?)\n\}", css, re.S)
+    assert dark and "--nodata:" in dark.group(1)
+
+
+def _js_ramp_stops() -> list[str]:
+    return _js_frozen_array("RAMP_STOPS")
+
+
+def test_the_ramp_is_built_from_the_manuscript_blues_and_darkens_towards_one() -> None:
+    stops = _js_ramp_stops()
+    palette = {c.lower() for c in COLORBLIND_PALETTE}
+    assert {"#56b4e9", "#0072b2"} <= palette, (
+        "the manuscript palette no longer has these blues"
+    )
+    assert {"#56b4e9", "#0072b2"} <= {c.lower() for c in stops}
+    luminances = [_luminance(c) for c in stops]
+    assert luminances == sorted(luminances, reverse=True), (
+        "the ramp must get darker towards 100%, the convention resistance_cmap() documents"
+    )
+    # Every stop is blue-dominant: one hue, so the only thing that varies is lightness, which
+    # is what survives colour-vision deficiency.
+    for colour in stops:
+        r, _g, b = _rgb(colour)
+        assert b > r + 10, colour
+
+
+@needs_node
+def test_ramp_colours_get_strictly_darker_as_the_share_rises() -> None:
+    colours = _run_page_functions(
+        "console.log(JSON.stringify(Array.from({ length: 21 }, (_, i) => page.rampColor(i / 20))));"
+    )
+    luminances = [_luminance(c) for c in colours]
+    assert all(a > b for a, b in pairwise(luminances)), luminances
+    assert (
+        colours[0] == _js_ramp_stops()[0].lower()
+        and colours[-1] == _js_ramp_stops()[-1].lower()
+    )
+
+
+@needs_node
+def test_cell_text_flips_to_white_on_dark_fills_and_stays_dark_on_pale_ones() -> None:
+    tones = _run_page_functions(
+        """
+        const out = Array.from({ length: 21 }, (_, i) => page.textTone(page.rampColor(i / 20)));
+        console.log(JSON.stringify(out));
+        """
+    )
+    assert tones[0] == "dark" and tones[-1] == "light"
+    assert tones == sorted(tones, key=lambda t: t == "light"), (
+        "tone must flip once, not flicker"
+    )
+
+
+_MODEL_ROWS = [
+    # PI: KE has a coloured cell in 2001 and a sparse one in 2002; UG's only 2002 cell is
+    # sparse, then a coloured one in 2005; TZ has nothing at or above the floor.
+    ("PI", "KE", 2001, 10, 1),
+    ("PI", "KE", 2002, 3, 1),
+    ("PI", "UG", 2002, 2, 0),
+    ("PI", "UG", 2005, 7, 2),
+    ("PI", "TZ", 2003, 1, 0),
+    ("NNRTI", "TZ", 2009, 50, 5),
+]
+
+
+def _model_rows_json() -> str:
+    rows = [
+        {
+            "drug_class": cls,
+            "country": country,
+            "collection_year": year,
+            "n_sequences": n,
+            "n_resistant": k,
+            "frac_resistant": None if n < _FLOOR else k / n,
+        }
+        for cls, country, year, n, k in _MODEL_ROWS
+    ]
+    return json.dumps(rows)
+
+
+@needs_node
+def test_the_year_axis_keeps_only_years_with_a_coloured_cell_and_the_omissions_are_counted() -> (
+    None
+):
+    model = _run_page_functions(
+        f"""
+        const m = page.landscapeModel({_model_rows_json()}, "PI", ["KE","UG","TZ"], {_FLOOR});
+        console.log(JSON.stringify({{ years: m.years, countries: m.countries,
+          cells: [...m.cells.keys()], omittedCells: m.omittedCells, omittedSequences: m.omittedSequences }}));
+        """
+    )
+    assert model["years"] == [2001, 2005], "a year with only sparse cells must not be a column"
+    assert model["countries"] == ["KE", "UG"], (
+        "a country with only sparse cells must not be a row"
+    )
+    assert sorted(model["cells"]) == ["KE|2001", "UG|2005"]
+    # KE 2002 (3), UG 2002 (2) and TZ 2003 (1) are dropped from the figure and said to be.
+    assert (model["omittedCells"], model["omittedSequences"]) == (3, 6)
+
+
+@needs_node
+def test_rows_follow_the_exported_country_order_not_the_order_cells_arrive_in() -> None:
+    order = _run_page_functions(
+        f"""
+        const rows = {_model_rows_json()}.reverse();
+        console.log(JSON.stringify(page.landscapeModel(rows, "PI", ["UG","KE","TZ"], {_FLOOR}).countries));
+        """
+    )
+    assert order == ["UG", "KE"]
+
+
+@needs_node
+def test_a_cell_whose_share_disagrees_with_the_floor_is_refused() -> None:
+    outcome = _run_page_functions(
+        f"""
+        const row = (n, frac) => [{{ drug_class: "PI", country: "KE", collection_year: 2001,
+          n_sequences: n, n_resistant: 0, frac_resistant: frac }}];
+        const out = {{}};
+        for (const [name, rows] of Object.entries({{
+          coloured_below_floor: row({_FLOOR - 1}, 0.1), null_above_floor: row({_FLOOR}, null),
+          fine_above: row({_FLOOR}, 0.2), fine_below: row({_FLOOR - 1}, null) }})) {{
+          try {{ page.landscapeModel(rows, "PI", ["KE"], {_FLOOR}); out[name] = "ok"; }}
+          catch (error) {{ out[name] = "threw"; }}
+        }}
+        console.log(JSON.stringify(out));
+        """
+    )
+    assert outcome == {
+        "coloured_below_floor": "threw",
+        "null_above_floor": "threw",
+        "fine_above": "ok",
+        "fine_below": "ok",
+    }
+
+
+@needs_node
+def test_non_adjacent_years_are_separated_by_a_break_and_adjacent_ones_are_not() -> None:
+    layout = _run_page_functions(
+        """
+        const { cellWidth, xs } = page.columnLayout([2001, 2002, 2010], 300, 10);
+        console.log(JSON.stringify({ cellWidth, xs: [...xs.entries()] }));
+        """
+    )
+    xs = {int(year): x for year, x in layout["xs"]}
+    width = layout["cellWidth"]
+    assert xs[2002] - xs[2001] == pytest.approx(width)
+    assert xs[2010] - xs[2002] == pytest.approx(width + 10)
+    assert xs[2010] + width == pytest.approx(300), "the columns and the break fill the plot"
+
+
+@needs_node
+def test_year_labels_never_crowd_each_other_and_always_name_the_first_and_last_year() -> None:
+    years = [1986, *range(2000, 2026)]
+    labelled = _run_page_functions(
+        f"""
+        const years = {json.dumps(years)};
+        const {{ cellWidth, xs }} = page.columnLayout(years, 313, 8);
+        const labels = page.yearLabels(years, xs, cellWidth);
+        console.log(JSON.stringify({{ labels, cellWidth, xs: years.map((y) => xs.get(y)) }}));
+        """
+    )
+    labels = labelled["labels"]
+    assert labels[0] == 1986 and labels[-1] == 2025
+    centres = [labelled["xs"][years.index(y)] + labelled["cellWidth"] / 2 for y in labels]
+    gaps = [b - a for a, b in pairwise(centres)]
+    assert min(gaps) >= 34
+
+
+def _render(rows_json: str, width: int, drug_class: str = "PI") -> Any:
+    return _run_page_functions(
+        f"""
+        const ctx = {{ floor: {_FLOOR}, countries: [{{code:"KE",name:"Kenya"}},{{code:"UG",name:"Uganda"}},{{code:"TZ",name:"Tanzania"}}] }};
+        const model = page.landscapeModel({rows_json}, "{drug_class}", ["KE","UG","TZ"], {_FLOOR});
+        const clicked = [];
+        const svg = page.renderLandscape(model, "{drug_class}", ctx, {{ clientWidth: {width} }}, (t) => clicked.push(t));
+        const cells = cellsOf(svg);
+        const first = svg.children.find((el) => el.attrs.class === "hm-cell");
+        first.handlers.click();
+        console.log(JSON.stringify({{ cells, clicked, viewBox: svg.attrs.viewBox }}));
+        """
+    )
+
+
+def _wide_rows() -> str:
+    # KE has coloured cells in 2001 and 2005; UG in 2005 only, so UG 2001 is an empty cell,
+    # and KE 2005's sibling UG 2002 is sparse but in a year with no coloured cell elsewhere.
+    rows = [
+        ("PI", "KE", 2001, 1200, 120),
+        ("PI", "KE", 2005, 7, 7),
+        ("PI", "UG", 2005, 40, 0),
+        ("PI", "UG", 2001, 4, 2),
+    ]
+    return json.dumps(
+        [
+            {
+                "drug_class": c,
+                "country": co,
+                "collection_year": y,
+                "n_sequences": n,
+                "n_resistant": k,
+                "frac_resistant": None if n < _FLOOR else k / n,
+            }
+            for c, co, y, n, k in rows
+        ]
+    )
+
+
+@needs_node
+def test_a_cell_under_the_floor_is_drawn_grey_with_a_slash_and_never_in_the_ramp() -> None:
+    out = _render(_wide_rows(), 700)
+    by_title = {c["title"].split(":")[0]: c for c in out["cells"]}
+    sparse = by_title["Uganda 2001, PI"]
+    assert sparse["rect"]["class"] == "hm-nodata" and sparse["slash"]
+    assert "fill" not in sparse["rect"], "a sparse cell must not carry a ramp colour"
+    coloured = by_title["Kenya 2001, PI"]
+    assert coloured["rect"]["class"] == "hm-fill" and not coloured["slash"]
+    assert coloured["rect"]["fill"] == _run_page_functions(
+        "console.log(JSON.stringify(page.rampColor(120 / 1200)));"
+    )
+    # Even a sparse cell that is 50% resistant stays grey: "not enough data" is not a colour.
+    assert sparse["title"].endswith("so no percentage is given.")
+
+
+@needs_node
+def test_every_drawn_cell_carries_its_counts_in_its_title_and_the_empty_ones_say_so() -> None:
+    out = _render(_wide_rows(), 700)
+    titles = {c["title"] for c in out["cells"]}
+    assert (
+        "Kenya 2001, PI: 120 of 1,200 sequences scored for PR are resistant (10.0%)." in titles
+    )
+    assert "Kenya 2005, PI: 7 of 7 sequences scored for PR are resistant (100.0%)." in titles
+    assert "Uganda 2005, PI: 0 of 40 sequences scored for PR are resistant (0.0%)." in titles
+    assert len(out["cells"]) == 4  # 2 countries x 2 years, none missing
+    assert all(c["title"] for c in out["cells"])
+    only_empty = [c for c in out["cells"] if c["title"].endswith("no sequences")]
+    assert only_empty == [], "all four cells have rows in this fixture"
+
+
+@needs_node
+def test_a_country_year_with_no_sequences_is_an_empty_cell_with_a_title() -> None:
+    rows = json.dumps(
+        [
+            {"drug_class": "PI", "country": "KE", "collection_year": 2001, "n_sequences": 9,
+             "n_resistant": 1, "frac_resistant": 1 / 9},
+            {"drug_class": "PI", "country": "UG", "collection_year": 2005, "n_sequences": 9,
+             "n_resistant": 1, "frac_resistant": 1 / 9},
+        ]
+    )  # fmt: skip
+    out = _render(rows, 700)
+    empties = [c for c in out["cells"] if c["rect"]["class"] == "hm-empty"]
+    assert sorted(c["title"] for c in empties) == [
+        "Kenya 2005, PI: no sequences",
+        "Uganda 2001, PI: no sequences",
+    ]
+    assert not any(c["click"] for c in empties), "an empty cell has nothing to read out"
+
+
+@needs_node
+def test_n_is_printed_in_the_cell_only_when_it_fits_and_large_counts_are_shortened() -> None:
+    assert {c["n"] for c in _render(_wide_rows(), 700)["cells"]} == {"1.2k", "7", "40", "4"}
+    many_years = json.dumps(
+        [
+            {
+                "drug_class": "PI",
+                "country": "KE",
+                "collection_year": year,
+                "n_sequences": 50,
+                "n_resistant": 5,
+                "frac_resistant": 0.1,
+            }
+            for year in range(2001, 2026)
+        ]
+    )
+    wide, narrow = _render(many_years, 700), _render(many_years, 280)
+    assert {c["n"] for c in wide["cells"]} == {"50"}
+    assert {c["n"] for c in narrow["cells"]} == {None}, (
+        "no room: the title and tap readout carry n"
+    )
+    assert len(narrow["cells"]) == len(wide["cells"]) == 25, "narrowing must not drop any cell"
+    assert all(c["title"] for c in narrow["cells"])
+
+
+@needs_node
+def test_tapping_a_cell_hands_its_description_to_the_readout() -> None:
+    out = _render(_wide_rows(), 700)
+    assert out["clicked"] == [out["cells"][0]["title"]]
+
+
+@needs_node
+def test_a_class_with_no_cell_at_the_floor_says_so_instead_of_drawing_an_empty_grid() -> None:
+    out = _run_page_functions(
+        f"""
+        const ctx = {{ floor: {_FLOOR}, countries: [{{code:"KE",name:"Kenya"}}] }};
+        const rows = [{{ drug_class: "INSTI", country: "KE", collection_year: 2001,
+          n_sequences: 2, n_resistant: 0, frac_resistant: null }}];
+        const model = page.landscapeModel(rows, "INSTI", ["KE"], {_FLOOR});
+        const svg = page.renderLandscape(model, "INSTI", ctx, {{ clientWidth: 400 }}, () => {{}});
+        console.log(JSON.stringify(svg.children.filter((el) => el.tag === "text").map((el) => el.text)));
+        """
+    )
+    assert out == [f"No INSTI cell reaches {_FLOOR} sequences."]
+
+
+@needs_node
+def test_bindings_that_cite_cells_resolve_and_a_missing_or_sparse_cell_throws() -> None:
+    outcome = _run_page_functions(
+        f"""
+        const summary = {json.dumps(SUMMARY)};
+        const out = {{}};
+        const attempt = (path, s) => {{
+          try {{ return page.boundText(page.resolveBinding(path, s, page.deriveFigures(s)), undefined); }}
+          catch (error) {{ return "threw"; }}
+        }};
+        out.pct = attempt("cell.NNRTI.KE.2010.pct", summary);
+        out.n = attempt("cell.NNRTI.KE.2010.n", summary);
+        out.fold = attempt("ratio.NNRTI.UG.2016.KE.2010", summary);
+        out.missing = attempt("cell.NNRTI.KE.1900.pct", summary);
+        const sparse = structuredClone(summary);
+        const target = sparse.views.resistance_landscape.find(
+          (r) => r.drug_class === "NNRTI" && r.country === "KE" && r.collection_year === 2010);
+        target.n_sequences = 2; target.frac_resistant = null;
+        out.sparse_pct = attempt("cell.NNRTI.KE.2010.pct", sparse);
+        out.sparse_n = attempt("cell.NNRTI.KE.2010.n", sparse);
+        out.sparse_fold = attempt("ratio.NNRTI.UG.2016.KE.2010", sparse);
+        console.log(JSON.stringify(out));
+        """
+    )
+    low = _landscape_cell("NNRTI", "KE", "2010")
+    assert outcome["pct"] == f"{low['frac_resistant'] * 100:.1f}%"
+    assert outcome["n"] == f"{low['n_sequences']:,}"
+    assert outcome["missing"] == "threw"
+    assert outcome["sparse_pct"] == "threw" and outcome["sparse_fold"] == "threw"
+    assert outcome["sparse_n"] == "2"
+
+
+@needs_node
+def test_the_digest_notice_shows_when_either_inputs_file_disagrees_with_its_pointer() -> None:
+    outcome = _run_page_functions(
+        """
+        const agree = { input_dvc_md5: "a", input_file_md5: "a", curated_dvc_md5: "c", curated_file_md5: "c" };
+        const out = {
+          agree: page.digestsDiffer(agree),
+          sierra: page.digestsDiffer({ ...agree, input_file_md5: "x" }),
+          curated: page.digestsDiffer({ ...agree, curated_file_md5: "x" }),
+        };
+        console.log(JSON.stringify(out));
+        """
+    )
+    assert outcome == {"agree": False, "sierra": True, "curated": True}

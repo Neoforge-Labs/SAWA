@@ -19,6 +19,10 @@
   --link: #005a8e;
   --banner-bg: #fff3d6;
   --banner-border: #b26b00;
+  --nodata: #cdd1d6;
+  --nodata-mark: #6b7580;
+  --cell-text-dark: #14181d;
+  --cell-text-light: #ffffff;
 
   --class-PI: var(--okabe-blue);
   --class-NRTI: var(--okabe-orange);
@@ -51,6 +55,8 @@
     --link: #7fc4ee;
     --banner-bg: #3a2c0b;
     --banner-border: #e6a23c;
+    --nodata: #424a54;
+    --nodata-mark: #aab3bd;
     --level-high: #ffffff;
   }
 }
@@ -80,9 +86,10 @@ main { padding-block: 32px 8px; }
 a { color: var(--link); }
 code { font-size: 0.9em; }
 
-h1, h2 { line-height: 1.25; margin: 0 0 12px; }
+h1, h2, h3 { line-height: 1.25; margin: 0 0 12px; }
 h1 { font-size: 1.65rem; letter-spacing: -0.01em; }
 h2 { font-size: 1.2rem; }
+h3 { font-size: 1rem; margin-bottom: 6px; }
 p { margin: 0 0 14px; }
 
 section { padding-top: 28px; margin-top: 28px; border-top: 1px solid var(--rule); }
@@ -139,6 +146,18 @@ figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
 .lvl-intermediate { fill: var(--level-intermediate); }
 .lvl-high { fill: var(--level-high); }
 
+.heatmap { margin-top: 20px; }
+.hm-fill { stroke: var(--rule); stroke-width: 0.5; }
+.hm-nodata { fill: var(--nodata); }
+.hm-slash { stroke: var(--nodata-mark); stroke-width: 1.5; }
+.hm-empty { fill: none; stroke: var(--rule); stroke-width: 0.5; }
+.chart .hm-n { font-size: 9px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.chart .hm-n-dark { fill: var(--cell-text-dark); }
+.chart .hm-n-light { fill: var(--cell-text-light); }
+.chart .hm-n-nodata { fill: var(--text); }
+.hm-cell { cursor: pointer; }
+.readout { font-size: 0.85rem; color: var(--muted); margin: 6px 0 0; min-height: 1.3em; }
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -154,6 +173,13 @@ figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
 .swatch-PR { background: var(--panel-PR); }
 .swatch-RT_NRTI { background: var(--panel-RT_NRTI); }
 .swatch-RT_NNRTI { background: var(--panel-RT_NNRTI); }
+.swatch-nodata {
+  background:
+    linear-gradient(to top right, transparent 44%, var(--nodata-mark) 44%, var(--nodata-mark) 56%, transparent 56%),
+    var(--nodata);
+}
+.swatch-empty { background: none; box-shadow: inset 0 0 0 1px var(--rule); }
+.legend svg { display: block; }
 .swatch-susceptible { background: var(--level-susceptible); box-shadow: inset 0 0 0 1px var(--rule); }
 .swatch-potential_low { background: var(--level-potential_low); }
 .swatch-low { background: var(--level-low); }
