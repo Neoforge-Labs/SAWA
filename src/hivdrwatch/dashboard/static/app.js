@@ -99,6 +99,11 @@ function deriveFigures(summary) {
   };
 }
 
+// Bound values that may be null in a valid summary (Sierra can omit the publish date).
+// Every other bound value is required, and null there is a malformed file, not a blank.
+const NULLABLE_BINDINGS = Object.freeze(["meta.algorithm_publish_date"]);
+const MISSING = "\u2014";
+
 function resolveBinding(path, summary, derived) {
   const [scope, key] = path.split(".");
   let value;
@@ -106,18 +111,25 @@ function resolveBinding(path, summary, derived) {
   else if (scope === "derived") value = derived[key];
   else if (scope === "gene") value = summary.views.gene_coverage.find((row) => row.gene === key)?.n_sequences;
   if (value === undefined) throw new Error(`summary.json has no value for ${path}`);
+  if (value === null && !NULLABLE_BINDINGS.includes(path)) {
+    throw new Error(`summary.json has null for ${path}, which must always have a value`);
+  }
   return value;
+}
+
+// Never `String(null)`: a missing value reads as a dash, not as the word "null".
+function boundText(value, trunc) {
+  if (value === null) return MISSING;
+  if (typeof value === "number") return fmtInt(value);
+  return trunc ? value.slice(0, Number(trunc)) : value;
 }
 
 function applyBindings(summary) {
   const derived = deriveFigures(summary);
   for (const el of document.querySelectorAll("[data-bind]")) {
-    let value = resolveBinding(el.dataset.bind, summary, derived);
-    const raw = value;
-    if (typeof value === "number") value = fmtInt(value);
-    else if (el.dataset.trunc) value = value.slice(0, Number(el.dataset.trunc));
-    el.textContent = value;
-    if (el.dataset.href) el.setAttribute("href", el.dataset.href.replace("{value}", raw));
+    const raw = resolveBinding(el.dataset.bind, summary, derived);
+    el.textContent = boundText(raw, el.dataset.trunc);
+    if (el.dataset.href && raw !== null) el.setAttribute("href", el.dataset.href.replace("{value}", raw));
   }
 }
 
