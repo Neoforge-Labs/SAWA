@@ -1,0 +1,1672 @@
+{
+  "meta": {
+    "algorithm_publish_date": "2026-04-26",
+    "algorithm_version": "HIVDB_10.2",
+    "called_at": "2026-08-17",
+    "dr_schema_version": "0.1.0",
+    "git_sha": "202983064f6444148d822b2a796b4cab7006f9b4",
+    "input_dvc_md5": "e51cbb39d5ebf3bdcaff05d4df52b515",
+    "n_accessions_ingested": 36510,
+    "n_accessions_scored": 35777,
+    "n_calls": 728087,
+    "n_rows_raw": 848590,
+    "schema_version": "1.0.0",
+    "sdrm_list_version": "SDRM-2019"
+  },
+  "views": {
+    "gene_coverage": [
+      {
+        "gene": "IN",
+        "n_sequences": 9365
+      },
+      {
+        "gene": "PR",
+        "n_sequences": 31116
+      },
+      {
+        "gene": "RT",
+        "n_sequences": 30881
+      }
+    ],
+    "levels_by_drug": [
+      {
+        "drug": "ATV/r",
+        "drug_class": "PI",
+        "frac": 0.9701,
+        "level": "susceptible",
+        "n_sequences": 30187
+      },
+      {
+        "drug": "ATV/r",
+        "drug_class": "PI",
+        "frac": 0.0081,
+        "level": "potential_low",
+        "n_sequences": 251
+      },
+      {
+        "drug": "ATV/r",
+        "drug_class": "PI",
+        "frac": 0.0057,
+        "level": "low",
+        "n_sequences": 178
+      },
+      {
+        "drug": "ATV/r",
+        "drug_class": "PI",
+        "frac": 0.0044,
+        "level": "intermediate",
+        "n_sequences": 138
+      },
+      {
+        "drug": "ATV/r",
+        "drug_class": "PI",
+        "frac": 0.0116,
+        "level": "high",
+        "n_sequences": 362
+      },
+      {
+        "drug": "DRV/r",
+        "drug_class": "PI",
+        "frac": 0.9881,
+        "level": "susceptible",
+        "n_sequences": 30745
+      },
+      {
+        "drug": "DRV/r",
+        "drug_class": "PI",
+        "frac": 0.0017,
+        "level": "potential_low",
+        "n_sequences": 54
+      },
+      {
+        "drug": "DRV/r",
+        "drug_class": "PI",
+        "frac": 0.0062,
+        "level": "low",
+        "n_sequences": 193
+      },
+      {
+        "drug": "DRV/r",
+        "drug_class": "PI",
+        "frac": 0.0037,
+        "level": "intermediate",
+        "n_sequences": 114
+      },
+      {
+        "drug": "DRV/r",
+        "drug_class": "PI",
+        "frac": 0.0003,
+        "level": "high",
+        "n_sequences": 10
+      },
+      {
+        "drug": "FPV/r",
+        "drug_class": "PI",
+        "frac": 0.9589,
+        "level": "susceptible",
+        "n_sequences": 29838
+      },
+      {
+        "drug": "FPV/r",
+        "drug_class": "PI",
+        "frac": 0.0186,
+        "level": "potential_low",
+        "n_sequences": 579
+      },
+      {
+        "drug": "FPV/r",
+        "drug_class": "PI",
+        "frac": 0.0057,
+        "level": "low",
+        "n_sequences": 176
+      },
+      {
+        "drug": "FPV/r",
+        "drug_class": "PI",
+        "frac": 0.0041,
+        "level": "intermediate",
+        "n_sequences": 129
+      },
+      {
+        "drug": "FPV/r",
+        "drug_class": "PI",
+        "frac": 0.0127,
+        "level": "high",
+        "n_sequences": 394
+      },
+      {
+        "drug": "IDV/r",
+        "drug_class": "PI",
+        "frac": 0.9687,
+        "level": "susceptible",
+        "n_sequences": 30142
+      },
+      {
+        "drug": "IDV/r",
+        "drug_class": "PI",
+        "frac": 0.0078,
+        "level": "potential_low",
+        "n_sequences": 244
+      },
+      {
+        "drug": "IDV/r",
+        "drug_class": "PI",
+        "frac": 0.0058,
+        "level": "low",
+        "n_sequences": 181
+      },
+      {
+        "drug": "IDV/r",
+        "drug_class": "PI",
+        "frac": 0.0054,
+        "level": "intermediate",
+        "n_sequences": 169
+      },
+      {
+        "drug": "IDV/r",
+        "drug_class": "PI",
+        "frac": 0.0122,
+        "level": "high",
+        "n_sequences": 380
+      },
+      {
+        "drug": "LPV/r",
+        "drug_class": "PI",
+        "frac": 0.974,
+        "level": "susceptible",
+        "n_sequences": 30306
+      },
+      {
+        "drug": "LPV/r",
+        "drug_class": "PI",
+        "frac": 0.006,
+        "level": "potential_low",
+        "n_sequences": 186
+      },
+      {
+        "drug": "LPV/r",
+        "drug_class": "PI",
+        "frac": 0.0036,
+        "level": "low",
+        "n_sequences": 111
+      },
+      {
+        "drug": "LPV/r",
+        "drug_class": "PI",
+        "frac": 0.0052,
+        "level": "intermediate",
+        "n_sequences": 163
+      },
+      {
+        "drug": "LPV/r",
+        "drug_class": "PI",
+        "frac": 0.0112,
+        "level": "high",
+        "n_sequences": 350
+      },
+      {
+        "drug": "NFV",
+        "drug_class": "PI",
+        "frac": 0.9514,
+        "level": "susceptible",
+        "n_sequences": 29604
+      },
+      {
+        "drug": "NFV",
+        "drug_class": "PI",
+        "frac": 0.0146,
+        "level": "potential_low",
+        "n_sequences": 453
+      },
+      {
+        "drug": "NFV",
+        "drug_class": "PI",
+        "frac": 0.01,
+        "level": "low",
+        "n_sequences": 310
+      },
+      {
+        "drug": "NFV",
+        "drug_class": "PI",
+        "frac": 0.006,
+        "level": "intermediate",
+        "n_sequences": 186
+      },
+      {
+        "drug": "NFV",
+        "drug_class": "PI",
+        "frac": 0.0181,
+        "level": "high",
+        "n_sequences": 563
+      },
+      {
+        "drug": "SQV/r",
+        "drug_class": "PI",
+        "frac": 0.9711,
+        "level": "susceptible",
+        "n_sequences": 30216
+      },
+      {
+        "drug": "SQV/r",
+        "drug_class": "PI",
+        "frac": 0.0062,
+        "level": "potential_low",
+        "n_sequences": 194
+      },
+      {
+        "drug": "SQV/r",
+        "drug_class": "PI",
+        "frac": 0.0072,
+        "level": "low",
+        "n_sequences": 225
+      },
+      {
+        "drug": "SQV/r",
+        "drug_class": "PI",
+        "frac": 0.0058,
+        "level": "intermediate",
+        "n_sequences": 181
+      },
+      {
+        "drug": "SQV/r",
+        "drug_class": "PI",
+        "frac": 0.0096,
+        "level": "high",
+        "n_sequences": 300
+      },
+      {
+        "drug": "TPV/r",
+        "drug_class": "PI",
+        "frac": 0.9676,
+        "level": "susceptible",
+        "n_sequences": 30108
+      },
+      {
+        "drug": "TPV/r",
+        "drug_class": "PI",
+        "frac": 0.0125,
+        "level": "potential_low",
+        "n_sequences": 390
+      },
+      {
+        "drug": "TPV/r",
+        "drug_class": "PI",
+        "frac": 0.009,
+        "level": "low",
+        "n_sequences": 279
+      },
+      {
+        "drug": "TPV/r",
+        "drug_class": "PI",
+        "frac": 0.0085,
+        "level": "intermediate",
+        "n_sequences": 265
+      },
+      {
+        "drug": "TPV/r",
+        "drug_class": "PI",
+        "frac": 0.0024,
+        "level": "high",
+        "n_sequences": 74
+      },
+      {
+        "drug": "3TC",
+        "drug_class": "NRTI",
+        "frac": 0.829,
+        "level": "susceptible",
+        "n_sequences": 25600
+      },
+      {
+        "drug": "3TC",
+        "drug_class": "NRTI",
+        "frac": 0.0023,
+        "level": "potential_low",
+        "n_sequences": 71
+      },
+      {
+        "drug": "3TC",
+        "drug_class": "NRTI",
+        "frac": 0.0062,
+        "level": "low",
+        "n_sequences": 190
+      },
+      {
+        "drug": "3TC",
+        "drug_class": "NRTI",
+        "frac": 0.0004,
+        "level": "intermediate",
+        "n_sequences": 11
+      },
+      {
+        "drug": "3TC",
+        "drug_class": "NRTI",
+        "frac": 0.1622,
+        "level": "high",
+        "n_sequences": 5009
+      },
+      {
+        "drug": "ABC",
+        "drug_class": "NRTI",
+        "frac": 0.8259,
+        "level": "susceptible",
+        "n_sequences": 25505
+      },
+      {
+        "drug": "ABC",
+        "drug_class": "NRTI",
+        "frac": 0.0017,
+        "level": "potential_low",
+        "n_sequences": 51
+      },
+      {
+        "drug": "ABC",
+        "drug_class": "NRTI",
+        "frac": 0.0817,
+        "level": "low",
+        "n_sequences": 2523
+      },
+      {
+        "drug": "ABC",
+        "drug_class": "NRTI",
+        "frac": 0.0347,
+        "level": "intermediate",
+        "n_sequences": 1072
+      },
+      {
+        "drug": "ABC",
+        "drug_class": "NRTI",
+        "frac": 0.056,
+        "level": "high",
+        "n_sequences": 1730
+      },
+      {
+        "drug": "AZT",
+        "drug_class": "NRTI",
+        "frac": 0.9137,
+        "level": "susceptible",
+        "n_sequences": 28215
+      },
+      {
+        "drug": "AZT",
+        "drug_class": "NRTI",
+        "frac": 0.0066,
+        "level": "potential_low",
+        "n_sequences": 204
+      },
+      {
+        "drug": "AZT",
+        "drug_class": "NRTI",
+        "frac": 0.011,
+        "level": "low",
+        "n_sequences": 339
+      },
+      {
+        "drug": "AZT",
+        "drug_class": "NRTI",
+        "frac": 0.0169,
+        "level": "intermediate",
+        "n_sequences": 523
+      },
+      {
+        "drug": "AZT",
+        "drug_class": "NRTI",
+        "frac": 0.0518,
+        "level": "high",
+        "n_sequences": 1600
+      },
+      {
+        "drug": "D4T",
+        "drug_class": "NRTI",
+        "frac": 0.8819,
+        "level": "susceptible",
+        "n_sequences": 27234
+      },
+      {
+        "drug": "D4T",
+        "drug_class": "NRTI",
+        "frac": 0.005,
+        "level": "potential_low",
+        "n_sequences": 155
+      },
+      {
+        "drug": "D4T",
+        "drug_class": "NRTI",
+        "frac": 0.0193,
+        "level": "low",
+        "n_sequences": 595
+      },
+      {
+        "drug": "D4T",
+        "drug_class": "NRTI",
+        "frac": 0.0467,
+        "level": "intermediate",
+        "n_sequences": 1443
+      },
+      {
+        "drug": "D4T",
+        "drug_class": "NRTI",
+        "frac": 0.0471,
+        "level": "high",
+        "n_sequences": 1454
+      },
+      {
+        "drug": "DDI",
+        "drug_class": "NRTI",
+        "frac": 0.8165,
+        "level": "susceptible",
+        "n_sequences": 25214
+      },
+      {
+        "drug": "DDI",
+        "drug_class": "NRTI",
+        "frac": 0.0626,
+        "level": "potential_low",
+        "n_sequences": 1932
+      },
+      {
+        "drug": "DDI",
+        "drug_class": "NRTI",
+        "frac": 0.0289,
+        "level": "low",
+        "n_sequences": 891
+      },
+      {
+        "drug": "DDI",
+        "drug_class": "NRTI",
+        "frac": 0.0283,
+        "level": "intermediate",
+        "n_sequences": 875
+      },
+      {
+        "drug": "DDI",
+        "drug_class": "NRTI",
+        "frac": 0.0638,
+        "level": "high",
+        "n_sequences": 1969
+      },
+      {
+        "drug": "FTC",
+        "drug_class": "NRTI",
+        "frac": 0.829,
+        "level": "susceptible",
+        "n_sequences": 25600
+      },
+      {
+        "drug": "FTC",
+        "drug_class": "NRTI",
+        "frac": 0.0023,
+        "level": "potential_low",
+        "n_sequences": 71
+      },
+      {
+        "drug": "FTC",
+        "drug_class": "NRTI",
+        "frac": 0.0062,
+        "level": "low",
+        "n_sequences": 190
+      },
+      {
+        "drug": "FTC",
+        "drug_class": "NRTI",
+        "frac": 0.0004,
+        "level": "intermediate",
+        "n_sequences": 11
+      },
+      {
+        "drug": "FTC",
+        "drug_class": "NRTI",
+        "frac": 0.1622,
+        "level": "high",
+        "n_sequences": 5009
+      },
+      {
+        "drug": "ISL",
+        "drug_class": "NRTI",
+        "frac": 0.8351,
+        "level": "susceptible",
+        "n_sequences": 25789
+      },
+      {
+        "drug": "ISL",
+        "drug_class": "NRTI",
+        "frac": 0.0018,
+        "level": "potential_low",
+        "n_sequences": 56
+      },
+      {
+        "drug": "ISL",
+        "drug_class": "NRTI",
+        "frac": 0.0294,
+        "level": "low",
+        "n_sequences": 907
+      },
+      {
+        "drug": "ISL",
+        "drug_class": "NRTI",
+        "frac": 0.1099,
+        "level": "intermediate",
+        "n_sequences": 3394
+      },
+      {
+        "drug": "ISL",
+        "drug_class": "NRTI",
+        "frac": 0.0238,
+        "level": "high",
+        "n_sequences": 735
+      },
+      {
+        "drug": "TDF",
+        "drug_class": "NRTI",
+        "frac": 0.9124,
+        "level": "susceptible",
+        "n_sequences": 28177
+      },
+      {
+        "drug": "TDF",
+        "drug_class": "NRTI",
+        "frac": 0.0118,
+        "level": "potential_low",
+        "n_sequences": 365
+      },
+      {
+        "drug": "TDF",
+        "drug_class": "NRTI",
+        "frac": 0.0275,
+        "level": "low",
+        "n_sequences": 850
+      },
+      {
+        "drug": "TDF",
+        "drug_class": "NRTI",
+        "frac": 0.0351,
+        "level": "intermediate",
+        "n_sequences": 1084
+      },
+      {
+        "drug": "TDF",
+        "drug_class": "NRTI",
+        "frac": 0.0131,
+        "level": "high",
+        "n_sequences": 405
+      },
+      {
+        "drug": "DOR",
+        "drug_class": "NNRTI",
+        "frac": 0.8735,
+        "level": "susceptible",
+        "n_sequences": 26976
+      },
+      {
+        "drug": "DOR",
+        "drug_class": "NNRTI",
+        "frac": 0.0232,
+        "level": "potential_low",
+        "n_sequences": 717
+      },
+      {
+        "drug": "DOR",
+        "drug_class": "NNRTI",
+        "frac": 0.0255,
+        "level": "low",
+        "n_sequences": 786
+      },
+      {
+        "drug": "DOR",
+        "drug_class": "NNRTI",
+        "frac": 0.0417,
+        "level": "intermediate",
+        "n_sequences": 1288
+      },
+      {
+        "drug": "DOR",
+        "drug_class": "NNRTI",
+        "frac": 0.0361,
+        "level": "high",
+        "n_sequences": 1114
+      },
+      {
+        "drug": "DPV",
+        "drug_class": "NNRTI",
+        "frac": 0.7769,
+        "level": "susceptible",
+        "n_sequences": 23990
+      },
+      {
+        "drug": "DPV",
+        "drug_class": "NNRTI",
+        "frac": 0.0207,
+        "level": "potential_low",
+        "n_sequences": 640
+      },
+      {
+        "drug": "DPV",
+        "drug_class": "NNRTI",
+        "frac": 0.0685,
+        "level": "low",
+        "n_sequences": 2116
+      },
+      {
+        "drug": "DPV",
+        "drug_class": "NNRTI",
+        "frac": 0.0309,
+        "level": "intermediate",
+        "n_sequences": 955
+      },
+      {
+        "drug": "DPV",
+        "drug_class": "NNRTI",
+        "frac": 0.103,
+        "level": "high",
+        "n_sequences": 3180
+      },
+      {
+        "drug": "EFV",
+        "drug_class": "NNRTI",
+        "frac": 0.7452,
+        "level": "susceptible",
+        "n_sequences": 23012
+      },
+      {
+        "drug": "EFV",
+        "drug_class": "NNRTI",
+        "frac": 0.0221,
+        "level": "potential_low",
+        "n_sequences": 683
+      },
+      {
+        "drug": "EFV",
+        "drug_class": "NNRTI",
+        "frac": 0.0084,
+        "level": "low",
+        "n_sequences": 260
+      },
+      {
+        "drug": "EFV",
+        "drug_class": "NNRTI",
+        "frac": 0.0458,
+        "level": "intermediate",
+        "n_sequences": 1415
+      },
+      {
+        "drug": "EFV",
+        "drug_class": "NNRTI",
+        "frac": 0.1785,
+        "level": "high",
+        "n_sequences": 5511
+      },
+      {
+        "drug": "ETR",
+        "drug_class": "NNRTI",
+        "frac": 0.7956,
+        "level": "susceptible",
+        "n_sequences": 24570
+      },
+      {
+        "drug": "ETR",
+        "drug_class": "NNRTI",
+        "frac": 0.0906,
+        "level": "potential_low",
+        "n_sequences": 2799
+      },
+      {
+        "drug": "ETR",
+        "drug_class": "NNRTI",
+        "frac": 0.0269,
+        "level": "low",
+        "n_sequences": 832
+      },
+      {
+        "drug": "ETR",
+        "drug_class": "NNRTI",
+        "frac": 0.0696,
+        "level": "intermediate",
+        "n_sequences": 2150
+      },
+      {
+        "drug": "ETR",
+        "drug_class": "NNRTI",
+        "frac": 0.0172,
+        "level": "high",
+        "n_sequences": 530
+      },
+      {
+        "drug": "NVP",
+        "drug_class": "NNRTI",
+        "frac": 0.7445,
+        "level": "susceptible",
+        "n_sequences": 22991
+      },
+      {
+        "drug": "NVP",
+        "drug_class": "NNRTI",
+        "frac": 0.0128,
+        "level": "potential_low",
+        "n_sequences": 395
+      },
+      {
+        "drug": "NVP",
+        "drug_class": "NNRTI",
+        "frac": 0.0044,
+        "level": "low",
+        "n_sequences": 137
+      },
+      {
+        "drug": "NVP",
+        "drug_class": "NNRTI",
+        "frac": 0.0153,
+        "level": "intermediate",
+        "n_sequences": 472
+      },
+      {
+        "drug": "NVP",
+        "drug_class": "NNRTI",
+        "frac": 0.223,
+        "level": "high",
+        "n_sequences": 6886
+      },
+      {
+        "drug": "RPV",
+        "drug_class": "NNRTI",
+        "frac": 0.79,
+        "level": "susceptible",
+        "n_sequences": 24397
+      },
+      {
+        "drug": "RPV",
+        "drug_class": "NNRTI",
+        "frac": 0.0483,
+        "level": "potential_low",
+        "n_sequences": 1491
+      },
+      {
+        "drug": "RPV",
+        "drug_class": "NNRTI",
+        "frac": 0.04,
+        "level": "low",
+        "n_sequences": 1234
+      },
+      {
+        "drug": "RPV",
+        "drug_class": "NNRTI",
+        "frac": 0.0421,
+        "level": "intermediate",
+        "n_sequences": 1300
+      },
+      {
+        "drug": "RPV",
+        "drug_class": "NNRTI",
+        "frac": 0.0796,
+        "level": "high",
+        "n_sequences": 2459
+      },
+      {
+        "drug": "BIC",
+        "drug_class": "INSTI",
+        "frac": 0.971,
+        "level": "susceptible",
+        "n_sequences": 9093
+      },
+      {
+        "drug": "BIC",
+        "drug_class": "INSTI",
+        "frac": 0.01,
+        "level": "potential_low",
+        "n_sequences": 94
+      },
+      {
+        "drug": "BIC",
+        "drug_class": "INSTI",
+        "frac": 0.0021,
+        "level": "low",
+        "n_sequences": 20
+      },
+      {
+        "drug": "BIC",
+        "drug_class": "INSTI",
+        "frac": 0.0062,
+        "level": "intermediate",
+        "n_sequences": 58
+      },
+      {
+        "drug": "BIC",
+        "drug_class": "INSTI",
+        "frac": 0.0107,
+        "level": "high",
+        "n_sequences": 100
+      },
+      {
+        "drug": "CAB",
+        "drug_class": "INSTI",
+        "frac": 0.9164,
+        "level": "susceptible",
+        "n_sequences": 8582
+      },
+      {
+        "drug": "CAB",
+        "drug_class": "INSTI",
+        "frac": 0.0545,
+        "level": "potential_low",
+        "n_sequences": 510
+      },
+      {
+        "drug": "CAB",
+        "drug_class": "INSTI",
+        "frac": 0.0052,
+        "level": "low",
+        "n_sequences": 49
+      },
+      {
+        "drug": "CAB",
+        "drug_class": "INSTI",
+        "frac": 0.0015,
+        "level": "intermediate",
+        "n_sequences": 14
+      },
+      {
+        "drug": "CAB",
+        "drug_class": "INSTI",
+        "frac": 0.0224,
+        "level": "high",
+        "n_sequences": 210
+      },
+      {
+        "drug": "DTG",
+        "drug_class": "INSTI",
+        "frac": 0.971,
+        "level": "susceptible",
+        "n_sequences": 9093
+      },
+      {
+        "drug": "DTG",
+        "drug_class": "INSTI",
+        "frac": 0.01,
+        "level": "potential_low",
+        "n_sequences": 94
+      },
+      {
+        "drug": "DTG",
+        "drug_class": "INSTI",
+        "frac": 0.0021,
+        "level": "low",
+        "n_sequences": 20
+      },
+      {
+        "drug": "DTG",
+        "drug_class": "INSTI",
+        "frac": 0.0053,
+        "level": "intermediate",
+        "n_sequences": 50
+      },
+      {
+        "drug": "DTG",
+        "drug_class": "INSTI",
+        "frac": 0.0115,
+        "level": "high",
+        "n_sequences": 108
+      },
+      {
+        "drug": "EVG",
+        "drug_class": "INSTI",
+        "frac": 0.8977,
+        "level": "susceptible",
+        "n_sequences": 8407
+      },
+      {
+        "drug": "EVG",
+        "drug_class": "INSTI",
+        "frac": 0.0616,
+        "level": "potential_low",
+        "n_sequences": 577
+      },
+      {
+        "drug": "EVG",
+        "drug_class": "INSTI",
+        "frac": 0.0094,
+        "level": "low",
+        "n_sequences": 88
+      },
+      {
+        "drug": "EVG",
+        "drug_class": "INSTI",
+        "frac": 0.0144,
+        "level": "intermediate",
+        "n_sequences": 135
+      },
+      {
+        "drug": "EVG",
+        "drug_class": "INSTI",
+        "frac": 0.0169,
+        "level": "high",
+        "n_sequences": 158
+      },
+      {
+        "drug": "RAL",
+        "drug_class": "INSTI",
+        "frac": 0.8978,
+        "level": "susceptible",
+        "n_sequences": 8408
+      },
+      {
+        "drug": "RAL",
+        "drug_class": "INSTI",
+        "frac": 0.0614,
+        "level": "potential_low",
+        "n_sequences": 575
+      },
+      {
+        "drug": "RAL",
+        "drug_class": "INSTI",
+        "frac": 0.0164,
+        "level": "low",
+        "n_sequences": 154
+      },
+      {
+        "drug": "RAL",
+        "drug_class": "INSTI",
+        "frac": 0.008,
+        "level": "intermediate",
+        "n_sequences": 75
+      },
+      {
+        "drug": "RAL",
+        "drug_class": "INSTI",
+        "frac": 0.0163,
+        "level": "high",
+        "n_sequences": 153
+      }
+    ],
+    "prevalence_by_drug_class": [
+      {
+        "drug_class": "PI",
+        "frac_resistant": 0.0257,
+        "n_resistant": 799,
+        "n_sequences": 31116
+      },
+      {
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1753,
+        "n_resistant": 5413,
+        "n_sequences": 30881
+      },
+      {
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2396,
+        "n_resistant": 7400,
+        "n_sequences": 30881
+      },
+      {
+        "drug_class": "INSTI",
+        "frac_resistant": 0.032,
+        "n_resistant": 300,
+        "n_sequences": 9365
+      }
+    ],
+    "sdrm_frequency": [
+      {
+        "frac": 0.0015,
+        "mutation": "D30N",
+        "n_panel_denominator": 31116,
+        "n_sequences": 46,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0023,
+        "mutation": "F53L",
+        "n_panel_denominator": 31116,
+        "n_sequences": 73,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "F53Y",
+        "n_panel_denominator": 31116,
+        "n_sequences": 8,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0,
+        "mutation": "G48M",
+        "n_panel_denominator": 31116,
+        "n_sequences": 1,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "G48V",
+        "n_panel_denominator": 31116,
+        "n_sequences": 9,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0001,
+        "mutation": "G73A",
+        "n_panel_denominator": 31116,
+        "n_sequences": 3,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "G73C",
+        "n_panel_denominator": 31116,
+        "n_sequences": 8,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0032,
+        "mutation": "G73S",
+        "n_panel_denominator": 31116,
+        "n_sequences": 100,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0001,
+        "mutation": "G73T",
+        "n_panel_denominator": 31116,
+        "n_sequences": 4,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0023,
+        "mutation": "I47A",
+        "n_panel_denominator": 31116,
+        "n_sequences": 71,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.001,
+        "mutation": "I47V",
+        "n_panel_denominator": 31116,
+        "n_sequences": 30,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0018,
+        "mutation": "I50L",
+        "n_panel_denominator": 31116,
+        "n_sequences": 55,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0009,
+        "mutation": "I50V",
+        "n_panel_denominator": 31116,
+        "n_sequences": 27,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0001,
+        "mutation": "I54A",
+        "n_panel_denominator": 31116,
+        "n_sequences": 4,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0009,
+        "mutation": "I54L",
+        "n_panel_denominator": 31116,
+        "n_sequences": 28,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0002,
+        "mutation": "I54M",
+        "n_panel_denominator": 31116,
+        "n_sequences": 7,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0002,
+        "mutation": "I54S",
+        "n_panel_denominator": 31116,
+        "n_sequences": 7,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0002,
+        "mutation": "I54T",
+        "n_panel_denominator": 31116,
+        "n_sequences": 5,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0087,
+        "mutation": "I54V",
+        "n_panel_denominator": 31116,
+        "n_sequences": 271,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0037,
+        "mutation": "I84V",
+        "n_panel_denominator": 31116,
+        "n_sequences": 115,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0038,
+        "mutation": "I85V",
+        "n_panel_denominator": 31116,
+        "n_sequences": 117,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0018,
+        "mutation": "L23I",
+        "n_panel_denominator": 31116,
+        "n_sequences": 56,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0017,
+        "mutation": "L24I",
+        "n_panel_denominator": 31116,
+        "n_sequences": 52,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.014,
+        "mutation": "L33F",
+        "n_panel_denominator": 31116,
+        "n_sequences": 435,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0029,
+        "mutation": "L76V",
+        "n_panel_denominator": 31116,
+        "n_sequences": 89,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0031,
+        "mutation": "L90M",
+        "n_panel_denominator": 31116,
+        "n_sequences": 95,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0124,
+        "mutation": "M46I",
+        "n_panel_denominator": 31116,
+        "n_sequences": 385,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0034,
+        "mutation": "M46L",
+        "n_panel_denominator": 31116,
+        "n_sequences": 105,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0008,
+        "mutation": "N83D",
+        "n_panel_denominator": 31116,
+        "n_sequences": 25,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0008,
+        "mutation": "N88D",
+        "n_panel_denominator": 31116,
+        "n_sequences": 24,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.001,
+        "mutation": "N88S",
+        "n_panel_denominator": 31116,
+        "n_sequences": 32,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0022,
+        "mutation": "V32I",
+        "n_panel_denominator": 31116,
+        "n_sequences": 68,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0085,
+        "mutation": "V82A",
+        "n_panel_denominator": 31116,
+        "n_sequences": 265,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "V82C",
+        "n_panel_denominator": 31116,
+        "n_sequences": 8,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0015,
+        "mutation": "V82F",
+        "n_panel_denominator": 31116,
+        "n_sequences": 47,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0004,
+        "mutation": "V82L",
+        "n_panel_denominator": 31116,
+        "n_sequences": 12,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0005,
+        "mutation": "V82M",
+        "n_panel_denominator": 31116,
+        "n_sequences": 15,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "V82S",
+        "n_panel_denominator": 31116,
+        "n_sequences": 10,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "V82T",
+        "n_panel_denominator": 31116,
+        "n_sequences": 9,
+        "panel": "PR"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "D67E",
+        "n_panel_denominator": 30881,
+        "n_sequences": 9,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0053,
+        "mutation": "D67G",
+        "n_panel_denominator": 30881,
+        "n_sequences": 165,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0358,
+        "mutation": "D67N",
+        "n_panel_denominator": 30881,
+        "n_sequences": 1107,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0011,
+        "mutation": "F116Y",
+        "n_panel_denominator": 30881,
+        "n_sequences": 34,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.002,
+        "mutation": "F77L",
+        "n_panel_denominator": 30881,
+        "n_sequences": 63,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0149,
+        "mutation": "K219E",
+        "n_panel_denominator": 30881,
+        "n_sequences": 460,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0022,
+        "mutation": "K219N",
+        "n_panel_denominator": 30881,
+        "n_sequences": 67,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0187,
+        "mutation": "K219Q",
+        "n_panel_denominator": 30881,
+        "n_sequences": 579,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0028,
+        "mutation": "K219R",
+        "n_panel_denominator": 30881,
+        "n_sequences": 86,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0004,
+        "mutation": "K65E",
+        "n_panel_denominator": 30881,
+        "n_sequences": 13,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "K65N",
+        "n_panel_denominator": 30881,
+        "n_sequences": 8,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0282,
+        "mutation": "K65R",
+        "n_panel_denominator": 30881,
+        "n_sequences": 871,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0058,
+        "mutation": "K70E",
+        "n_panel_denominator": 30881,
+        "n_sequences": 179,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0006,
+        "mutation": "K70G",
+        "n_panel_denominator": 30881,
+        "n_sequences": 20,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0331,
+        "mutation": "K70R",
+        "n_panel_denominator": 30881,
+        "n_sequences": 1023,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0171,
+        "mutation": "L210W",
+        "n_panel_denominator": 30881,
+        "n_sequences": 528,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0081,
+        "mutation": "L74I",
+        "n_panel_denominator": 30881,
+        "n_sequences": 249,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0058,
+        "mutation": "L74V",
+        "n_panel_denominator": 30881,
+        "n_sequences": 179,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.011,
+        "mutation": "M184I",
+        "n_panel_denominator": 30881,
+        "n_sequences": 339,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.1511,
+        "mutation": "M184V",
+        "n_panel_denominator": 30881,
+        "n_sequences": 4665,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0323,
+        "mutation": "M41L",
+        "n_panel_denominator": 30881,
+        "n_sequences": 997,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0012,
+        "mutation": "Q151M",
+        "n_panel_denominator": 30881,
+        "n_sequences": 37,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0007,
+        "mutation": "T215C",
+        "n_panel_denominator": 30881,
+        "n_sequences": 22,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0008,
+        "mutation": "T215D",
+        "n_panel_denominator": 30881,
+        "n_sequences": 25,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0001,
+        "mutation": "T215E",
+        "n_panel_denominator": 30881,
+        "n_sequences": 2,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0199,
+        "mutation": "T215F",
+        "n_panel_denominator": 30881,
+        "n_sequences": 615,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0034,
+        "mutation": "T215I",
+        "n_panel_denominator": 30881,
+        "n_sequences": 106,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0028,
+        "mutation": "T215S",
+        "n_panel_denominator": 30881,
+        "n_sequences": 87,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0011,
+        "mutation": "T215V",
+        "n_panel_denominator": 30881,
+        "n_sequences": 33,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0271,
+        "mutation": "T215Y",
+        "n_panel_denominator": 30881,
+        "n_sequences": 838,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0073,
+        "mutation": "T69D",
+        "n_panel_denominator": 30881,
+        "n_sequences": 226,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0003,
+        "mutation": "T69ins",
+        "n_panel_denominator": 30881,
+        "n_sequences": 9,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0006,
+        "mutation": "V75A",
+        "n_panel_denominator": 30881,
+        "n_sequences": 17,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0074,
+        "mutation": "V75M",
+        "n_panel_denominator": 30881,
+        "n_sequences": 227,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0001,
+        "mutation": "V75S",
+        "n_panel_denominator": 30881,
+        "n_sequences": 4,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0002,
+        "mutation": "V75T",
+        "n_panel_denominator": 30881,
+        "n_sequences": 7,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0115,
+        "mutation": "Y115F",
+        "n_panel_denominator": 30881,
+        "n_sequences": 355,
+        "panel": "RT_NRTI"
+      },
+      {
+        "frac": 0.0551,
+        "mutation": "G190A",
+        "n_panel_denominator": 30881,
+        "n_sequences": 1703,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0026,
+        "mutation": "G190E",
+        "n_panel_denominator": 30881,
+        "n_sequences": 80,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0045,
+        "mutation": "G190S",
+        "n_panel_denominator": 30881,
+        "n_sequences": 138,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0284,
+        "mutation": "K101E",
+        "n_panel_denominator": 30881,
+        "n_sequences": 876,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0036,
+        "mutation": "K101P",
+        "n_panel_denominator": 30881,
+        "n_sequences": 112,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.1159,
+        "mutation": "K103N",
+        "n_panel_denominator": 30881,
+        "n_sequences": 3578,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0062,
+        "mutation": "K103S",
+        "n_panel_denominator": 30881,
+        "n_sequences": 192,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0075,
+        "mutation": "L100I",
+        "n_panel_denominator": 30881,
+        "n_sequences": 232,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0092,
+        "mutation": "M230L",
+        "n_panel_denominator": 30881,
+        "n_sequences": 284,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0176,
+        "mutation": "P225H",
+        "n_panel_denominator": 30881,
+        "n_sequences": 542,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0048,
+        "mutation": "V106A",
+        "n_panel_denominator": 30881,
+        "n_sequences": 147,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0117,
+        "mutation": "V106M",
+        "n_panel_denominator": 30881,
+        "n_sequences": 362,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0006,
+        "mutation": "V179F",
+        "n_panel_denominator": 30881,
+        "n_sequences": 18,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0532,
+        "mutation": "Y181C",
+        "n_panel_denominator": 30881,
+        "n_sequences": 1643,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0012,
+        "mutation": "Y181I",
+        "n_panel_denominator": 30881,
+        "n_sequences": 38,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0017,
+        "mutation": "Y181V",
+        "n_panel_denominator": 30881,
+        "n_sequences": 54,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0031,
+        "mutation": "Y188C",
+        "n_panel_denominator": 30881,
+        "n_sequences": 95,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0014,
+        "mutation": "Y188H",
+        "n_panel_denominator": 30881,
+        "n_sequences": 43,
+        "panel": "RT_NNRTI"
+      },
+      {
+        "frac": 0.0091,
+        "mutation": "Y188L",
+        "n_panel_denominator": 30881,
+        "n_sequences": 282,
+        "panel": "RT_NNRTI"
+      }
+    ]
+  }
+}
