@@ -618,9 +618,74 @@ def test_git_sha_falls_back_on_nonzero_exit(monkeypatch: pytest.MonkeyPatch) -> 
     assert cli.resolve_git_sha() == "unknown"
 
 
-def test_git_sha_reads_head(monkeypatch: pytest.MonkeyPatch) -> None:
-    def ok(*_args: Any, **_kwargs: Any) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(["git"], 0, stdout="deadbeef\n", stderr="")
+def _fake_git(
+    monkeypatch: pytest.MonkeyPatch, *, status_out: str, status_code: int = 0
+) -> None:
+    def run(args: list[str], *_a: Any, **_k: Any) -> subprocess.CompletedProcess[str]:
+        if args[1] == "rev-parse":
+            return subprocess.CompletedProcess(args, 0, stdout="deadbeef\n", stderr="")
+        assert args[1:3] == ["status", "--porcelain"], args
+        return subprocess.CompletedProcess(args, status_code, stdout=status_out, stderr="")
 
-    monkeypatch.setattr(cli.subprocess, "run", ok)
+    monkeypatch.setattr(cli.subprocess, "run", run)
+
+
+def test_git_sha_reads_head_when_the_tree_is_clean(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fake_git(monkeypatch, status_out="")
     assert cli.resolve_git_sha() == "deadbeef"
+
+
+def test_git_sha_is_marked_dirty_when_status_lists_changes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _fake_git(monkeypatch, status_out=" M src/hivdrwatch/dashboard/export/aggregate.py\n")
+    assert cli.resolve_git_sha() == "deadbeef-dirty"
+
+
+def test_git_sha_is_marked_dirty_when_status_cannot_be_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Clean cannot be shown, so it is not claimed.
+    _fake_git(monkeypatch, status_out="", status_code=128)
+    assert cli.resolve_git_sha() == "deadbeef-dirty"
+
+
+def _git_repo(path: Path) -> str:
+    def git(*args: str) -> str:
+        done = subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@example.org", *args],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return done.stdout.strip()
+
+    git("init", "-q")
+    (path / "tracked.txt").write_text("one\n")
+    git("add", "tracked.txt")
+    git("commit", "-q", "-m", "init")
+    return git("rev-parse", "HEAD")
+
+
+def test_real_repository_is_reported_by_its_bare_sha_only_while_clean(tmp_path: Path) -> None:
+    head = _git_repo(tmp_path)
+    assert cli.resolve_git_sha(tmp_path) == head
+
+    (tmp_path / "tracked.txt").write_text("two\n")
+    assert cli.resolve_git_sha(tmp_path) == f"{head}-dirty"
+
+
+def test_real_repository_with_only_an_untracked_file_is_dirty(tmp_path: Path) -> None:
+    head = _git_repo(tmp_path)
+    (tmp_path / "new_module.py").write_text("x = 1\n")
+    assert cli.resolve_git_sha(tmp_path) == f"{head}-dirty"
+
+
+def test_committed_summary_names_a_commit_from_a_clean_tree() -> None:
+    sha = json.loads((REPO / "src/hivdrwatch/dashboard/static/summary.json").read_text())[
+        "meta"
+    ]["git_sha"]
+    assert re.fullmatch(r"[0-9a-f]{40}", sha), (
+        f"summary.json records git_sha={sha!r}: regenerate it from a clean checkout"
+    )

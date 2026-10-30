@@ -27,6 +27,10 @@ file exists only in this branch's own history, never in a release.**
 - The export now refuses an `n_accessions_ingested` smaller than the scored
   count (`IngestedCountBelowScoredError`) and a null `algorithm_version`,
   `called_at` or `schema_version` (`NullProvenanceError`).
+- `meta.git_sha` carries a `-dirty` suffix when `git status --porcelain` is
+  non-empty or could not be read, so a summary built from uncommitted code
+  says so. `make dashboard` no longer defaults `INGESTED_COUNT`; it must be
+  passed.
 
 ## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.1.0 — 2026-10-30
 

@@ -29,6 +29,7 @@ DEFAULT_REFERENCE = Path("data/reference/drm_positions.json")
 DEFAULT_OUT = Path(__file__).resolve().parents[1] / "static" / "summary.json"
 
 UNKNOWN_GIT_SHA = "unknown"
+DIRTY_SUFFIX = "-dirty"
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -65,19 +66,37 @@ def pointer_path(args: argparse.Namespace) -> Path:
     return input_path.with_name(input_path.name + ".dvc")
 
 
-def resolve_git_sha() -> str:
-    """HEAD's SHA, or `unknown` when git is absent or this is not a repository."""
+def _git(args: list[str], cwd: Path | None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=False, cwd=cwd)
+
+
+def resolve_git_sha(cwd: Path | None = None) -> str:
+    """HEAD's SHA, suffixed `-dirty` unless the working tree is verifiably clean.
+
+    A summary is only reproducible from the commit it names if the exporter that ran was
+    that commit's. Uncommitted changes, untracked files included, break that, and so does
+    a `git status` that could not be read, so both are marked rather than silently claimed.
+    `unknown` when git is absent or this is not a repository.
+    """
     try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
-        )
+        head = _git(["rev-parse", "HEAD"], cwd)
+        status = _git(["status", "--porcelain"], cwd) if head.returncode == 0 else None
     except OSError:
         logger.warning("git is unavailable; recording git_sha as %s", UNKNOWN_GIT_SHA)
         return UNKNOWN_GIT_SHA
-    if completed.returncode != 0:
+    if head.returncode != 0:
         logger.warning("git rev-parse failed; recording git_sha as %s", UNKNOWN_GIT_SHA)
         return UNKNOWN_GIT_SHA
-    return completed.stdout.strip()
+    sha = head.stdout.strip()
+    if status is not None and status.returncode == 0 and not status.stdout.strip():
+        return sha
+    reason = (
+        "git status failed"
+        if status and status.returncode != 0
+        else "the working tree has changes"
+    )
+    logger.warning("%s; recording git_sha as %s%s", reason, sha, DIRTY_SUFFIX)
+    return f"{sha}{DIRTY_SUFFIX}"
 
 
 def main(argv: list[str] | None = None) -> int:
