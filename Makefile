@@ -35,6 +35,8 @@ help:
 	@echo "  make sierra           # sierra DR calls (cache-first)"
 	@echo "  make curate           # align + trim + QC + dedup → silver"
 	@echo "  make cluster          # tn93 + assignments + outbreak features"
+	@echo "  make dashboard        # Sierra calls → static dashboard summary.json"
+	@echo "                        # override the ingested total with INGESTED_COUNT=<n>"
 	@echo "  make cluster-validate # our clusterer vs ground truth"
 	@echo "                        # add WITH_HIVTRACE=1 for parity vs HIV-TRACE"
 	@echo "  make phylo            # per-subtype IQ-TREE + TreeTime"
@@ -212,6 +214,13 @@ curate:
 .PHONY: cluster
 cluster:
 	python -m hivdrwatch.pipeline.cluster --aligned-fasta $(ALIGNED_FASTA) --curated $(CURATED_OUT) --work-dir $(INTERIM_DIR)/cluster --gold-dir $(GOLD_DIR) $${TO_POSTGRES:+--to-postgres}
+
+# --ingested-count is required by the export and has no default there: the parquet holds
+# only accessions that returned a Sierra result, so the ingested total cannot be derived
+# from it. 36510 is the current vintage's total; pass INGESTED_COUNT when it is regenerated.
+.PHONY: dashboard
+dashboard:
+	python -m hivdrwatch.dashboard.export --input $(INTERIM_DIR)/dr_results.parquet --ingested-count $${INGESTED_COUNT:-36510}
 
 .PHONY: pipeline
 pipeline: ingest sierra curate cluster

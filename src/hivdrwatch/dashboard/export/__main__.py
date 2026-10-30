@@ -47,7 +47,13 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     # Required: the parquet holds only accessions that returned a result, so the ingested
     # total cannot be derived from it, and a default would go stale when it is regenerated.
-    parser.add_argument("--ingested-count", type=int, required=True)
+    parser.add_argument(
+        "--ingested-count",
+        type=int,
+        required=True,
+        help="number of accessions that entered ingest, against which the number that "
+        "returned a Sierra result is reported",
+    )
     return parser.parse_args(argv)
 
 

@@ -61,6 +61,10 @@ _SUBCOMMANDS: dict[str, tuple[str, str]] = {
         "hivdrwatch.pipeline.phylo",
         "Per-subtype IQ-TREE 2 + TreeTime → dated per-subtype trees.",
     ),
+    "dashboard": (
+        "hivdrwatch.dashboard.export.__main__",
+        "Aggregate Sierra resistance calls into the static dashboard's summary JSON.",
+    ),
     "bench-ingest": (
         "benchmarks.scale_ingest",
         "Scale benchmark for the ingest stage — synthetic LANL TSV parser throughput.",
