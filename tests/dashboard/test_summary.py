@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import subprocess
 from pathlib import Path
@@ -32,6 +33,7 @@ from hivdrwatch.dashboard.export.summary import (
     MissingDvcHashError,
     NonSingleValuedProvenanceError,
     build_summary,
+    check_input_not_stale,
     file_md5,
     input_dvc_md5,
     render_summary,
@@ -169,6 +171,84 @@ def test_input_dvc_md5_raises_when_no_digest(tmp_path: Path, text: str) -> None:
     pointer.write_text(text)
     with pytest.raises(MissingDvcHashError):
         input_dvc_md5(pointer)
+
+
+# --- check_input_not_stale ---------------------------------------------------------
+
+_MD5_A = "0123456789abcdef0123456789abcdef"
+_MD5_B = "fedcba9876543210fedcba9876543210"
+_MD5_C = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+
+def _drift_inputs(
+    tmp_path: Path, *, summary_meta: dict[str, str], pointer_md5: str
+) -> tuple[Path, Path]:
+    summary = tmp_path / "summary.json"
+    summary.write_text(json.dumps({"meta": summary_meta, "views": {}}))
+    pointer = tmp_path / "x.parquet.dvc"
+    pointer.write_text(
+        f"outs:\n- md5: {pointer_md5}\n  size: 1\n  hash: md5\n  path: x.parquet\n"
+    )
+    return summary, pointer
+
+
+def test_drift_check_passes_when_hashes_agree(tmp_path: Path) -> None:
+    summary, pointer = _drift_inputs(
+        tmp_path, summary_meta={"input_dvc_md5": _MD5_A}, pointer_md5=_MD5_A
+    )
+    assert check_input_not_stale(summary, pointer) == 0
+
+
+def test_drift_check_fails_when_the_pointer_moved(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    summary, pointer = _drift_inputs(
+        tmp_path, summary_meta={"input_dvc_md5": _MD5_A}, pointer_md5=_MD5_B
+    )
+    with caplog.at_level(logging.ERROR):
+        assert check_input_not_stale(summary, pointer) == 1
+    errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 1
+    assert _MD5_A in errors[0]
+    assert _MD5_B in errors[0]
+
+
+def test_drift_check_compares_the_pointer_digest_not_the_file_digest(tmp_path: Path) -> None:
+    # The committed vintage's two digests differ (pointer vs hashed file), so passing here
+    # is what lets the guard be green on it. Only the pointer-to-pointer claim is checked.
+    summary, pointer = _drift_inputs(
+        tmp_path,
+        summary_meta={"input_dvc_md5": _MD5_A, "input_file_md5": _MD5_C},
+        pointer_md5=_MD5_A,
+    )
+    assert check_input_not_stale(summary, pointer) == 0
+
+
+def test_drift_check_is_not_satisfied_by_a_matching_file_digest(tmp_path: Path) -> None:
+    summary, pointer = _drift_inputs(
+        tmp_path,
+        summary_meta={"input_dvc_md5": _MD5_A, "input_file_md5": _MD5_B},
+        pointer_md5=_MD5_B,
+    )
+    assert check_input_not_stale(summary, pointer) == 1
+
+
+def test_drift_check_fails_rather_than_passes_when_the_summary_records_no_digest(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    summary, pointer = _drift_inputs(tmp_path, summary_meta={}, pointer_md5=_MD5_A)
+    with caplog.at_level(logging.ERROR):
+        assert check_input_not_stale(summary, pointer) == 1
+    assert any(r.levelno == logging.ERROR for r in caplog.records)
+
+
+def test_drift_check_propagates_an_unreadable_pointer(tmp_path: Path) -> None:
+    summary = tmp_path / "summary.json"
+    summary.write_text(json.dumps({"meta": {"input_dvc_md5": _MD5_A}}))
+    pointer = tmp_path / "x.dvc"
+    pointer.write_text("outs: []\n")
+    with pytest.raises(MissingDvcHashError):
+        check_input_not_stale(summary, pointer)
 
 
 # --- file_md5 ----------------------------------------------------------------------

@@ -79,6 +79,32 @@ def input_dvc_md5(pointer: Path) -> str:
     return match.group(1)
 
 
+def check_input_not_stale(summary: Path, pointer: Path) -> int:
+    """Return 0 if `meta.input_dvc_md5` equals the pointer's md5, else log an ERROR and return 1.
+
+    Narrow by construction. It compares one pointer value against another, so it detects
+    that `dvc add` moved the pointer after the summary was exported. It does not detect a
+    parquet that disagrees with its own pointer, and it does not re-derive any aggregate:
+    the only DVC remote is a localhost MinIO, so CI never holds the data. `input_file_md5`
+    is the digest of the file actually read at export time; it cannot be checked here for
+    the same reason, and is deliberately not consulted.
+    """
+    meta = json.loads(summary.read_text()).get("meta", {})
+    recorded = meta.get("input_dvc_md5")
+    current = input_dvc_md5(pointer)
+    if recorded == current:
+        return 0
+    logger.error(
+        "%s records input_dvc_md5=%s but %s now says md5=%s; re-run the export against the "
+        "current input",
+        summary,
+        recorded,
+        pointer,
+        current,
+    )
+    return 1
+
+
 def file_md5(path: Path, *, chunk_bytes: int = _HASH_CHUNK_BYTES) -> str:
     """Return the md5 of the file's bytes, read in chunks so the whole file is never in memory."""
     digest = hashlib.md5(usedforsecurity=False)
