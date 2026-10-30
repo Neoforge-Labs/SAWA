@@ -20,6 +20,13 @@ file exists only in this branch's own history, never in a release.**
   this number to state the unit and how far it differs from distinct
   sequences. Any 1.1.0 file lacks it and must be re-exported.
 - `DedupReport` gains `n_distinct_sequences`.
+- `meta.dr_schema_version` is now the `schema_version` the data frame
+  carries instead of the code constant, so it cannot name a schema the rows
+  were not written at. Same type and, on the current vintage, same value; a
+  mismatch with the constant logs a warning.
+- The export now refuses an `n_accessions_ingested` smaller than the scored
+  count (`IngestedCountBelowScoredError`) and a null `algorithm_version`,
+  `called_at` or `schema_version` (`NullProvenanceError`).
 
 ## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.1.0 — 2026-10-30
 

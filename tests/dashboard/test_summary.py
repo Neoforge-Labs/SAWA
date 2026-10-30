@@ -30,8 +30,10 @@ from hivdrwatch.dashboard.export.dedup import NonRedundantDuplicateError, dedup_
 from hivdrwatch.dashboard.export.drm import SdrmPanel, load_sdrm_panels
 from hivdrwatch.dashboard.export.summary import (
     SUMMARY_SCHEMA_VERSION,
+    IngestedCountBelowScoredError,
     MissingDvcHashError,
     NonSingleValuedProvenanceError,
+    NullProvenanceError,
     build_summary,
     check_input_not_stale,
     file_md5,
@@ -378,7 +380,7 @@ def test_non_redundant_duplicates_propagate_from_dedup() -> None:
 
 
 @pytest.mark.parametrize(
-    "column", ["algorithm_version", "called_at", "algorithm_publish_date"]
+    "column", ["algorithm_version", "called_at", "algorithm_publish_date", "schema_version"]
 )
 def test_provenance_that_is_not_single_valued_is_rejected(column: str) -> None:
     df = _synthetic()
@@ -392,6 +394,45 @@ def test_provenance_that_is_not_single_valued_is_rejected(column: str) -> None:
     message = str(excinfo.value)
     assert column in message
     assert "9999-other" in message
+
+
+def _all_null(column: str) -> pl.DataFrame:
+    return _synthetic().with_columns(pl.lit(None, dtype=pl.String).alias(column))
+
+
+@pytest.mark.parametrize("column", ["algorithm_version", "called_at", "schema_version"])
+def test_provenance_the_page_must_name_is_rejected_when_null(column: str) -> None:
+    with pytest.raises(NullProvenanceError, match=column):
+        _build(_all_null(column))
+
+
+def test_publish_date_is_nullable_by_design_and_recorded_as_null() -> None:
+    meta = _build(_all_null("algorithm_publish_date"))["meta"]
+    assert "algorithm_publish_date" in meta
+    assert meta["algorithm_publish_date"] is None
+
+
+def test_ingested_count_below_the_scored_count_is_rejected() -> None:
+    with pytest.raises(IngestedCountBelowScoredError, match=r"2 .*3"):
+        _build(n_accessions_ingested=2)
+
+
+def test_ingested_count_equal_to_the_scored_count_is_accepted() -> None:
+    meta = _build(n_accessions_ingested=3)["meta"]
+    assert meta["n_accessions_ingested"] == meta["n_accessions_scored"] == 3
+
+
+def test_dr_schema_version_is_the_one_the_data_carries_not_the_code_constant(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    older = _synthetic().with_columns(pl.lit("0.0.1").alias("schema_version"))
+    assert older["schema_version"][0] != DR_SCHEMA_VERSION
+    with caplog.at_level(logging.WARNING):
+        meta = _build(older)["meta"]
+    assert meta["dr_schema_version"] == "0.0.1"
+    assert any(
+        "0.0.1" in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING
+    )
 
 
 def test_summary_carries_no_region_claim() -> None:

@@ -9,8 +9,10 @@ floats are rounded to a fixed number of places before they reach the encoder.
 `meta` records the measured counts and provenance of the input vintage but
 never asserts them. The parquet is regenerated over time, so only properties
 that hold for any vintage fail the export: lossless deduplication (raised by
-`dedup_dr_results`) and a single algorithm version, publish date and call date
-across the frame. The summary makes no geographic claim about the sequences.
+`dedup_dr_results`), a single algorithm version, publish date, call date and DR
+schema version across the frame (all but the publish date never null), and an
+ingested count no smaller than the scored count. The summary makes no geographic claim
+about the sequences.
 
 Summary schema 1.2.0: `meta` (provenance and counts) and `views` (four lists of
 row dicts: prevalence_by_drug_class, levels_by_drug, gene_coverage, sdrm_frequency).
@@ -27,6 +29,9 @@ the number of distinct `sequence_sha256` values among the scored accessions. Eve
 in the summary is of accessions, and several accessions can carry one sequence, so the
 page needs this number to say how far the unit differs from distinct sequences. The static
 page requires it, so a 1.1.0 file is refused by its schema gate rather than half-drawn.
+`meta.dr_schema_version` also changes source without changing type: it is now the
+`schema_version` the data frame carries, where it was the code constant, so it names the
+schema the rows were written at even when the constant has since moved.
 """
 
 from __future__ import annotations
@@ -62,7 +67,11 @@ _PROVENANCE_COLUMNS: tuple[str, ...] = (
     "algorithm_version",
     "algorithm_publish_date",
     "called_at",
+    "schema_version",
 )
+
+# `algorithm_publish_date` is nullable by design (Sierra may omit it); these are not.
+_NEVER_NULL_PROVENANCE: tuple[str, ...] = ("algorithm_version", "called_at", "schema_version")
 
 # A DVC file-output pointer stores a 32-hex md5. A directory output ends in `.dir`, which
 # this deliberately rejects: the dashboard input is a single parquet file.
@@ -75,6 +84,14 @@ class MissingDvcHashError(ValueError):
 
 class NonSingleValuedProvenanceError(ValueError):
     """A provenance column takes more than one value, so `meta` cannot name one."""
+
+
+class NullProvenanceError(ValueError):
+    """A provenance column that must name a value is null across the frame."""
+
+
+class IngestedCountBelowScoredError(ValueError):
+    """More accessions were scored than the stated number that entered ingest."""
 
 
 def input_dvc_md5(pointer: Path) -> str:
@@ -198,11 +215,29 @@ def build_summary(
     deduped, report = dedup_dr_results(df)
 
     provenance = {column: _single_value(deduped, column) for column in _PROVENANCE_COLUMNS}
+    for column in _NEVER_NULL_PROVENANCE:
+        if provenance[column] is None:
+            raise NullProvenanceError(
+                f"{column} is null across the frame; meta must name a value"
+            )
+    n_scored = deduped["accession"].n_unique()
+    if n_accessions_ingested < n_scored:
+        raise IngestedCountBelowScoredError(
+            f"{n_accessions_ingested} accessions stated as ingested, but {n_scored} were "
+            "scored; the ingested count cannot be smaller than the scored count"
+        )
+    data_schema_version = provenance.pop("schema_version")
+    if data_schema_version != DR_SCHEMA_VERSION:
+        logger.warning(
+            "dr_results was written at schema %s but this code expects %s",
+            data_schema_version,
+            DR_SCHEMA_VERSION,
+        )
     n_observations, n_multistate = sdrm_observation_counts(deduped, panels)
 
     meta: dict[str, Any] = {
         "schema_version": SUMMARY_SCHEMA_VERSION,
-        "dr_schema_version": DR_SCHEMA_VERSION,
+        "dr_schema_version": data_schema_version,
         **provenance,
         "sdrm_list_version": sdrm_version,
         "input_dvc_md5": input_md5,
@@ -210,7 +245,7 @@ def build_summary(
         "git_sha": git_sha,
         "n_rows_raw": report.n_rows_in,
         "n_calls": report.n_rows_out,
-        "n_accessions_scored": deduped["accession"].n_unique(),
+        "n_accessions_scored": n_scored,
         "n_distinct_sequences": report.n_distinct_sequences,
         "n_accessions_ingested": n_accessions_ingested,
         "n_sdrm_observations": n_observations,
