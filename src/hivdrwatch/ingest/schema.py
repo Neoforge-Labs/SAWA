@@ -173,6 +173,18 @@ def subtype_from_designation(text: str | None) -> Subtype:
     return Subtype.UNKNOWN
 
 
+# East African priority countries (ISO 3166-1 alpha-2 → GenBank country name)
+EAST_AFRICA_COUNTRIES: dict[str, str] = {
+    "KE": "Kenya",
+    "UG": "Uganda",
+    "TZ": "Tanzania",
+    "RW": "Rwanda",
+    "BI": "Burundi",
+    "ET": "Ethiopia",
+    "SS": "South Sudan",
+    "SO": "Somalia",
+}
+
 # GenBank's `/country=` (now `/geo_loc_name=`) and LANL's Country column,
 # lower-cased, → ISO 3166-1 alpha-2. Covers every name present in SAWA's
 # corpus plus the neighbours a sub-Saharan pull is likely to reach; extend

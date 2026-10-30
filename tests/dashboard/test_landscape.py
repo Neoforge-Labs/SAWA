@@ -8,6 +8,9 @@ is left out. Each test names the break it would catch. Frames are built in code 
 
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import polars as pl
 import pytest
 
@@ -317,3 +320,31 @@ def test_the_cells_must_agree_with_the_accounting() -> None:
     tampered = cells.with_columns(n_sequences=pl.col("n_sequences") + 1)
     with pytest.raises(LandscapeAccountingError):
         landscape._check_cells_match_accounting(tampered, placement, scored)
+
+
+def test_importing_the_export_does_not_load_biopython_or_the_genbank_ingester() -> None:
+    # The drift job imports `summary` to compare two md5 strings; the dashboard parses no
+    # sequences, so it must not pay for the ingester's dependencies to read a country list.
+    code = (
+        "import sys, hivdrwatch.dashboard.export.summary;"
+        "print(sorted(m for m in ('Bio', 'hivdrwatch.ingest.genbank') if m in sys.modules))"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    assert done.stdout.strip() == "[]"
+
+
+def test_the_ingest_package_still_exposes_its_ingesters_and_one_country_table() -> None:
+    from hivdrwatch import ingest
+    from hivdrwatch.ingest import genbank, schema
+
+    assert ingest.GenBankIngester is genbank.GenBankIngester
+    assert ingest.LANLIngester is not None and callable(ingest.merge_sources)
+    assert (
+        ingest.EAST_AFRICA_COUNTRIES
+        is genbank.EAST_AFRICA_COUNTRIES
+        is schema.EAST_AFRICA_COUNTRIES
+    )
+    with pytest.raises(AttributeError):
+        ingest.NoSuchThing  # noqa: B018

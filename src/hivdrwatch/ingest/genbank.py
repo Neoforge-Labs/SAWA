@@ -40,6 +40,7 @@ from tenacity import (
 )
 
 from .schema import (
+    EAST_AFRICA_COUNTRIES,
     SequenceRecord,
     Source,
     Subtype,
@@ -48,18 +49,6 @@ from .schema import (
 )
 
 logger = logging.getLogger(__name__)
-
-# East African priority countries (ISO 3166-1 alpha-2 → GenBank country name)
-EAST_AFRICA_COUNTRIES: dict[str, str] = {
-    "KE": "Kenya",
-    "UG": "Uganda",
-    "TZ": "Tanzania",
-    "RW": "Rwanda",
-    "BI": "Burundi",
-    "ET": "Ethiopia",
-    "SS": "South Sudan",
-    "SO": "Somalia",
-}
 
 # NCBI E-utilities gets flaky above ~50 records under load. Empirically
 # batches of 50 succeed on the first try >95% of the time; larger sizes

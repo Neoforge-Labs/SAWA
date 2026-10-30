@@ -73,7 +73,7 @@ from hivdrwatch.dashboard.export.landscape import (
     LandscapeAccountingError,
     resistance_landscape,
 )
-from hivdrwatch.ingest.genbank import EAST_AFRICA_COUNTRIES
+from hivdrwatch.ingest.schema import EAST_AFRICA_COUNTRIES
 from hivdrwatch.paper1.fig02_aggregate import MIN_CELL_N
 from hivdrwatch.resistance.schema import DR_SCHEMA_VERSION
 
