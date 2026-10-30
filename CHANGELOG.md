@@ -8,8 +8,9 @@ per-stage `*_SCHEMA_VERSION` constants, not a package version.
 
 ## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.1.0 — 2026-10-30
 
-**New module. A 1.0.0 `summary.json` is refused by the page's schema gate,
-not half-drawn; regenerate it with `make dashboard`.**
+**New module. The page's schema gate refuses any `summary.json` not at
+1.1.0 instead of half-drawing it; a 1.0.0 file exists only in this branch's
+own history, never in a release.**
 
 ### Added
 
@@ -17,9 +18,10 @@ not half-drawn; regenerate it with `make dashboard`.**
   matches PR and RT surveillance mutations and aggregates four views into
   a deterministic `summary.json`; a dependency-free static page draws it.
   Registered as `hivdrwatch dashboard` and `make dashboard`.
-- `.github/workflows/pages.yml` publishes the static page to GitHub Pages,
-  and the `summary-input-drift` job in `test.yml` fails when the DVC
-  pointer has moved since the summary was exported. The guard compares
+- `.github/workflows/pages.yml` publishes the static page to GitHub Pages
+  once Pages is enabled on the repository (it is not yet), and the
+  `summary-input-drift` job in `test.yml` fails when the DVC pointer has
+  moved since the summary was exported. The guard compares
   `meta.input_dvc_md5` against the committed pointer only; it does not
   verify the aggregation or the parquet.
 
