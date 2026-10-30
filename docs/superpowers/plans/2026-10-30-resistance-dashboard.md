@@ -142,8 +142,7 @@ def test_known_polymorphisms_are_not_sdrms(raw):
 
 @pytest.mark.parametrize(
     ("raw", "panel_name", "expected"),
-    [("M184V", "RT_NRTI", "M184V"), ("K103N", "RT_NNRTI", "K103N"),
-     ("M46I", "PR", "M46I")],
+    [("M184V", "RT_NRTI", "M184V"), ("K103N", "RT_NNRTI", "K103N"), ("M46I", "PR", "M46I")],
 )
 def test_known_drms_match_their_panel(raw, panel_name, expected):
     panel = _panel(panel_name)
@@ -236,6 +235,7 @@ def test_prevalence_counts_sequence_resistant_if_any_drug_in_class_is():
 
 def test_prevalence_uses_resistant_levels_from_fig02():
     from hivdrwatch.paper1.fig02_aggregate import RESISTANT_LEVELS
+
     assert RESISTANT_LEVELS == frozenset({"high", "intermediate"})
     out = prevalence_by_drug_class(_frame_with_level("low"))
     assert out.filter(pl.col("drug_class") == "NNRTI").row(0, named=True)["n_resistant"] == 0
@@ -257,7 +257,11 @@ def test_denominators_are_per_class_not_global():
 def test_levels_by_drug_covers_all_five_levels_per_drug():
     out = levels_by_drug(_frame_mixed_levels())
     assert set(out.filter(pl.col("drug") == "NVP")["level"]) == {
-        "susceptible", "potential_low", "low", "intermediate", "high"
+        "susceptible",
+        "potential_low",
+        "low",
+        "intermediate",
+        "high",
     }
 
 
@@ -328,8 +332,14 @@ def test_input_dvc_md5_reads_the_pointer():
 
 
 def test_meta_records_provenance_without_asserting_data_values():
-    s = build_summary(_synthetic(), panels=_panels(), sdrm_version="SDRM-2019",
-                      input_md5="abc", git_sha="deadbee", n_accessions_ingested=4)
+    s = build_summary(
+        _synthetic(),
+        panels=_panels(),
+        sdrm_version="SDRM-2019",
+        input_md5="abc",
+        git_sha="deadbee",
+        n_accessions_ingested=4,
+    )
     meta = s["meta"]
     assert meta["schema_version"] == SUMMARY_SCHEMA_VERSION
     assert meta["algorithm_version"] == "HIVDB_10.2"
@@ -457,7 +467,7 @@ def test_page_links_the_provenance_evaluation():
 
 def test_page_loads_no_external_scripts_or_styles():
     text = INDEX.read_text()
-    assert "<script src=\"http" not in text and "cdn" not in text.lower()
+    assert '<script src="http' not in text and "cdn" not in text.lower()
 
 
 def test_footer_carries_the_citation_and_provenance_pins():
@@ -469,6 +479,7 @@ def test_footer_carries_the_citation_and_provenance_pins():
 
 def test_palette_matches_paper1_style():
     from hivdrwatch.paper1.style import COLORBLIND_PALETTE
+
     css = STYLES.read_text()
     for colour in COLORBLIND_PALETTE[:4]:
         assert colour.lower() in css.lower()
