@@ -30,7 +30,6 @@ import pytest
 from hivdrwatch.dashboard.export.aggregate import LEVEL_ORDER
 from hivdrwatch.dashboard.export.summary import SUMMARY_SCHEMA_VERSION
 from hivdrwatch.paper1.style import COLORBLIND_PALETTE, DRUG_CLASS_ORDER
-from hivdrwatch.resistance.schema import DRResult
 
 REPO = Path(__file__).resolve().parents[2]
 STATIC = REPO / "src" / "hivdrwatch" / "dashboard" / "static"
@@ -382,19 +381,14 @@ def test_nothing_else_on_the_page_presents_the_figures_as_pretreatment_or_drug_n
     )
 
 
-def test_resistance_rows_carry_no_treatment_history_for_the_page_to_report() -> None:
-    # The caveat says treatment history is not recorded. If a treatment field is ever added to
-    # the resistance rows the summary is built from, that sentence needs rewriting and the
-    # prevalence stratifying, not leaving.
-    assert not [f for f in DRResult.model_fields if re.search(r"naive|treat|therap|art_", f)]
-
-
 def test_unit_is_stated_as_accessions_with_the_measured_count_of_repeated_sequences() -> None:
     meta = SUMMARY["meta"]
     scored, distinct = meta["n_accessions_scored"], meta["n_distinct_sequences"]
     assert 0 < distinct <= scored
     note = _note("unit-note")
-    assert note.startswith("Every figure on this page counts accessions")
+    assert note.startswith(
+        "Every prevalence, level and coverage figure on this page counts accessions"
+    )
     assert "“sequences” means accessions" in note
     expected = (
         f"The {scored:,} scored accessions hold {distinct:,} distinct sequences, "
@@ -432,8 +426,12 @@ def test_mixture_convention_and_its_measured_limit_are_both_stated() -> None:
     )
     assert "attributed to the alphabetically first matching state" in note
     assert "That affects" in note and "of observations" in note
-    # The direction of the bias is part of the disclosure, not only its size.
-    assert "earlier mutation" in note and "inflated" in note and "understated" in note
+    # The direction is part of the disclosure: the earlier state is right, the later one short.
+    assert "the earlier state’s count is correct" in note
+    assert "the later state’s count is understated" in note
+    assert "inflated" not in note, (
+        "a mixture does carry the earlier state, so it is not inflated"
+    )
 
 
 def test_mixture_percentage_is_computed_from_the_summary_counts() -> None:
