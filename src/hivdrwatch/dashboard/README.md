@@ -62,7 +62,7 @@ The `summary-input-drift` job in `.github/workflows/test.yml` runs `check_input_
 
 On the current vintage `input_dvc_md5` and `input_file_md5` differ: the file the summary was computed from does not hash to the md5 its pointer records. The page footer shows both digests and discloses the mismatch.
 
-The deploy is not gated on that job either: `pages.yml` triggers independently of `test.yml`, so a stale `summary.json` that reaches `main` is published unless branch protection requires the test workflow.
+The deploy is not gated on that job either. `pages.yml` triggers independently of `test.yml`, and branch protection requiring the test workflow is not currently enabled on `main`, so a stale `summary.json` that reaches `main` is published even while the drift job is red. The guard is advisory today; enabling that protection is what would make it binding.
 
 ## Tests
 

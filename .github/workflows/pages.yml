@@ -5,8 +5,10 @@ name: pages
 # `python -m hivdrwatch.dashboard.export` and reviewed in the diff before it reaches main.
 #
 # This deploy is not gated on the summary-input-drift job in test.yml. The two workflows
-# trigger independently, so a stale summary.json that reaches main publishes anyway unless
-# branch protection requires the test workflow to pass before merge.
+# trigger independently, and branch protection requiring the test workflow is not currently
+# enabled on main, so a stale summary.json that reaches main publishes even while the drift
+# job is red. The guard is advisory today; enabling that protection is what would make it
+# binding.
 #
 # GitHub Pages must be enabled once under Settings -> Pages (source: GitHub Actions)
 # before the first deploy can succeed.
