@@ -15,7 +15,12 @@ from pathlib import Path
 import polars as pl
 
 from hivdrwatch.dashboard.export.drm import load_sdrm_panels
-from hivdrwatch.dashboard.export.summary import build_summary, input_dvc_md5, write_summary
+from hivdrwatch.dashboard.export.summary import (
+    build_summary,
+    file_md5,
+    input_dvc_md5,
+    write_summary,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         panels=panels,
         sdrm_version=sdrm_version,
         input_md5=input_dvc_md5(pointer_path(args)),
+        input_file_md5=file_md5(args.input),
         git_sha=resolve_git_sha(),
         n_accessions_ingested=args.ingested_count,
     )

@@ -76,6 +76,16 @@ function showBanner(message) {
   }
 }
 
+/* ---- input digests ------------------------------------------------------ */
+
+function digestsDiffer(meta) {
+  return meta.input_file_md5 !== meta.input_dvc_md5;
+}
+
+function syncDigestNote(meta) {
+  document.getElementById("digest-note").hidden = !digestsDiffer(meta);
+}
+
 /* ---- text bindings ------------------------------------------------------ */
 
 function deriveFigures(summary) {
@@ -341,6 +351,7 @@ async function main() {
 
   try {
     applyBindings(summary);
+    syncDigestNote(summary.meta);
     renderLevelLegend();
     drawAll(summary);
   } catch (error) {

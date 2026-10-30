@@ -32,6 +32,7 @@ from hivdrwatch.dashboard.export.summary import (
     MissingDvcHashError,
     NonSingleValuedProvenanceError,
     build_summary,
+    file_md5,
     input_dvc_md5,
     render_summary,
     sdrm_observation_counts,
@@ -120,6 +121,7 @@ def _build(df: pl.DataFrame | None = None, **overrides: Any) -> dict[str, Any]:
         "panels": _panels(),
         "sdrm_version": "SDRM-2019",
         "input_md5": "abc",
+        "input_file_md5": "def",
         "git_sha": "deadbee",
         "n_accessions_ingested": 4,
     }
@@ -169,6 +171,25 @@ def test_input_dvc_md5_raises_when_no_digest(tmp_path: Path, text: str) -> None:
         input_dvc_md5(pointer)
 
 
+# --- file_md5 ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("chunk_bytes", [1, 7, 4096, 1 << 20])
+def test_file_md5_matches_hashlib_whatever_the_chunk_size(
+    tmp_path: Path, chunk_bytes: int
+) -> None:
+    path = tmp_path / "blob.bin"
+    path.write_bytes(bytes(range(256)) * 41)
+    expected = hashlib.md5(path.read_bytes(), usedforsecurity=False).hexdigest()
+    assert file_md5(path, chunk_bytes=chunk_bytes) == expected
+
+
+def test_file_md5_of_an_empty_file_is_the_empty_digest(tmp_path: Path) -> None:
+    path = tmp_path / "empty"
+    path.write_bytes(b"")
+    assert file_md5(path) == "d41d8cd98f00b204e9800998ecf8427e"
+
+
 # --- build_summary -----------------------------------------------------------------
 
 
@@ -181,10 +202,17 @@ def test_meta_records_provenance_without_asserting_data_values() -> None:
     assert meta["called_at"] == "2026-08-17"
     assert meta["sdrm_list_version"] == "SDRM-2019"
     assert meta["input_dvc_md5"] == "abc"
+    assert meta["input_file_md5"] == "def"
     assert meta["git_sha"] == "deadbee"
     assert meta["n_accessions_scored"] == 3
     assert meta["n_accessions_ingested"] == 4
     assert meta["n_calls"] == 7
+
+
+def test_pointer_digest_and_file_digest_are_recorded_under_distinct_keys() -> None:
+    meta = _build(input_md5="from-pointer", input_file_md5="from-file")["meta"]
+    assert meta["input_dvc_md5"] == "from-pointer"
+    assert meta["input_file_md5"] == "from-file"
 
 
 def test_meta_records_sdrm_observation_counts() -> None:
@@ -403,6 +431,9 @@ def test_cli_writes_only_summary_json(tmp_path: Path) -> None:
     assert [p.name for p in out.parent.iterdir()] == ["summary.json"]
     meta = json.loads(out.read_text())["meta"]
     assert meta["input_dvc_md5"] == "0123456789abcdef0123456789abcdef"
+    # The file's own digest, not the pointer's: the two are different claims.
+    assert meta["input_file_md5"] == hashlib.md5(FIXTURE_PATH.read_bytes()).hexdigest()
+    assert meta["input_file_md5"] != meta["input_dvc_md5"]
     assert meta["n_accessions_ingested"] == 4
     assert meta["n_calls"] == 7
     assert meta["sdrm_list_version"] == "SDRM-2019"

@@ -84,8 +84,10 @@
     Algorithm <span data-bind="meta.algorithm_version"></span> &middot;
     data vintage <span data-bind="meta.called_at"></span> &middot;
     generated at commit <a data-bind="meta.git_sha" data-trunc="7" data-href="https://github.com/Neoforge-Labs/SAWA/commit/{value}"></a> &middot;
-    input md5 <span data-bind="meta.input_dvc_md5" data-trunc="8"></span>
+    DVC pointer md5 <span data-bind="meta.input_dvc_md5" data-trunc="8"></span> &middot;
+    input file md5 <span data-bind="meta.input_file_md5" data-trunc="8"></span>
   </p>
+  <p id="digest-note" class="note" hidden>These digests differ. The file this summary was computed from does not hash to the md5 its DVC pointer records, so the data vintage is not yet reconciled with the pointer.</p>
 </footer>
 </body>
 </html>

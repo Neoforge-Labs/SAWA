@@ -364,6 +364,36 @@ def test_footer_carries_repo_citation_algorithm_vintage_and_commit() -> None:
     assert "CITATION.cff" in text
 
 
+def test_footer_labels_the_pointer_digest_and_the_file_digest_separately() -> None:
+    meta = SUMMARY["meta"]
+    for key in ("input_dvc_md5", "input_file_md5"):
+        assert re.fullmatch(r"[0-9a-f]{32}", meta[key]), key
+    text = _squash(_rendered_text(_by_id(PAGE, "footer")))
+    assert f"DVC pointer md5 {meta['input_dvc_md5'][:8]}" in text
+    assert f"input file md5 {meta['input_file_md5'][:8]}" in text
+    assert "input md5" not in text, "an unlabelled digest is ambiguous about what it hashes"
+
+
+def test_digest_mismatch_notice_is_hidden_until_the_digests_differ() -> None:
+    note = _by_id(PAGE, "digest-note")
+    assert "hidden" in note.attrs, "the notice would show even when the digests agree"
+    said = _squash(_raw_text(note))
+    assert "These digests differ." in said
+    assert "does not hash to the md5 its DVC pointer records" in said
+    assert any(n is note for n in _walk(_by_id(PAGE, "footer"))), (
+        "notice sits outside the footer"
+    )
+    # The branch that is written but rarely run: the comparison, the unhide, and the call.
+    assert re.search(
+        r"function digestsDiffer\(meta\) \{\s*return meta\.input_file_md5 !== meta\.input_dvc_md5;\s*\}",
+        APP_JS.read_text(),
+    )
+    sync = _js_function("syncDigestNote")
+    assert 'getElementById("digest-note").hidden = !digestsDiffer(meta)' in sync
+    main = _js_function("main")
+    assert main.index("syncDigestNote(summary.meta)") > main.index("applyBindings(")
+
+
 # --- no external requests, no framework --------------------------------------------------
 
 

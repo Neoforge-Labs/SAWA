@@ -6,6 +6,7 @@
     "dr_schema_version": "0.1.0",
     "git_sha": "deadbee",
     "input_dvc_md5": "abc",
+    "input_file_md5": "def",
     "n_accessions_ingested": 4,
     "n_accessions_scored": 3,
     "n_calls": 7,

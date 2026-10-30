@@ -17,10 +17,13 @@ row dicts: prevalence_by_drug_class, levels_by_drug, gene_coverage,
 sdrm_frequency). `meta.n_sdrm_observations` and `meta.n_sdrm_observations_multistate`
 are optional additions to 1.0.0, so the page's counting-convention note can state the
 measured size of the single-state attribution rule instead of a typed-in figure.
+`meta.input_file_md5` is likewise additive: the digest of the file actually read, kept
+apart from `input_dvc_md5`, which is only what the DVC pointer claims.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -44,6 +47,8 @@ logger = logging.getLogger(__name__)
 SUMMARY_SCHEMA_VERSION: str = "1.0.0"
 
 FLOAT_PLACES: int = 4
+
+_HASH_CHUNK_BYTES: int = 1 << 20
 
 _PROVENANCE_COLUMNS: tuple[str, ...] = (
     "algorithm_version",
@@ -70,6 +75,15 @@ def input_dvc_md5(pointer: Path) -> str:
     if match is None:
         raise MissingDvcHashError(f"{pointer} has no 'md5:' line with a 32-character digest")
     return match.group(1)
+
+
+def file_md5(path: Path, *, chunk_bytes: int = _HASH_CHUNK_BYTES) -> str:
+    """Return the md5 of the file's bytes, read in chunks so the whole file is never in memory."""
+    digest = hashlib.md5(usedforsecurity=False)
+    with path.open("rb") as handle:
+        while chunk := handle.read(chunk_bytes):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _single_value(df: pl.DataFrame, column: str) -> str | None:
@@ -138,6 +152,7 @@ def build_summary(
     panels: tuple[SdrmPanel, ...],
     sdrm_version: str,
     input_md5: str,
+    input_file_md5: str,
     git_sha: str,
     n_accessions_ingested: int,
 ) -> dict[str, Any]:
@@ -157,6 +172,7 @@ def build_summary(
         **provenance,
         "sdrm_list_version": sdrm_version,
         "input_dvc_md5": input_md5,
+        "input_file_md5": input_file_md5,
         "git_sha": git_sha,
         "n_rows_raw": report.n_rows_in,
         "n_calls": report.n_rows_out,
