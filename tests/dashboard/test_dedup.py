@@ -108,3 +108,26 @@ def test_dedup_names_missing_columns() -> None:
     df = _synthetic_dr_frame(rows=[_row("AB1", "3TC")]).drop("sequence_sha256")
     with pytest.raises(ValueError, match="sequence_sha256"):
         dedup_dr_results(df)
+
+
+def test_dedup_keeps_first_occurrence_order() -> None:
+    # Task 4 commits a golden summary whose byte-stability depends on this order.
+    # Enough interleaved keys that an unordered `unique` would not reproduce it by chance.
+    accessions = [f"AB{i:02d}" for i in (7, 3, 9, 1, 5, 3, 7, 9, 2, 1)]
+    df = _synthetic_dr_frame(rows=[_row(a, "3TC") for a in accessions])
+    out, _ = dedup_dr_results(df)
+    assert out["accession"].to_list() == ["AB07", "AB03", "AB09", "AB01", "AB05", "AB02"]
+
+
+def test_dedup_keeps_first_occurrence_when_duplicates_are_interleaved() -> None:
+    df = _synthetic_dr_frame(rows=[_row("B", "3TC"), _row("A", "3TC"), _row("B", "3TC")])
+    out, _ = dedup_dr_results(df)
+    assert out["accession"].to_list() == ["B", "A"]
+
+
+def test_dedup_accepts_an_empty_frame() -> None:
+    empty = _synthetic_dr_frame(rows=[_row("AB1", "3TC")]).clear()
+    out, report = dedup_dr_results(empty)
+    assert out.height == 0
+    assert out.schema == empty.schema
+    assert report == DedupReport(n_rows_in=0, n_rows_out=0, n_redundant=0)
