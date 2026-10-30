@@ -139,8 +139,13 @@ def partition_by_subtype(
     if require_qc_pass and "passes_qc" in df.columns:
         df = df.filter(pl.col("passes_qc"))
 
+    # Sorted, not merely order-stable: `build_subtype_trees` extends one
+    # manifest list in this iteration order, so an unsorted `unique()` gives
+    # the tree manifest a different row order on every run. Sorting also
+    # matches `build_partition_report`, which sorts "so downstream diffs are
+    # stable".
     out: dict[str, pl.DataFrame] = {}
-    for subtype in df["subtype"].unique().to_list():
+    for subtype in sorted(df["subtype"].unique().to_list()):
         if subtype in excluded:
             logger.info("skipping excluded subtype: %s", subtype)
             continue
