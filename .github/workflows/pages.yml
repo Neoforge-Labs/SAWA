@@ -4,6 +4,10 @@ name: pages
 # is built or regenerated here: summary.json is produced locally by
 # `python -m hivdrwatch.dashboard.export` and reviewed in the diff before it reaches main.
 #
+# This deploy is not gated on the summary-input-drift job in test.yml. The two workflows
+# trigger independently, so a stale summary.json that reaches main publishes anyway unless
+# branch protection requires the test workflow to pass before merge.
+#
 # GitHub Pages must be enabled once under Settings -> Pages (source: GitHub Actions)
 # before the first deploy can succeed.
 
