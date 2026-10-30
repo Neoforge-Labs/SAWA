@@ -139,7 +139,8 @@ def _assert_golden(summary: dict[str, Any], path: Path, *, update: bool) -> None
 
 
 def test_input_dvc_md5_reads_the_pointer() -> None:
-    assert input_dvc_md5(POINTER) == "e51cbb39d5ebf3bdcaff05d4df52b515"
+    # Format only: the digest changes whenever the parquet is regenerated.
+    assert re.fullmatch(r"[0-9a-f]{32}", input_dvc_md5(POINTER))
 
 
 def test_input_dvc_md5_ignores_the_hash_algorithm_line(tmp_path: Path) -> None:
@@ -381,16 +382,22 @@ def test_cli_output_is_stable_across_runs(tmp_path: Path) -> None:
 
 def test_cli_defaults_point_inside_the_package_and_repo() -> None:
     assert cli.DEFAULT_OUT.parts[-4:] == ("hivdrwatch", "dashboard", "static", "summary.json")
-    assert cli.DEFAULT_INGESTED_COUNT == 36510
-    args = cli.parse_args([])
+    args = cli.parse_args(["--ingested-count", "4"])
     assert args.input == Path("data/interim/dr_results.parquet")
     assert args.pointer is None
     assert args.reference == Path("data/reference/drm_positions.json")
     assert args.out == cli.DEFAULT_OUT
 
 
+def test_cli_requires_the_ingested_count(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        cli.parse_args([])
+    assert excinfo.value.code == 2
+    assert "--ingested-count" in capsys.readouterr().err
+
+
 def test_cli_pointer_defaults_to_input_plus_dvc(tmp_path: Path) -> None:
-    args = cli.parse_args(["--input", str(tmp_path / "dr.parquet")])
+    args = cli.parse_args(["--input", str(tmp_path / "dr.parquet"), "--ingested-count", "4"])
     assert cli.pointer_path(args) == tmp_path / "dr.parquet.dvc"
 
 
