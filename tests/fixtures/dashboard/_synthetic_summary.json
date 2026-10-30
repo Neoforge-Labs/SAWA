@@ -13,7 +13,7 @@
     "n_rows_raw": 10,
     "n_sdrm_observations": 5,
     "n_sdrm_observations_multistate": 0,
-    "schema_version": "1.0.0",
+    "schema_version": "1.1.0",
     "sdrm_list_version": "SDRM-2019"
   },
   "views": {

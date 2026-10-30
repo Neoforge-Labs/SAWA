@@ -12,13 +12,15 @@ that hold for any vintage fail the export: lossless deduplication (raised by
 `dedup_dr_results`) and a single algorithm version, publish date and call date
 across the frame. The summary makes no geographic claim about the sequences.
 
-Summary schema 1.0.0: `meta` (provenance and counts) and `views` (four lists of
-row dicts: prevalence_by_drug_class, levels_by_drug, gene_coverage,
-sdrm_frequency). `meta.n_sdrm_observations` and `meta.n_sdrm_observations_multistate`
-are optional additions to 1.0.0, so the page's counting-convention note can state the
-measured size of the single-state attribution rule instead of a typed-in figure.
-`meta.input_file_md5` is likewise additive: the digest of the file actually read, kept
-apart from `input_dvc_md5`, which is only what the DVC pointer claims.
+Summary schema 1.1.0: `meta` (provenance and counts) and `views` (four lists of
+row dicts: prevalence_by_drug_class, levels_by_drug, gene_coverage, sdrm_frequency).
+
+Migration 1.0.0 -> 1.1.0 (minor: new required fields). `meta` gained
+`n_sdrm_observations` and `n_sdrm_observations_multistate`, which let the page state
+the measured size of the single-state attribution rule instead of a typed-in figure,
+and `input_file_md5`, the digest of the file actually read, kept apart from
+`input_dvc_md5`, which is only what the DVC pointer claims. The static page requires
+all three, so a 1.0.0 file is refused by its schema gate rather than half-drawn.
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ from hivdrwatch.resistance.schema import DR_SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
 
-SUMMARY_SCHEMA_VERSION: str = "1.0.0"
+SUMMARY_SCHEMA_VERSION: str = "1.1.0"
 
 FLOAT_PLACES: int = 4
 

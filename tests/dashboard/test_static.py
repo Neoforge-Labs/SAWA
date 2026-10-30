@@ -183,6 +183,29 @@ def test_schema_gate_runs_before_anything_is_drawn_and_shows_a_banner() -> None:
     assert re.search(r"summary\??\.meta\??\.schema_version", main)
 
 
+def test_schema_gate_decision_logic_is_pinned() -> None:
+    js = APP_JS.read_text()
+    # The decision itself: anything but an identical string is a mismatch. `return false`
+    # here would draw charts against any schema.
+    assert re.search(
+        r"function schemaMismatch\(expected, actual\) \{\s*"
+        r'return typeof actual !== "string" \|\| actual !== expected;\s*\}',
+        js,
+    )
+    main = _js_function("main")
+    # Its polarity at the call site: a leading `!` would show the banner on a match.
+    assert re.search(
+        r"if \(schemaMismatch\(expected, summary\?\.meta\?\.schema_version\)\) \{\s*"
+        r"showBanner\([^;]*\);\s*return;\s*\}",
+        main,
+    )
+    # And its expectation comes from the page's own attribute, not a literal in the script.
+    assert re.search(
+        r'const expected = document\.body\.getAttribute\("data-summary-schema"\);', main
+    )
+    assert not re.search(r"expected\s*=\s*[\"'`]", js)
+
+
 def test_the_banner_is_unhidden_by_script_and_not_defeated_by_css() -> None:
     banner = _by_id(PAGE, "schema-banner")
     assert banner.attrs.get("role") == "alert" and "hidden" in banner.attrs
@@ -345,6 +368,19 @@ def test_limitation_note_links_the_provenance_evaluation_that_exists() -> None:
     assert any(h.endswith(f"/blob/main/{target}") for h in hrefs), hrefs
     assert (REPO / target).is_file()
     assert "deliberately absent" in _note("limitation")
+
+
+def test_the_out_of_region_count_is_a_citation_of_the_evaluation_not_a_live_claim() -> None:
+    figure = "3,108"
+    for path in (INDEX, STYLES, APP_JS):
+        expected = 1 if path is INDEX else 0
+        assert path.read_text().count(figure) == expected, path.name
+    sentences = re.split(r"(?<=\.) ", _note("limitation"))
+    (carrier,) = [sent for sent in sentences if figure in sent]
+    assert carrier.startswith("The ingest provenance evaluation found that")
+    assert f"it counts {figure} accessions" in carrier
+    # The attribution is only honest if the cited document does say it.
+    assert figure in (REPO / "docs/evaluations/ingest-provenance.md").read_text()
 
 
 def test_footer_carries_repo_citation_algorithm_vintage_and_commit() -> None:

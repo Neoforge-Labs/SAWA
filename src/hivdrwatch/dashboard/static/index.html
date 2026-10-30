@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="styles.css">
 <script type="module" src="app.js"></script>
 </head>
-<body data-summary-schema="1.0.0">
+<body data-summary-schema="1.1.0">
 <div id="schema-banner" class="banner" role="alert" hidden></div>
 
 <main>
@@ -22,7 +22,7 @@
 
     <p id="algorithm">Algorithm <span data-bind="meta.algorithm_version"></span>, published <span data-bind="meta.algorithm_publish_date"></span>; calls made <span data-bind="meta.called_at"></span>.</p>
 
-    <p id="limitation" class="note">Geographic and subtype breakdowns are deliberately absent. In this vintage the country and subtype fields were written from the wrong source: every country value reflects the search query rather than the record, and 3,108 accessions state a country outside the targeted region. Those views return after a provenance rebuild. The reasoning is in the <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/docs/evaluations/ingest-provenance.md">ingest provenance evaluation</a>.</p>
+    <p id="limitation" class="note">Geographic and subtype breakdowns are deliberately absent. The <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/docs/evaluations/ingest-provenance.md">ingest provenance evaluation</a> found that this vintage&rsquo;s country and subtype fields were written from the wrong source: every country value reflects the search query rather than the record, and it counts 3,108 accessions that state a country outside the targeted region. Those views return after a provenance rebuild.</p>
 
     <noscript><p class="note">This page draws its figures from <code>summary.json</code> with a small script. Without JavaScript, the data file is still readable on its own.</p></noscript>
   </header>
