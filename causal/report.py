@@ -52,7 +52,10 @@ def write_html_report(effects: list[CausalEffect], out_path: Path) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     frame = effects_to_frame(effects)
 
-    scopes = frame["data_scope"].unique().to_list() if frame.height else []
+    # First-appearance order, which now groups each drug's scopes with their
+    # own per-subtype strata because the estimator emits them that way. Sorting
+    # instead would interleave the drugs.
+    scopes = frame["data_scope"].unique(maintain_order=True).to_list() if frame.height else []
 
     parts: list[str] = [
         "<!doctype html><html><head><meta charset='utf-8'>",

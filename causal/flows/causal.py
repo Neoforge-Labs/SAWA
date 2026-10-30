@@ -72,7 +72,9 @@ def run_dr_effects(
     if df.is_empty():
         return []
     if drugs is None and "drug" in df.columns:
-        drugs = df["drug"].unique().to_list()
+        # Sorted: this loop's order becomes the row order of the effects
+        # Parquet and the section order of the HTML report.
+        drugs = sorted(d for d in df["drug"].unique().to_list() if d is not None)
 
     effects = []
     if drugs:

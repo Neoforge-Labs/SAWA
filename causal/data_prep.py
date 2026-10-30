@@ -142,6 +142,15 @@ def build_dr_causal_frames(
                 & pl.col("country").is_not_null()
                 & pl.col("collection_year").is_not_null()
             )
+            # One row per accession within a scope, so this is a total order.
+            # It has to be a sort rather than `maintain_order=True` on the
+            # `unique()` calls upstream: a Polars join does not promise to
+            # preserve either side's order, so the two joins above would
+            # discard anything those flags preserved. `_bootstrap_ci` resamples
+            # by position (`pandas_df.iloc[rng.integers(...)]`), so a frame
+            # that arrives in a different order gives a seeded bootstrap a
+            # different resample and a different CI.
+            .sort("accession")
         )
         frames[scope_value] = joined
 

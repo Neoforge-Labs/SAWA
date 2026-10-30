@@ -137,10 +137,12 @@ def estimate_dr_effects_per_subtype(
         )
         return [estimate_dr_effect(df, mutation, outcome=outcome)]
 
+    # Sorted: the caller appends these effects to one list that becomes the
+    # effects Parquet and the HTML report, so an unsorted `unique()` reorders
+    # both on every run. Sorting is stable across vintages too, which
+    # `maintain_order=True` would not be.
     out: list[CausalEffect] = []
-    for subtype in df[subtype_col].unique().to_list():
-        if subtype is None:
-            continue
+    for subtype in sorted(s for s in df[subtype_col].unique().to_list() if s is not None):
         sub_df = df.filter(pl.col(subtype_col) == subtype)
         if sub_df.height < min_samples:
             logger.info("skipping subtype=%s (n=%d < %d)", subtype, sub_df.height, min_samples)
