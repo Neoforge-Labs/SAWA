@@ -6,6 +6,43 @@ per-stage `*_SCHEMA_VERSION` constants, not a package version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 
+## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.1.0 — 2026-10-30
+
+**New module. A 1.0.0 `summary.json` is refused by the page's schema gate,
+not half-drawn; regenerate it with `make dashboard`.**
+
+### Added
+
+- `src/hivdrwatch/dashboard/`: `export/` deduplicates Sierra results,
+  matches PR and RT surveillance mutations and aggregates four views into
+  a deterministic `summary.json`; a dependency-free static page draws it.
+  Registered as `hivdrwatch dashboard` and `make dashboard`.
+- `.github/workflows/pages.yml` publishes the static page to GitHub Pages,
+  and the `summary-input-drift` job in `test.yml` fails when the DVC
+  pointer has moved since the summary was exported. The guard compares
+  `meta.input_dvc_md5` against the committed pointer only; it does not
+  verify the aggregation or the parquet.
+
+### Changed
+
+- Summary schema 1.0.0 → 1.1.0 (minor: new required fields). `meta` gains
+  `n_sdrm_observations` and `n_sdrm_observations_multistate`, so the page
+  states the measured size of the single-state attribution rule rather
+  than a typed-in figure, and `input_file_md5`, the digest of the file
+  actually read, kept apart from `input_dvc_md5`, which is only what the
+  DVC pointer claims. The page requires all three, so this is a
+  compatibility break in the JSON contract and not a cosmetic version
+  move. Any 1.0.0 file lacks them and must be re-exported.
+
+### Not done
+
+- Geographic and subtype-stratified views: the shipped vintage's country
+  and subtype are unreliable (`docs/evaluations/ingest-provenance.md`),
+  so they return after a provenance rebuild.
+- Integrase surveillance mutations: the vendored SDRM list has no
+  dolutegravir-era integrase block.
+- Flow 1's API-backed Auspice + deck.gl dashboard (`MODULES.md`).
+
 ## ingest `SCHEMA_VERSION` 0.2.0 — 2026-10-21
 
 **`subtype` and `country` change meaning. 0.1.0 and 0.2.0 records must not
