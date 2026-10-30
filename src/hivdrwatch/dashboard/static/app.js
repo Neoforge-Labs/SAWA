@@ -94,6 +94,7 @@ function deriveFigures(summary) {
     n_unscored: meta.n_accessions_ingested - meta.n_accessions_scored,
     n_drugs: new Set(views.levels_by_drug.map((row) => row.drug)).size,
     n_classes: new Set(views.levels_by_drug.map((row) => row.drug_class)).size,
+    n_repeated_sequences: meta.n_accessions_scored - meta.n_distinct_sequences,
     pct_sdrm_multistate: fmtShare(meta.n_sdrm_observations_multistate, meta.n_sdrm_observations),
   };
 }

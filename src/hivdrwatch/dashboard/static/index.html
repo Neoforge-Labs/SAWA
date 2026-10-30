@@ -30,11 +30,13 @@
   <section id="prevalence" aria-labelledby="prevalence-h">
     <h2 id="prevalence-h">Resistance prevalence by drug class</h2>
     <p>A sequence counts as resistant to a class if any drug in it scores intermediate or high-level resistance in HIVdb. Classes are in manuscript order.</p>
+    <p id="treatment-history" class="note">Treatment history is not recorded for these sequences. These are not pretreatment-resistance estimates: the corpus mixes surveillance, treatment-failure and trial sequences in unknown proportion, so the figures below should not be read against pretreatment drug-resistance surveys.</p>
     <figure>
       <div id="chart-prevalence" class="chart" data-chart="prevalence"></div>
       <figcaption>Share of sequences scored for the class&rsquo;s gene. Each bar states its own denominator, and the denominators differ.</figcaption>
     </figure>
     <p id="denominator-note" class="note">The denominator is &ldquo;Sierra returned a score for this gene&rdquo;. That is not the same as &ldquo;the surveillance codons were sequenced&rdquo;: the data carry no per-gene coordinates, so true codon coverage cannot be computed without re-calling Sierra, and a sequence that stops short of a codon counts as unmutated there. Only <span data-bind="gene.IN"></span> of <span data-bind="meta.n_accessions_scored"></span> sequences have integrase coverage, because most deposited <em>pol</em> sequences cover PR and RT only.</p>
+    <p id="unit-note" class="note">Every figure on this page counts accessions, and &ldquo;sequences&rdquo; means accessions. The <span data-bind="meta.n_accessions_scored"></span> scored accessions hold <span data-bind="meta.n_distinct_sequences"></span> distinct sequences, so <span data-bind="derived.n_repeated_sequences"></span> repeat a sequence already present under another accession. Patient identity is not recorded, so these are not independent patients.</p>
   </section>
 
   <section id="levels" aria-labelledby="levels-h">
