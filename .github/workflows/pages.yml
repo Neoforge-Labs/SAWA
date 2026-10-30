@@ -1,0 +1,42 @@
+name: pages
+
+# Publishes the committed static dashboard exactly as it stands in the repository. Nothing
+# is built or regenerated here: summary.json is produced locally by
+# `python -m hivdrwatch.dashboard.export` and reviewed in the diff before it reaches main.
+#
+# GitHub Pages must be enabled once under Settings -> Pages (source: GitHub Actions)
+# before the first deploy can succeed.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/hivdrwatch/dashboard/static/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: src/hivdrwatch/dashboard/static
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

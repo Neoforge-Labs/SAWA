@@ -51,3 +51,40 @@ jobs:
           name: coverage-py${{ matrix.python-version }}
           path: .coverage
           if-no-files-found: ignore
+
+  # Detects a stale summary, nothing more. It compares meta.input_dvc_md5 in the committed
+  # summary.json against the md5 in the committed .dvc pointer, so it fires when `dvc add`
+  # moved the pointer after the summary was exported. It does NOT verify the aggregation,
+  # and it does NOT detect a parquet that disagrees with its own pointer: the only DVC
+  # remote is a MinIO on localhost (.dvc/config), unreachable from a hosted runner, so CI
+  # never holds the data. meta.input_file_md5 (the digest of the file actually hashed at
+  # export time) is likewise unverifiable here, and is not consulted. It differs from
+  # input_dvc_md5 on the current vintage; the page footer discloses that.
+  summary-input-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Summary input pointer matches the DVC pointer
+        run: |
+          uv run python -c "
+          import logging, sys
+          from pathlib import Path
+          from hivdrwatch.dashboard.export.summary import check_input_not_stale
+          logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+          sys.exit(check_input_not_stale(
+              Path('src/hivdrwatch/dashboard/static/summary.json'),
+              Path('data/interim/dr_results.parquet.dvc'),
+          ))
+          "
