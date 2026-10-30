@@ -149,7 +149,7 @@ def gene_coverage(df: pl.DataFrame) -> pl.DataFrame:
 
 def _panel_frequency(df: pl.DataFrame, panel: SdrmPanel) -> pl.DataFrame:
     # `mutations` repeats on every drug row of a gene, so reduce to one row per
-    # accession before exploding or each mutation is counted once per drug.
+    # accession before taking the denominator, or it counts drug rows, not sequences.
     per_accession = df.filter(pl.col("gene") == panel.gene).unique(
         subset="accession", keep="first", maintain_order=True
     )

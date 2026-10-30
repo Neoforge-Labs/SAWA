@@ -16,6 +16,7 @@ import polars as pl
 import pytest
 
 from hivdrwatch.dashboard.export.aggregate import (
+    LEVEL_ORDER,
     UnknownDrugClassError,
     UnknownLevelError,
     gene_coverage,
@@ -153,6 +154,12 @@ def test_denominators_are_per_class_not_global():
     assert by["PI"] == 2 and by["INSTI"] == 1
 
 
+def test_level_order_knows_every_resistant_level():
+    from hivdrwatch.paper1.fig02_aggregate import RESISTANT_LEVELS
+
+    assert set(LEVEL_ORDER) >= RESISTANT_LEVELS
+
+
 def test_levels_by_drug_covers_all_five_levels_per_drug():
     out = levels_by_drug(_frame_mixed_levels())
     assert set(out.filter(pl.col("drug") == "NVP")["level"]) == {
@@ -206,7 +213,10 @@ def test_gene_coverage_counts_distinct_accessions_per_gene():
 def test_sdrm_frequency_counts_each_accession_once_per_mutation():
     # Same accession, M184V listed on both its RT rows.
     out = sdrm_frequency(_frame_repeated_mutation(), _panels())
-    assert out.filter(pl.col("mutation") == "M184V").row(0, named=True)["n_sequences"] == 1
+    row = out.filter(pl.col("mutation") == "M184V").row(0, named=True)
+    assert row["n_sequences"] == 1
+    # One accession over three drug rows: the denominator is where a missing reduction shows.
+    assert row["n_panel_denominator"] == 1
 
 
 def test_sdrm_denominator_includes_sequences_with_no_mutations():
