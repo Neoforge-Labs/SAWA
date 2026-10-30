@@ -3,10 +3,52 @@
     "algorithm_publish_date": "2026-04-26",
     "algorithm_version": "HIVDB_10.2",
     "called_at": "2026-10-30",
+    "curated_dvc_md5": "f024e783ae4d80b2ae4886737be84028",
+    "curated_file_md5": "f024e783ae4d80b2ae4886737be84028",
     "dr_schema_version": "0.1.0",
-    "git_sha": "41d07c4ffec28c5c2b93d3f9cd0e65876daa8aa1",
+    "git_sha": "1dcd938392cc089f579f9a9201bf58eaa2d787e1",
     "input_dvc_md5": "5fa898bd24efc537261a81e2c77c2158",
     "input_file_md5": "5fa898bd24efc537261a81e2c77c2158",
+    "landscape_countries": [
+      {
+        "code": "KE",
+        "name": "Kenya"
+      },
+      {
+        "code": "UG",
+        "name": "Uganda"
+      },
+      {
+        "code": "TZ",
+        "name": "Tanzania"
+      },
+      {
+        "code": "RW",
+        "name": "Rwanda"
+      },
+      {
+        "code": "BI",
+        "name": "Burundi"
+      },
+      {
+        "code": "ET",
+        "name": "Ethiopia"
+      },
+      {
+        "code": "SS",
+        "name": "South Sudan"
+      },
+      {
+        "code": "SO",
+        "name": "Somalia"
+      }
+    ],
+    "landscape_min_cell_n": 5,
+    "landscape_n_accessions": 27379,
+    "landscape_n_excluded_no_country": 277,
+    "landscape_n_excluded_no_year": 5100,
+    "landscape_n_excluded_other": 0,
+    "landscape_n_excluded_out_of_region": 3125,
     "n_accessions_ingested": 36614,
     "n_accessions_scored": 35881,
     "n_calls": 729751,
@@ -14,7 +56,7 @@
     "n_rows_raw": 729751,
     "n_sdrm_observations": 27460,
     "n_sdrm_observations_multistate": 428,
-    "schema_version": "1.2.0",
+    "schema_version": "1.3.0",
     "sdrm_list_version": "SDRM-2019"
   },
   "views": {
@@ -1003,6 +1045,3152 @@
         "frac_resistant": 0.0321,
         "n_resistant": 303,
         "n_sequences": 9429
+      }
+    ],
+    "resistance_landscape": [
+      {
+        "collection_year": 2000,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 6
+      },
+      {
+        "collection_year": 2001,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 23
+      },
+      {
+        "collection_year": 2002,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 18
+      },
+      {
+        "collection_year": 2003,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2004,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 194
+      },
+      {
+        "collection_year": 2005,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 165
+      },
+      {
+        "collection_year": 2006,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0029,
+        "n_resistant": 1,
+        "n_sequences": 339
+      },
+      {
+        "collection_year": 2007,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 98
+      },
+      {
+        "collection_year": 2008,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0066,
+        "n_resistant": 2,
+        "n_sequences": 303
+      },
+      {
+        "collection_year": 2009,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0083,
+        "n_resistant": 2,
+        "n_sequences": 241
+      },
+      {
+        "collection_year": 2010,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0064,
+        "n_resistant": 13,
+        "n_sequences": 2034
+      },
+      {
+        "collection_year": 2011,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0082,
+        "n_resistant": 13,
+        "n_sequences": 1595
+      },
+      {
+        "collection_year": 2012,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0096,
+        "n_resistant": 4,
+        "n_sequences": 415
+      },
+      {
+        "collection_year": 2013,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0097,
+        "n_resistant": 4,
+        "n_sequences": 414
+      },
+      {
+        "collection_year": 2014,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0736,
+        "n_resistant": 24,
+        "n_sequences": 326
+      },
+      {
+        "collection_year": 2015,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.049,
+        "n_resistant": 10,
+        "n_sequences": 204
+      },
+      {
+        "collection_year": 2016,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0129,
+        "n_resistant": 4,
+        "n_sequences": 311
+      },
+      {
+        "collection_year": 2017,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0112,
+        "n_resistant": 3,
+        "n_sequences": 267
+      },
+      {
+        "collection_year": 2018,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0115,
+        "n_resistant": 1,
+        "n_sequences": 87
+      },
+      {
+        "collection_year": 2019,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0136,
+        "n_resistant": 4,
+        "n_sequences": 295
+      },
+      {
+        "collection_year": 2020,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0379,
+        "n_resistant": 8,
+        "n_sequences": 211
+      },
+      {
+        "collection_year": 2021,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 16
+      },
+      {
+        "collection_year": 2022,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2023,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.1429,
+        "n_resistant": 1,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2024,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2025,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 1986,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 138
+      },
+      {
+        "collection_year": 1995,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2003,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0164,
+        "n_resistant": 1,
+        "n_sequences": 61
+      },
+      {
+        "collection_year": 2004,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 116
+      },
+      {
+        "collection_year": 2005,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0031,
+        "n_resistant": 1,
+        "n_sequences": 319
+      },
+      {
+        "collection_year": 2006,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 246
+      },
+      {
+        "collection_year": 2007,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 244
+      },
+      {
+        "collection_year": 2008,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0088,
+        "n_resistant": 2,
+        "n_sequences": 226
+      },
+      {
+        "collection_year": 2009,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0066,
+        "n_resistant": 4,
+        "n_sequences": 602
+      },
+      {
+        "collection_year": 2010,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0013,
+        "n_resistant": 1,
+        "n_sequences": 756
+      },
+      {
+        "collection_year": 2011,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0606,
+        "n_resistant": 16,
+        "n_sequences": 264
+      },
+      {
+        "collection_year": 2012,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0871,
+        "n_resistant": 63,
+        "n_sequences": 723
+      },
+      {
+        "collection_year": 2013,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0491,
+        "n_resistant": 61,
+        "n_sequences": 1242
+      },
+      {
+        "collection_year": 2014,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.1074,
+        "n_resistant": 52,
+        "n_sequences": 484
+      },
+      {
+        "collection_year": 2015,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0262,
+        "n_resistant": 49,
+        "n_sequences": 1872
+      },
+      {
+        "collection_year": 2016,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0244,
+        "n_resistant": 36,
+        "n_sequences": 1475
+      },
+      {
+        "collection_year": 2017,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0293,
+        "n_resistant": 13,
+        "n_sequences": 443
+      },
+      {
+        "collection_year": 2018,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0556,
+        "n_resistant": 2,
+        "n_sequences": 36
+      },
+      {
+        "collection_year": 2019,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0348,
+        "n_resistant": 10,
+        "n_sequences": 287
+      },
+      {
+        "collection_year": 2020,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2021,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 8
+      },
+      {
+        "collection_year": 2022,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2023,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0287,
+        "n_resistant": 14,
+        "n_sequences": 488
+      },
+      {
+        "collection_year": 2024,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0667,
+        "n_resistant": 1,
+        "n_sequences": 15
+      },
+      {
+        "collection_year": 2025,
+        "country": "UG",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2002,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2003,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2004,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0294,
+        "n_resistant": 1,
+        "n_sequences": 34
+      },
+      {
+        "collection_year": 2005,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0031,
+        "n_resistant": 2,
+        "n_sequences": 643
+      },
+      {
+        "collection_year": 2006,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2007,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0488,
+        "n_resistant": 2,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2008,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.019,
+        "n_resistant": 2,
+        "n_sequences": 105
+      },
+      {
+        "collection_year": 2009,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0108,
+        "n_resistant": 1,
+        "n_sequences": 93
+      },
+      {
+        "collection_year": 2010,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 45
+      },
+      {
+        "collection_year": 2011,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0106,
+        "n_resistant": 1,
+        "n_sequences": 94
+      },
+      {
+        "collection_year": 2012,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 94
+      },
+      {
+        "collection_year": 2013,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0108,
+        "n_resistant": 6,
+        "n_sequences": 553
+      },
+      {
+        "collection_year": 2014,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.01,
+        "n_resistant": 2,
+        "n_sequences": 201
+      },
+      {
+        "collection_year": 2015,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0144,
+        "n_resistant": 2,
+        "n_sequences": 139
+      },
+      {
+        "collection_year": 2016,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0267,
+        "n_resistant": 2,
+        "n_sequences": 75
+      },
+      {
+        "collection_year": 2017,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0219,
+        "n_resistant": 7,
+        "n_sequences": 320
+      },
+      {
+        "collection_year": 2018,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0488,
+        "n_resistant": 2,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2019,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0058,
+        "n_resistant": 6,
+        "n_sequences": 1039
+      },
+      {
+        "collection_year": 2020,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.0408,
+        "n_resistant": 6,
+        "n_sequences": 147
+      },
+      {
+        "collection_year": 2021,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.1667,
+        "n_resistant": 5,
+        "n_sequences": 30
+      },
+      {
+        "collection_year": 2022,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.1828,
+        "n_resistant": 17,
+        "n_sequences": 93
+      },
+      {
+        "collection_year": 2023,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.1875,
+        "n_resistant": 9,
+        "n_sequences": 48
+      },
+      {
+        "collection_year": 2024,
+        "country": "TZ",
+        "drug_class": "PI",
+        "frac_resistant": 0.3729,
+        "n_resistant": 22,
+        "n_sequences": 59
+      },
+      {
+        "collection_year": 2003,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2005,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0076,
+        "n_resistant": 1,
+        "n_sequences": 131
+      },
+      {
+        "collection_year": 2006,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 50
+      },
+      {
+        "collection_year": 2007,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 169
+      },
+      {
+        "collection_year": 2008,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 180
+      },
+      {
+        "collection_year": 2009,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 99
+      },
+      {
+        "collection_year": 2010,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 57
+      },
+      {
+        "collection_year": 2011,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 17
+      },
+      {
+        "collection_year": 2012,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0909,
+        "n_resistant": 1,
+        "n_sequences": 11
+      },
+      {
+        "collection_year": 2015,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 3
+      },
+      {
+        "collection_year": 2016,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2017,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 6
+      },
+      {
+        "collection_year": 2018,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2019,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2023,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2024,
+        "country": "RW",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2015,
+        "country": "BI",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2018,
+        "country": "BI",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2006,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2008,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": 0.0116,
+        "n_resistant": 2,
+        "n_sequences": 172
+      },
+      {
+        "collection_year": 2009,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": 0.0069,
+        "n_resistant": 1,
+        "n_sequences": 144
+      },
+      {
+        "collection_year": 2010,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": 0.0019,
+        "n_resistant": 1,
+        "n_sequences": 516
+      },
+      {
+        "collection_year": 2011,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 186
+      },
+      {
+        "collection_year": 2012,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 15
+      },
+      {
+        "collection_year": 2013,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 8
+      },
+      {
+        "collection_year": 2017,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 222
+      },
+      {
+        "collection_year": 2018,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": 0.0115,
+        "n_resistant": 9,
+        "n_sequences": 780
+      },
+      {
+        "collection_year": 2019,
+        "country": "ET",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2008,
+        "country": "SO",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2000,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2001,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 21
+      },
+      {
+        "collection_year": 2002,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2003,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2004,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0258,
+        "n_resistant": 5,
+        "n_sequences": 194
+      },
+      {
+        "collection_year": 2005,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0485,
+        "n_resistant": 8,
+        "n_sequences": 165
+      },
+      {
+        "collection_year": 2006,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0354,
+        "n_resistant": 12,
+        "n_sequences": 339
+      },
+      {
+        "collection_year": 2007,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1633,
+        "n_resistant": 16,
+        "n_sequences": 98
+      },
+      {
+        "collection_year": 2008,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1221,
+        "n_resistant": 37,
+        "n_sequences": 303
+      },
+      {
+        "collection_year": 2009,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0296,
+        "n_resistant": 6,
+        "n_sequences": 203
+      },
+      {
+        "collection_year": 2010,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0084,
+        "n_resistant": 17,
+        "n_sequences": 2034
+      },
+      {
+        "collection_year": 2011,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0263,
+        "n_resistant": 42,
+        "n_sequences": 1596
+      },
+      {
+        "collection_year": 2012,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0361,
+        "n_resistant": 15,
+        "n_sequences": 415
+      },
+      {
+        "collection_year": 2013,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.5821,
+        "n_resistant": 241,
+        "n_sequences": 414
+      },
+      {
+        "collection_year": 2014,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3118,
+        "n_resistant": 106,
+        "n_sequences": 340
+      },
+      {
+        "collection_year": 2015,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.4118,
+        "n_resistant": 84,
+        "n_sequences": 204
+      },
+      {
+        "collection_year": 2016,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3023,
+        "n_resistant": 94,
+        "n_sequences": 311
+      },
+      {
+        "collection_year": 2017,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0824,
+        "n_resistant": 22,
+        "n_sequences": 267
+      },
+      {
+        "collection_year": 2018,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1522,
+        "n_resistant": 14,
+        "n_sequences": 92
+      },
+      {
+        "collection_year": 2019,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3288,
+        "n_resistant": 97,
+        "n_sequences": 295
+      },
+      {
+        "collection_year": 2020,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.4218,
+        "n_resistant": 89,
+        "n_sequences": 211
+      },
+      {
+        "collection_year": 2021,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0625,
+        "n_resistant": 1,
+        "n_sequences": 16
+      },
+      {
+        "collection_year": 2022,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2023,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2857,
+        "n_resistant": 2,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2024,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.8571,
+        "n_resistant": 6,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2025,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 3,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 1986,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 143
+      },
+      {
+        "collection_year": 1995,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2003,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0164,
+        "n_resistant": 1,
+        "n_sequences": 61
+      },
+      {
+        "collection_year": 2004,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.069,
+        "n_resistant": 8,
+        "n_sequences": 116
+      },
+      {
+        "collection_year": 2005,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.5674,
+        "n_resistant": 181,
+        "n_sequences": 319
+      },
+      {
+        "collection_year": 2006,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.512,
+        "n_resistant": 128,
+        "n_sequences": 250
+      },
+      {
+        "collection_year": 2007,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1066,
+        "n_resistant": 26,
+        "n_sequences": 244
+      },
+      {
+        "collection_year": 2008,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3498,
+        "n_resistant": 78,
+        "n_sequences": 223
+      },
+      {
+        "collection_year": 2009,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0739,
+        "n_resistant": 39,
+        "n_sequences": 528
+      },
+      {
+        "collection_year": 2010,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2157,
+        "n_resistant": 165,
+        "n_sequences": 765
+      },
+      {
+        "collection_year": 2011,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2429,
+        "n_resistant": 68,
+        "n_sequences": 280
+      },
+      {
+        "collection_year": 2012,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1449,
+        "n_resistant": 93,
+        "n_sequences": 642
+      },
+      {
+        "collection_year": 2013,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0608,
+        "n_resistant": 74,
+        "n_sequences": 1218
+      },
+      {
+        "collection_year": 2014,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1942,
+        "n_resistant": 93,
+        "n_sequences": 479
+      },
+      {
+        "collection_year": 2015,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1817,
+        "n_resistant": 337,
+        "n_sequences": 1855
+      },
+      {
+        "collection_year": 2016,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.173,
+        "n_resistant": 256,
+        "n_sequences": 1480
+      },
+      {
+        "collection_year": 2017,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.129,
+        "n_resistant": 57,
+        "n_sequences": 442
+      },
+      {
+        "collection_year": 2018,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3056,
+        "n_resistant": 11,
+        "n_sequences": 36
+      },
+      {
+        "collection_year": 2019,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1809,
+        "n_resistant": 51,
+        "n_sequences": 282
+      },
+      {
+        "collection_year": 2020,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.6585,
+        "n_resistant": 27,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2021,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 8
+      },
+      {
+        "collection_year": 2022,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2023,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3709,
+        "n_resistant": 181,
+        "n_sequences": 488
+      },
+      {
+        "collection_year": 2024,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.4667,
+        "n_resistant": 7,
+        "n_sequences": 15
+      },
+      {
+        "collection_year": 2025,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.4,
+        "n_resistant": 2,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2002,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2003,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2004,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 34
+      },
+      {
+        "collection_year": 2005,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0047,
+        "n_resistant": 3,
+        "n_sequences": 645
+      },
+      {
+        "collection_year": 2006,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2007,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0976,
+        "n_resistant": 4,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2008,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2381,
+        "n_resistant": 25,
+        "n_sequences": 105
+      },
+      {
+        "collection_year": 2009,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3656,
+        "n_resistant": 34,
+        "n_sequences": 93
+      },
+      {
+        "collection_year": 2010,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2174,
+        "n_resistant": 10,
+        "n_sequences": 46
+      },
+      {
+        "collection_year": 2011,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.1809,
+        "n_resistant": 17,
+        "n_sequences": 94
+      },
+      {
+        "collection_year": 2012,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2979,
+        "n_resistant": 28,
+        "n_sequences": 94
+      },
+      {
+        "collection_year": 2013,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.4268,
+        "n_resistant": 236,
+        "n_sequences": 553
+      },
+      {
+        "collection_year": 2014,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3582,
+        "n_resistant": 72,
+        "n_sequences": 201
+      },
+      {
+        "collection_year": 2015,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2878,
+        "n_resistant": 40,
+        "n_sequences": 139
+      },
+      {
+        "collection_year": 2016,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2667,
+        "n_resistant": 20,
+        "n_sequences": 75
+      },
+      {
+        "collection_year": 2017,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3594,
+        "n_resistant": 115,
+        "n_sequences": 320
+      },
+      {
+        "collection_year": 2018,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.4146,
+        "n_resistant": 17,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2019,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.2984,
+        "n_resistant": 310,
+        "n_sequences": 1039
+      },
+      {
+        "collection_year": 2020,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3878,
+        "n_resistant": 57,
+        "n_sequences": 147
+      },
+      {
+        "collection_year": 2021,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.5667,
+        "n_resistant": 17,
+        "n_sequences": 30
+      },
+      {
+        "collection_year": 2022,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.6022,
+        "n_resistant": 56,
+        "n_sequences": 93
+      },
+      {
+        "collection_year": 2023,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.4444,
+        "n_resistant": 20,
+        "n_sequences": 45
+      },
+      {
+        "collection_year": 2024,
+        "country": "TZ",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.5763,
+        "n_resistant": 34,
+        "n_sequences": 59
+      },
+      {
+        "collection_year": 2003,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2005,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 131
+      },
+      {
+        "collection_year": 2006,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 51
+      },
+      {
+        "collection_year": 2007,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0058,
+        "n_resistant": 1,
+        "n_sequences": 171
+      },
+      {
+        "collection_year": 2008,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0055,
+        "n_resistant": 1,
+        "n_sequences": 181
+      },
+      {
+        "collection_year": 2009,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0536,
+        "n_resistant": 3,
+        "n_sequences": 56
+      },
+      {
+        "collection_year": 2010,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0526,
+        "n_resistant": 3,
+        "n_sequences": 57
+      },
+      {
+        "collection_year": 2011,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 17
+      },
+      {
+        "collection_year": 2012,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.5455,
+        "n_resistant": 6,
+        "n_sequences": 11
+      },
+      {
+        "collection_year": 2015,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 3
+      },
+      {
+        "collection_year": 2016,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2017,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 6
+      },
+      {
+        "collection_year": 2018,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2019,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2023,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2024,
+        "country": "RW",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2015,
+        "country": "BI",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2018,
+        "country": "BI",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2006,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2008,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0058,
+        "n_resistant": 1,
+        "n_sequences": 173
+      },
+      {
+        "collection_year": 2009,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 145
+      },
+      {
+        "collection_year": 2010,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0543,
+        "n_resistant": 28,
+        "n_sequences": 516
+      },
+      {
+        "collection_year": 2011,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0753,
+        "n_resistant": 14,
+        "n_sequences": 186
+      },
+      {
+        "collection_year": 2012,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.3333,
+        "n_resistant": 5,
+        "n_sequences": 15
+      },
+      {
+        "collection_year": 2013,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 8
+      },
+      {
+        "collection_year": 2017,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.6081,
+        "n_resistant": 135,
+        "n_sequences": 222
+      },
+      {
+        "collection_year": 2018,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": 0.5859,
+        "n_resistant": 457,
+        "n_sequences": 780
+      },
+      {
+        "collection_year": 2019,
+        "country": "ET",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2008,
+        "country": "SO",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2000,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2001,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 21
+      },
+      {
+        "collection_year": 2002,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2003,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2004,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0515,
+        "n_resistant": 10,
+        "n_sequences": 194
+      },
+      {
+        "collection_year": 2005,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0606,
+        "n_resistant": 10,
+        "n_sequences": 165
+      },
+      {
+        "collection_year": 2006,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0177,
+        "n_resistant": 6,
+        "n_sequences": 339
+      },
+      {
+        "collection_year": 2007,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0918,
+        "n_resistant": 9,
+        "n_sequences": 98
+      },
+      {
+        "collection_year": 2008,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.1452,
+        "n_resistant": 44,
+        "n_sequences": 303
+      },
+      {
+        "collection_year": 2009,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0493,
+        "n_resistant": 10,
+        "n_sequences": 203
+      },
+      {
+        "collection_year": 2010,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0143,
+        "n_resistant": 29,
+        "n_sequences": 2034
+      },
+      {
+        "collection_year": 2011,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0846,
+        "n_resistant": 135,
+        "n_sequences": 1596
+      },
+      {
+        "collection_year": 2012,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.053,
+        "n_resistant": 22,
+        "n_sequences": 415
+      },
+      {
+        "collection_year": 2013,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.6957,
+        "n_resistant": 288,
+        "n_sequences": 414
+      },
+      {
+        "collection_year": 2014,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4353,
+        "n_resistant": 148,
+        "n_sequences": 340
+      },
+      {
+        "collection_year": 2015,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5294,
+        "n_resistant": 108,
+        "n_sequences": 204
+      },
+      {
+        "collection_year": 2016,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.3666,
+        "n_resistant": 114,
+        "n_sequences": 311
+      },
+      {
+        "collection_year": 2017,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.1199,
+        "n_resistant": 32,
+        "n_sequences": 267
+      },
+      {
+        "collection_year": 2018,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.337,
+        "n_resistant": 31,
+        "n_sequences": 92
+      },
+      {
+        "collection_year": 2019,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5254,
+        "n_resistant": 155,
+        "n_sequences": 295
+      },
+      {
+        "collection_year": 2020,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5877,
+        "n_resistant": 124,
+        "n_sequences": 211
+      },
+      {
+        "collection_year": 2021,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4375,
+        "n_resistant": 7,
+        "n_sequences": 16
+      },
+      {
+        "collection_year": 2022,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 1,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2023,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2857,
+        "n_resistant": 2,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2024,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.8571,
+        "n_resistant": 6,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2025,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 3,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 1986,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.007,
+        "n_resistant": 1,
+        "n_sequences": 143
+      },
+      {
+        "collection_year": 1995,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2003,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.1475,
+        "n_resistant": 9,
+        "n_sequences": 61
+      },
+      {
+        "collection_year": 2004,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.181,
+        "n_resistant": 21,
+        "n_sequences": 116
+      },
+      {
+        "collection_year": 2005,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4389,
+        "n_resistant": 140,
+        "n_sequences": 319
+      },
+      {
+        "collection_year": 2006,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.516,
+        "n_resistant": 129,
+        "n_sequences": 250
+      },
+      {
+        "collection_year": 2007,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0902,
+        "n_resistant": 22,
+        "n_sequences": 244
+      },
+      {
+        "collection_year": 2008,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.3632,
+        "n_resistant": 81,
+        "n_sequences": 223
+      },
+      {
+        "collection_year": 2009,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0758,
+        "n_resistant": 40,
+        "n_sequences": 528
+      },
+      {
+        "collection_year": 2010,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2627,
+        "n_resistant": 201,
+        "n_sequences": 765
+      },
+      {
+        "collection_year": 2011,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2893,
+        "n_resistant": 81,
+        "n_sequences": 280
+      },
+      {
+        "collection_year": 2012,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.1822,
+        "n_resistant": 117,
+        "n_sequences": 642
+      },
+      {
+        "collection_year": 2013,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.1133,
+        "n_resistant": 138,
+        "n_sequences": 1218
+      },
+      {
+        "collection_year": 2014,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2088,
+        "n_resistant": 100,
+        "n_sequences": 479
+      },
+      {
+        "collection_year": 2015,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2447,
+        "n_resistant": 454,
+        "n_sequences": 1855
+      },
+      {
+        "collection_year": 2016,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2851,
+        "n_resistant": 422,
+        "n_sequences": 1480
+      },
+      {
+        "collection_year": 2017,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2828,
+        "n_resistant": 125,
+        "n_sequences": 442
+      },
+      {
+        "collection_year": 2018,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5,
+        "n_resistant": 18,
+        "n_sequences": 36
+      },
+      {
+        "collection_year": 2019,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.422,
+        "n_resistant": 119,
+        "n_sequences": 282
+      },
+      {
+        "collection_year": 2020,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.6829,
+        "n_resistant": 28,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2021,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.375,
+        "n_resistant": 3,
+        "n_sequences": 8
+      },
+      {
+        "collection_year": 2022,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.6,
+        "n_resistant": 3,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2023,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4672,
+        "n_resistant": 228,
+        "n_sequences": 488
+      },
+      {
+        "collection_year": 2024,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.6,
+        "n_resistant": 9,
+        "n_sequences": 15
+      },
+      {
+        "collection_year": 2025,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.6,
+        "n_resistant": 3,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2002,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2003,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2004,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 34
+      },
+      {
+        "collection_year": 2005,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.014,
+        "n_resistant": 9,
+        "n_sequences": 645
+      },
+      {
+        "collection_year": 2006,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2007,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.1463,
+        "n_resistant": 6,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2008,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4095,
+        "n_resistant": 43,
+        "n_sequences": 105
+      },
+      {
+        "collection_year": 2009,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4301,
+        "n_resistant": 40,
+        "n_sequences": 93
+      },
+      {
+        "collection_year": 2010,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2826,
+        "n_resistant": 13,
+        "n_sequences": 46
+      },
+      {
+        "collection_year": 2011,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.3085,
+        "n_resistant": 29,
+        "n_sequences": 94
+      },
+      {
+        "collection_year": 2012,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2979,
+        "n_resistant": 28,
+        "n_sequences": 94
+      },
+      {
+        "collection_year": 2013,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4991,
+        "n_resistant": 276,
+        "n_sequences": 553
+      },
+      {
+        "collection_year": 2014,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4328,
+        "n_resistant": 87,
+        "n_sequences": 201
+      },
+      {
+        "collection_year": 2015,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.3309,
+        "n_resistant": 46,
+        "n_sequences": 139
+      },
+      {
+        "collection_year": 2016,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.3467,
+        "n_resistant": 26,
+        "n_sequences": 75
+      },
+      {
+        "collection_year": 2017,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4281,
+        "n_resistant": 137,
+        "n_sequences": 320
+      },
+      {
+        "collection_year": 2018,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5854,
+        "n_resistant": 24,
+        "n_sequences": 41
+      },
+      {
+        "collection_year": 2019,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4524,
+        "n_resistant": 470,
+        "n_sequences": 1039
+      },
+      {
+        "collection_year": 2020,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5442,
+        "n_resistant": 80,
+        "n_sequences": 147
+      },
+      {
+        "collection_year": 2021,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5333,
+        "n_resistant": 16,
+        "n_sequences": 30
+      },
+      {
+        "collection_year": 2022,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.7097,
+        "n_resistant": 66,
+        "n_sequences": 93
+      },
+      {
+        "collection_year": 2023,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5778,
+        "n_resistant": 26,
+        "n_sequences": 45
+      },
+      {
+        "collection_year": 2024,
+        "country": "TZ",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.661,
+        "n_resistant": 39,
+        "n_sequences": 59
+      },
+      {
+        "collection_year": 2003,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2005,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 131
+      },
+      {
+        "collection_year": 2006,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 51
+      },
+      {
+        "collection_year": 2007,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0117,
+        "n_resistant": 2,
+        "n_sequences": 171
+      },
+      {
+        "collection_year": 2008,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0387,
+        "n_resistant": 7,
+        "n_sequences": 181
+      },
+      {
+        "collection_year": 2009,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0536,
+        "n_resistant": 3,
+        "n_sequences": 56
+      },
+      {
+        "collection_year": 2010,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0702,
+        "n_resistant": 4,
+        "n_sequences": 57
+      },
+      {
+        "collection_year": 2011,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 17
+      },
+      {
+        "collection_year": 2012,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.6364,
+        "n_resistant": 7,
+        "n_sequences": 11
+      },
+      {
+        "collection_year": 2015,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 3
+      },
+      {
+        "collection_year": 2016,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.2,
+        "n_resistant": 1,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2017,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.1667,
+        "n_resistant": 1,
+        "n_sequences": 6
+      },
+      {
+        "collection_year": 2018,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2019,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5714,
+        "n_resistant": 4,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2023,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2024,
+        "country": "RW",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2015,
+        "country": "BI",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2018,
+        "country": "BI",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 1,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2006,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2008,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0231,
+        "n_resistant": 4,
+        "n_sequences": 173
+      },
+      {
+        "collection_year": 2009,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.0345,
+        "n_resistant": 5,
+        "n_sequences": 145
+      },
+      {
+        "collection_year": 2010,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.093,
+        "n_resistant": 48,
+        "n_sequences": 516
+      },
+      {
+        "collection_year": 2011,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.1559,
+        "n_resistant": 29,
+        "n_sequences": 186
+      },
+      {
+        "collection_year": 2012,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.4667,
+        "n_resistant": 7,
+        "n_sequences": 15
+      },
+      {
+        "collection_year": 2013,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.5,
+        "n_resistant": 4,
+        "n_sequences": 8
+      },
+      {
+        "collection_year": 2017,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.7342,
+        "n_resistant": 163,
+        "n_sequences": 222
+      },
+      {
+        "collection_year": 2018,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": 0.6808,
+        "n_resistant": 531,
+        "n_sequences": 780
+      },
+      {
+        "collection_year": 2019,
+        "country": "ET",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2008,
+        "country": "SO",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2000,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2001,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0476,
+        "n_resistant": 1,
+        "n_sequences": 21
+      },
+      {
+        "collection_year": 2002,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2003,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2004,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 23
+      },
+      {
+        "collection_year": 2005,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 21
+      },
+      {
+        "collection_year": 2006,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 36
+      },
+      {
+        "collection_year": 2007,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 14
+      },
+      {
+        "collection_year": 2008,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 62
+      },
+      {
+        "collection_year": 2009,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 19
+      },
+      {
+        "collection_year": 2010,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 70
+      },
+      {
+        "collection_year": 2011,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 67
+      },
+      {
+        "collection_year": 2012,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 40
+      },
+      {
+        "collection_year": 2013,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 51
+      },
+      {
+        "collection_year": 2014,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2015,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.2,
+        "n_resistant": 1,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2016,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2017,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 6
+      },
+      {
+        "collection_year": 2020,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 70
+      },
+      {
+        "collection_year": 2023,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 1,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2024,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.4286,
+        "n_resistant": 3,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2025,
+        "country": "KE",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 2,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 1986,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 135
+      },
+      {
+        "collection_year": 1995,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2000,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 18
+      },
+      {
+        "collection_year": 2003,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 16
+      },
+      {
+        "collection_year": 2005,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 43
+      },
+      {
+        "collection_year": 2006,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2007,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0055,
+        "n_resistant": 1,
+        "n_sequences": 183
+      },
+      {
+        "collection_year": 2008,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0056,
+        "n_resistant": 1,
+        "n_sequences": 178
+      },
+      {
+        "collection_year": 2009,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0287,
+        "n_resistant": 6,
+        "n_sequences": 209
+      },
+      {
+        "collection_year": 2010,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 152
+      },
+      {
+        "collection_year": 2011,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 96
+      },
+      {
+        "collection_year": 2012,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0167,
+        "n_resistant": 8,
+        "n_sequences": 479
+      },
+      {
+        "collection_year": 2013,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0319,
+        "n_resistant": 18,
+        "n_sequences": 564
+      },
+      {
+        "collection_year": 2014,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0671,
+        "n_resistant": 11,
+        "n_sequences": 164
+      },
+      {
+        "collection_year": 2015,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0103,
+        "n_resistant": 4,
+        "n_sequences": 387
+      },
+      {
+        "collection_year": 2016,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.098,
+        "n_resistant": 25,
+        "n_sequences": 255
+      },
+      {
+        "collection_year": 2017,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.1791,
+        "n_resistant": 24,
+        "n_sequences": 134
+      },
+      {
+        "collection_year": 2018,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.1818,
+        "n_resistant": 4,
+        "n_sequences": 22
+      },
+      {
+        "collection_year": 2019,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.1111,
+        "n_resistant": 15,
+        "n_sequences": 135
+      },
+      {
+        "collection_year": 2020,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 14
+      },
+      {
+        "collection_year": 2021,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0294,
+        "n_resistant": 1,
+        "n_sequences": 34
+      },
+      {
+        "collection_year": 2022,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0391,
+        "n_resistant": 7,
+        "n_sequences": 179
+      },
+      {
+        "collection_year": 2023,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0958,
+        "n_resistant": 55,
+        "n_sequences": 574
+      },
+      {
+        "collection_year": 2024,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.5,
+        "n_resistant": 7,
+        "n_sequences": 14
+      },
+      {
+        "collection_year": 2025,
+        "country": "UG",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.2,
+        "n_resistant": 1,
+        "n_sequences": 5
+      },
+      {
+        "collection_year": 2002,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2003,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2004,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 35
+      },
+      {
+        "collection_year": 2005,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 22
+      },
+      {
+        "collection_year": 2006,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.05,
+        "n_resistant": 1,
+        "n_sequences": 20
+      },
+      {
+        "collection_year": 2008,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 144
+      },
+      {
+        "collection_year": 2010,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 12
+      },
+      {
+        "collection_year": 2011,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 30
+      },
+      {
+        "collection_year": 2012,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 71
+      },
+      {
+        "collection_year": 2013,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 10
+      },
+      {
+        "collection_year": 2015,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2016,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0769,
+        "n_resistant": 1,
+        "n_sequences": 13
+      },
+      {
+        "collection_year": 2017,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 225
+      },
+      {
+        "collection_year": 2018,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 6
+      },
+      {
+        "collection_year": 2019,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 2
+      },
+      {
+        "collection_year": 2020,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0167,
+        "n_resistant": 3,
+        "n_sequences": 180
+      },
+      {
+        "collection_year": 2022,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2023,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.1346,
+        "n_resistant": 7,
+        "n_sequences": 52
+      },
+      {
+        "collection_year": 2024,
+        "country": "TZ",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.1017,
+        "n_resistant": 6,
+        "n_sequences": 59
+      },
+      {
+        "collection_year": 2003,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2005,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0135,
+        "n_resistant": 1,
+        "n_sequences": 74
+      },
+      {
+        "collection_year": 2006,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 22
+      },
+      {
+        "collection_year": 2007,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.014,
+        "n_resistant": 2,
+        "n_sequences": 143
+      },
+      {
+        "collection_year": 2008,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.012,
+        "n_resistant": 1,
+        "n_sequences": 83
+      },
+      {
+        "collection_year": 2009,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 17
+      },
+      {
+        "collection_year": 2010,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 47
+      },
+      {
+        "collection_year": 2011,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 14
+      },
+      {
+        "collection_year": 2015,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 3
+      },
+      {
+        "collection_year": 2016,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2017,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 6
+      },
+      {
+        "collection_year": 2018,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 4
+      },
+      {
+        "collection_year": 2019,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 7
+      },
+      {
+        "collection_year": 2023,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2024,
+        "country": "RW",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2015,
+        "country": "BI",
+        "drug_class": "INSTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2008,
+        "country": "ET",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0,
+        "n_resistant": 0,
+        "n_sequences": 24
+      },
+      {
+        "collection_year": 2017,
+        "country": "ET",
+        "drug_class": "INSTI",
+        "frac_resistant": 0.0022,
+        "n_resistant": 1,
+        "n_sequences": 460
       }
     ],
     "sdrm_frequency": [
