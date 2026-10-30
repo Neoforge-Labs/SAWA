@@ -173,37 +173,55 @@ def test_body_declares_the_schema_version_summary_json_carries() -> None:
     assert SUMMARY["meta"]["schema_version"] == SUMMARY_SCHEMA_VERSION
 
 
+# The expected schema must come from the page's own attribute, read either way.
+_ATTRIBUTE_READ = (
+    r'document\.body\.(?:getAttribute\(\s*"data-summary-schema"\s*\)|dataset\.summarySchema)'
+)
+
+
+def _expected_identifier(main: str) -> str:
+    match = re.search(rf"(?:const|let)\s+(\w+)\s*=\s*{_ATTRIBUTE_READ}\s*;", main)
+    assert match, "the expected schema is not read from the body's data-summary-schema"
+    return match.group(1)
+
+
 def test_schema_gate_runs_before_anything_is_drawn_and_shows_a_banner() -> None:
     main = _js_function("main")
     gate = main.index("schemaMismatch(")
     assert gate < main.index("applyBindings(") < main.index("drawAll(")
     mismatch_branch = main[gate : main.index("return;", gate)]
     assert "showBanner(" in mismatch_branch
-    assert re.search(r'getAttribute\(\s*"data-summary-schema"\s*\)', main)
-    assert re.search(r"summary\??\.meta\??\.schema_version", main)
+    _expected_identifier(main)
 
 
 def test_schema_gate_decision_logic_is_pinned() -> None:
     js = APP_JS.read_text()
-    # The decision itself: anything but an identical string is a mismatch. `return false`
-    # here would draw charts against any schema.
-    assert re.search(
-        r"function schemaMismatch\(expected, actual\) \{\s*"
-        r'return typeof actual !== "string" \|\| actual !== expected;\s*\}',
+    # The decision: a version that is not identical to the expected one is a mismatch.
+    # `return false` here would draw charts against any schema. Parameter names, and extra
+    # guards joined by `||`, are free to change; the inequality of the two inputs is not.
+    decision = re.search(
+        r"function schemaMismatch\((\w+),\s*(\w+)\)\s*\{\s*"
+        r"return\s+(?:[^;]*?\|\|\s*)?(\w+)\s*!==\s*(\w+)\s*;\s*\}",
         js,
     )
+    assert decision, "schemaMismatch no longer ends in an inequality of its two arguments"
+    params, compared = decision.group(1, 2), decision.group(3, 4)
+    assert sorted(params) == sorted(compared) and params[0] != params[1]
+
     main = _js_function("main")
-    # Its polarity at the call site: a leading `!` would show the banner on a match.
-    assert re.search(
-        r"if \(schemaMismatch\(expected, summary\?\.meta\?\.schema_version\)\) \{\s*"
-        r"showBanner\([^;]*\);\s*return;\s*\}",
+    # Polarity at the call site: a leading `!` would show the banner on a match. The
+    # version compared must be the summary's `schema_version`, not another version field.
+    expected = _expected_identifier(main)
+    call = re.search(
+        rf"if\s*\(\s*schemaMismatch\(\s*{expected}\s*,[^()]*\bschema_version\b[^()]*\)\s*\)\s*\{{"
+        r"\s*showBanner\([^;]*\);\s*return;\s*\}",
         main,
     )
-    # And its expectation comes from the page's own attribute, not a literal in the script.
-    assert re.search(
-        r'const expected = document\.body\.getAttribute\("data-summary-schema"\);', main
+    assert call, (
+        "the gate is not `if (schemaMismatch(expected, <meta.schema_version>)) {banner; return}`"
     )
-    assert not re.search(r"expected\s*=\s*[\"'`]", js)
+    # The expectation is never a literal in the script.
+    assert not re.search(rf"\b{expected}\s*=\s*[\"'`]", js)
 
 
 def test_the_banner_is_unhidden_by_script_and_not_defeated_by_css() -> None:
@@ -379,8 +397,13 @@ def test_the_out_of_region_count_is_a_citation_of_the_evaluation_not_a_live_clai
     (carrier,) = [sent for sent in sentences if figure in sent]
     assert carrier.startswith("The ingest provenance evaluation found that")
     assert f"it counts {figure} accessions" in carrier
-    # The attribution is only honest if the cited document does say it.
-    assert figure in (REPO / "docs/evaluations/ingest-provenance.md").read_text()
+    # The attribution is only honest if the cited document says it, of the right set: the
+    # accessions that state a country outside the targeted region, as a whole number (not
+    # the tail of a larger one such as 13,108).
+    document = (REPO / "docs/evaluations/ingest-provenance.md").read_text()
+    assert re.search(
+        rf"^\|\s*stated, elsewhere[^|]*\|\s*{re.escape(figure)}\s*\|", document, re.MULTILINE
+    )
 
 
 def test_footer_carries_repo_citation_algorithm_vintage_and_commit() -> None:
