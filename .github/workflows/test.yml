@@ -37,6 +37,13 @@ jobs:
       - name: Ruff — format check
         run: uv run ruff format --check .
 
+      # mypy runs strict (see [tool.mypy] in pyproject.toml) but only over the
+      # packages that currently pass. The rest of the tree carries ~180 pre-existing
+      # errors; gating everything today would fail every PR regardless of its content.
+      # This list is a ratchet: add a package here once it is clean, never remove one.
+      - name: Mypy — strict, on the packages that pass
+        run: uv run mypy src/hivdrwatch/dashboard src/hivdrwatch/cli
+
       - name: Pytest
         env:
           # Never talk to real Sierra/NCBI in CI — the resistance client

@@ -54,7 +54,10 @@ core or `causal/` core. Docs-only PRs can self-merge.
 ## Code style
 
 **Python 3.12+ only.** Use `from __future__ import annotations` in every
-module. Type hints are non-optional — mypy strict mode is enforced in CI.
+module. Type hints are non-optional. mypy runs in strict mode, but CI gates only the
+packages that currently pass it — see the ratchet list in
+`.github/workflows/test.yml`. Add a package to that list once it is clean;
+never remove one. Run `uv run mypy <path>` locally on anything you touch.
 
 **Naming:**
 - Modules: `snake_case`, singular (`ingest`, not `ingesters`)
