@@ -3,10 +3,52 @@
     "algorithm_publish_date": "2026-04-26",
     "algorithm_version": "HIVDB_10.2",
     "called_at": "2026-08-17",
+    "curated_dvc_md5": "ghi",
+    "curated_file_md5": "jkl",
     "dr_schema_version": "0.1.0",
     "git_sha": "deadbee",
     "input_dvc_md5": "abc",
     "input_file_md5": "def",
+    "landscape_countries": [
+      {
+        "code": "KE",
+        "name": "Kenya"
+      },
+      {
+        "code": "UG",
+        "name": "Uganda"
+      },
+      {
+        "code": "TZ",
+        "name": "Tanzania"
+      },
+      {
+        "code": "RW",
+        "name": "Rwanda"
+      },
+      {
+        "code": "BI",
+        "name": "Burundi"
+      },
+      {
+        "code": "ET",
+        "name": "Ethiopia"
+      },
+      {
+        "code": "SS",
+        "name": "South Sudan"
+      },
+      {
+        "code": "SO",
+        "name": "Somalia"
+      }
+    ],
+    "landscape_min_cell_n": 5,
+    "landscape_n_accessions": 2,
+    "landscape_n_excluded_no_country": 0,
+    "landscape_n_excluded_no_year": 0,
+    "landscape_n_excluded_other": 0,
+    "landscape_n_excluded_out_of_region": 1,
     "n_accessions_ingested": 4,
     "n_accessions_scored": 3,
     "n_calls": 7,
@@ -14,7 +56,7 @@
     "n_rows_raw": 10,
     "n_sdrm_observations": 5,
     "n_sdrm_observations_multistate": 0,
-    "schema_version": "1.2.0",
+    "schema_version": "1.3.0",
     "sdrm_list_version": "SDRM-2019"
   },
   "views": {
@@ -197,6 +239,48 @@
         "drug_class": "INSTI",
         "frac_resistant": 1.0,
         "n_resistant": 1,
+        "n_sequences": 1
+      }
+    ],
+    "resistance_landscape": [
+      {
+        "collection_year": 2010,
+        "country": "KE",
+        "drug_class": "PI",
+        "frac_resistant": null,
+        "n_resistant": 1,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2010,
+        "country": "KE",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 1,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2010,
+        "country": "UG",
+        "drug_class": "NRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2010,
+        "country": "KE",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 1,
+        "n_sequences": 1
+      },
+      {
+        "collection_year": 2010,
+        "country": "UG",
+        "drug_class": "NNRTI",
+        "frac_resistant": null,
+        "n_resistant": 0,
         "n_sequences": 1
       }
     ],

@@ -11,11 +11,14 @@ never asserts them. The parquet is regenerated over time, so only properties
 that hold for any vintage fail the export: lossless deduplication (raised by
 `dedup_dr_results`), a single algorithm version, publish date, call date and DR
 schema version across the frame (all but the publish date never null), and an
-ingested count no smaller than the scored count. The summary makes no geographic claim
-about the sequences.
+ingested count no smaller than the scored count. Apart from the landscape view, the
+summary makes no geographic claim about the sequences; the landscape view carries a
+country per cell and restricts itself to the targeted region, with the accessions it left
+out counted in `meta`.
 
-Summary schema 1.2.0: `meta` (provenance and counts) and `views` (four lists of
-row dicts: prevalence_by_drug_class, levels_by_drug, gene_coverage, sdrm_frequency).
+Summary schema 1.3.0: `meta` (provenance and counts) and `views` (five lists of
+row dicts: prevalence_by_drug_class, levels_by_drug, gene_coverage, sdrm_frequency,
+resistance_landscape).
 
 Migration 1.0.0 -> 1.1.0 (minor: new required fields). `meta` gained
 `n_sdrm_observations` and `n_sdrm_observations_multistate`, which let the page state
@@ -32,6 +35,19 @@ page requires it, so a 1.1.0 file is refused by its schema gate rather than half
 `meta.dr_schema_version` also changes source without changing type: it is now the
 `schema_version` the data frame carries, where it was the code constant, so it names the
 schema the rows were written at even when the constant has since moved.
+
+Migration 1.2.0 -> 1.3.0 (minor: new required fields and a new required view). `views` gains
+`resistance_landscape`, rows of [country, collection_year, drug_class, n_sequences,
+n_resistant, frac_resistant] summed over subtype and restricted to the targeted region, with
+`frac_resistant` null below `meta.landscape_min_cell_n`. `meta` gains `curated_dvc_md5` and
+`curated_file_md5`, the pointer and file digests of the curated table the countries and years
+come from, kept apart from the Sierra input's; `landscape_min_cell_n`; `landscape_countries`,
+the targeted region as [{code, name}] in search order; and the accession accounting
+`landscape_n_accessions` (drawn), `landscape_n_excluded_out_of_region`,
+`landscape_n_excluded_no_country`, `landscape_n_excluded_no_year` and
+`landscape_n_excluded_other`, which together sum to `n_accessions_scored`. The static page
+requires all of them, so a 1.2.0 file is refused by its schema gate rather than half-drawn.
+`check_input_not_stale` now takes the curated pointer as well and fails if either moved.
 """
 
 from __future__ import annotations
@@ -53,11 +69,17 @@ from hivdrwatch.dashboard.export.aggregate import (
 )
 from hivdrwatch.dashboard.export.dedup import dedup_dr_results
 from hivdrwatch.dashboard.export.drm import SdrmPanel, parse_mutation
+from hivdrwatch.dashboard.export.landscape import (
+    LandscapeAccountingError,
+    resistance_landscape,
+)
+from hivdrwatch.ingest.genbank import EAST_AFRICA_COUNTRIES
+from hivdrwatch.paper1.fig02_aggregate import MIN_CELL_N
 from hivdrwatch.resistance.schema import DR_SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
 
-SUMMARY_SCHEMA_VERSION: str = "1.2.0"
+SUMMARY_SCHEMA_VERSION: str = "1.3.0"
 
 FLOAT_PLACES: int = 4
 
@@ -102,30 +124,38 @@ def input_dvc_md5(pointer: Path) -> str:
     return match.group(1)
 
 
-def check_input_not_stale(summary: Path, pointer: Path) -> int:
-    """Return 0 if `meta.input_dvc_md5` equals the pointer's md5, else log an ERROR and return 1.
+def check_input_not_stale(summary: Path, pointer: Path, curated_pointer: Path) -> int:
+    """Return 0 if both recorded pointer digests match their `.dvc` pointers, else 1.
 
-    Narrow by construction. It compares one pointer value against another, so it detects
-    that `dvc add` moved the pointer after the summary was exported. It does not detect a
-    parquet that disagrees with its own pointer, and it does not re-derive any aggregate:
-    the only DVC remote is a localhost MinIO, so CI never holds the data. `input_file_md5`
-    is the digest of the file actually read at export time; it cannot be checked here for
-    the same reason, and is deliberately not consulted.
+    Narrow by construction. It compares pointer values against pointer values, so it detects
+    that `dvc add` moved either pointer after the summary was exported: `meta.input_dvc_md5`
+    against the Sierra pointer and `meta.curated_dvc_md5` against the curated one. It does
+    not detect a parquet that disagrees with its own pointer, and it does not re-derive any
+    aggregate: the only DVC remote is a localhost MinIO, so CI never holds the data. The
+    `*_file_md5` digests are those of the files actually read at export time; they cannot be
+    checked here for the same reason, and are deliberately not consulted.
+
+    Both pointers are checked and both are reported when both have moved. The curated one is
+    a required argument, not an option, so a caller cannot leave the second input unguarded
+    by omission.
     """
     meta = json.loads(summary.read_text()).get("meta", {})
-    recorded = meta.get("input_dvc_md5")
-    current = input_dvc_md5(pointer)
-    if recorded == current:
-        return 0
-    logger.error(
-        "%s records input_dvc_md5=%s but %s now says md5=%s; re-run the export against the "
-        "current input",
-        summary,
-        recorded,
-        pointer,
-        current,
-    )
-    return 1
+    failed = 0
+    for key, path in (("input_dvc_md5", pointer), ("curated_dvc_md5", curated_pointer)):
+        recorded = meta.get(key)
+        current = input_dvc_md5(path)
+        if recorded != current:
+            failed = 1
+            logger.error(
+                "%s records %s=%s but %s now says md5=%s; re-run the export against the "
+                "current input",
+                summary,
+                key,
+                recorded,
+                path,
+                current,
+            )
+    return failed
 
 
 def file_md5(path: Path, *, chunk_bytes: int = _HASH_CHUNK_BYTES) -> str:
@@ -204,13 +234,17 @@ def build_summary(
     sdrm_version: str,
     input_md5: str,
     input_file_md5: str,
+    curated: pl.DataFrame,
+    curated_md5: str,
+    curated_file_md5: str,
     git_sha: str,
     n_accessions_ingested: int,
 ) -> dict[str, Any]:
     """Deduplicate `df`, aggregate it, and return `{"meta": ..., "views": ...}`.
 
-    Exceptions from `dedup_dr_results` propagate unchanged. Floats in the result
-    are already rounded, so what a caller inspects is what `write_summary` writes.
+    `curated` supplies the country, collection year and subtype the landscape view
+    stratifies by. Exceptions from `dedup_dr_results` propagate unchanged. Floats in the
+    result are already rounded, so what a caller inspects is what `write_summary` writes.
     """
     deduped, report = dedup_dr_results(df)
 
@@ -234,6 +268,11 @@ def build_summary(
             DR_SCHEMA_VERSION,
         )
     n_observations, n_multistate = sdrm_observation_counts(deduped, panels)
+    landscape, accounting = resistance_landscape(deduped, curated)
+    if accounting.n_total != n_scored:
+        raise LandscapeAccountingError(
+            f"the landscape accounts for {accounting.n_total} accessions but {n_scored} were scored"
+        )
 
     meta: dict[str, Any] = {
         "schema_version": SUMMARY_SCHEMA_VERSION,
@@ -242,6 +281,8 @@ def build_summary(
         "sdrm_list_version": sdrm_version,
         "input_dvc_md5": input_md5,
         "input_file_md5": input_file_md5,
+        "curated_dvc_md5": curated_md5,
+        "curated_file_md5": curated_file_md5,
         "git_sha": git_sha,
         "n_rows_raw": report.n_rows_in,
         "n_calls": report.n_rows_out,
@@ -250,12 +291,22 @@ def build_summary(
         "n_accessions_ingested": n_accessions_ingested,
         "n_sdrm_observations": n_observations,
         "n_sdrm_observations_multistate": n_multistate,
+        "landscape_min_cell_n": MIN_CELL_N,
+        "landscape_countries": [
+            {"code": code, "name": name} for code, name in EAST_AFRICA_COUNTRIES.items()
+        ],
+        "landscape_n_accessions": accounting.n_in_heatmap,
+        "landscape_n_excluded_out_of_region": accounting.n_out_of_region,
+        "landscape_n_excluded_no_country": accounting.n_no_country,
+        "landscape_n_excluded_no_year": accounting.n_no_year,
+        "landscape_n_excluded_other": accounting.n_other,
     }
     views: dict[str, list[dict[str, Any]]] = {
         "prevalence_by_drug_class": prevalence_by_drug_class(deduped).to_dicts(),
         "levels_by_drug": levels_by_drug(deduped).to_dicts(),
         "gene_coverage": gene_coverage(deduped).to_dicts(),
         "sdrm_frequency": sdrm_frequency(deduped, panels).to_dicts(),
+        "resistance_landscape": landscape.to_dicts(),
     }
     logger.info(
         "summary: %d calls over %d accessions scored (%d ingested)",

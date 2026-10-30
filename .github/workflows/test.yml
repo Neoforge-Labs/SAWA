@@ -52,14 +52,16 @@ jobs:
           path: .coverage
           if-no-files-found: ignore
 
-  # Detects a stale summary, nothing more. It compares meta.input_dvc_md5 in the committed
-  # summary.json against the md5 in the committed .dvc pointer, so it fires when `dvc add`
-  # moved the pointer after the summary was exported. It does NOT verify the aggregation,
-  # and it does NOT detect a parquet that disagrees with its own pointer: the only DVC
-  # remote is a MinIO on localhost (.dvc/config), unreachable from a hosted runner, so CI
-  # never holds the data. meta.input_file_md5 (the digest of the file actually hashed at
-  # export time) is likewise unverifiable here, and is not consulted. It differs from
-  # input_dvc_md5 on the current vintage; the page footer discloses that.
+  # Detects a stale summary, nothing more. It compares the pointer digests recorded in the
+  # committed summary.json, meta.input_dvc_md5 (Sierra results) and meta.curated_dvc_md5
+  # (the curated table the countries and years come from), against the md5 in each committed
+  # .dvc pointer, so it fires when `dvc add` moved either pointer after the summary was
+  # exported. It does NOT verify the aggregation, and it does NOT detect a parquet that
+  # disagrees with its own pointer: the only DVC remote is a MinIO on localhost
+  # (.dvc/config), unreachable from a hosted runner, so CI never holds the data. The
+  # *_file_md5 digests (of the files actually hashed at export time) are likewise
+  # unverifiable here, and are not consulted. The page footer discloses when the Sierra
+  # input's two digests differ.
   summary-input-drift:
     runs-on: ubuntu-latest
     steps:
@@ -76,7 +78,7 @@ jobs:
       - name: Sync dependencies
         run: uv sync
 
-      - name: Summary input pointer matches the DVC pointer
+      - name: Summary input pointers match the DVC pointers
         run: |
           uv run python -c "
           import logging, sys
@@ -86,5 +88,6 @@ jobs:
           sys.exit(check_input_not_stale(
               Path('src/hivdrwatch/dashboard/static/summary.json'),
               Path('data/interim/dr_results.parquet.dvc'),
+              Path('data/interim/curated/aligned.parquet.dvc'),
           ))
           "

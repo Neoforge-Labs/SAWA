@@ -1,7 +1,7 @@
 """Command-line entry point: `python -m hivdrwatch.dashboard.export`.
 
-Reads the Sierra results parquet and its DVC pointer, builds the summary and
-writes `static/summary.json`. This module and the CLI entry points are the only
+Reads the Sierra results parquet and the curated table, each with its DVC pointer, builds
+the summary and writes `static/summary.json`. This module and the CLI entry points are the only
 places in the dashboard package allowed to `print`.
 """
 
@@ -15,6 +15,7 @@ from pathlib import Path
 import polars as pl
 
 from hivdrwatch.dashboard.export.drm import load_sdrm_panels
+from hivdrwatch.dashboard.export.landscape import CURATED_COLUMNS
 from hivdrwatch.dashboard.export.summary import (
     build_summary,
     file_md5,
@@ -25,6 +26,7 @@ from hivdrwatch.dashboard.export.summary import (
 logger = logging.getLogger(__name__)
 
 DEFAULT_INPUT = Path("data/interim/dr_results.parquet")
+DEFAULT_CURATED = Path("data/interim/curated/aligned.parquet")
 DEFAULT_REFERENCE = Path("data/reference/drm_positions.json")
 DEFAULT_OUT = Path(__file__).resolve().parents[1] / "static" / "summary.json"
 
@@ -44,6 +46,18 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=None,
         help="DVC pointer for --input (default: the input path plus .dvc)",
     )
+    parser.add_argument(
+        "--curated",
+        type=Path,
+        default=DEFAULT_CURATED,
+        help="curated table supplying country, collection year and subtype",
+    )
+    parser.add_argument(
+        "--curated-pointer",
+        type=Path,
+        default=None,
+        help="DVC pointer for --curated (default: the curated path plus .dvc)",
+    )
     parser.add_argument("--reference", type=Path, default=DEFAULT_REFERENCE)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     # Required: the parquet holds only accessions that returned a result, so the ingested
@@ -58,12 +72,16 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _pointer_for(path: Path, override: Path | None) -> Path:
+    return override if override is not None else path.with_name(path.name + ".dvc")
+
+
 def pointer_path(args: argparse.Namespace) -> Path:
-    pointer: Path | None = args.pointer
-    if pointer is not None:
-        return pointer
-    input_path: Path = args.input
-    return input_path.with_name(input_path.name + ".dvc")
+    return _pointer_for(args.input, args.pointer)
+
+
+def curated_pointer_path(args: argparse.Namespace) -> Path:
+    return _pointer_for(args.curated, args.curated_pointer)
 
 
 def _git(args: list[str], cwd: Path | None) -> subprocess.CompletedProcess[str]:
@@ -110,6 +128,9 @@ def main(argv: list[str] | None = None) -> int:
         sdrm_version=sdrm_version,
         input_md5=input_dvc_md5(pointer_path(args)),
         input_file_md5=file_md5(args.input),
+        curated=pl.read_parquet(args.curated, columns=list(CURATED_COLUMNS)),
+        curated_md5=input_dvc_md5(curated_pointer_path(args)),
+        curated_file_md5=file_md5(args.curated),
         git_sha=resolve_git_sha(),
         n_accessions_ingested=args.ingested_count,
     )

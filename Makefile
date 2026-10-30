@@ -222,7 +222,7 @@ cluster:
 .PHONY: dashboard
 dashboard:
 	: "$${INGESTED_COUNT:?INGESTED_COUNT is required: the number of accessions that entered ingest, e.g. make dashboard INGESTED_COUNT=<n>}"
-	python -m hivdrwatch.dashboard.export --input $(INTERIM_DIR)/dr_results.parquet --ingested-count "$$INGESTED_COUNT"
+	python -m hivdrwatch.dashboard.export --input $(INTERIM_DIR)/dr_results.parquet --curated $(CURATED_OUT) --ingested-count "$$INGESTED_COUNT"
 
 .PHONY: pipeline
 pipeline: ingest sierra curate cluster

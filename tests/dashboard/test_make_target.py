@@ -67,3 +67,12 @@ def test_make_dashboard_passes_the_operators_count_through_unchanged(
     )
     assert done.returncode == 0, done.stderr
     assert "--ingested-count 41234" in done.stdout
+
+
+def test_make_dashboard_points_the_export_at_the_curated_table_under_the_interim_dir(
+    tmp_path: Path,
+) -> None:
+    done = _make_dashboard(tmp_path, "INGESTED_COUNT=41234", "INTERIM_DIR=elsewhere/interim")
+    assert done.returncode == 0, done.stderr
+    assert "--input elsewhere/interim/dr_results.parquet" in done.stdout
+    assert "--curated elsewhere/interim/curated/aligned.parquet" in done.stdout

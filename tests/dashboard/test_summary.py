@@ -46,9 +46,11 @@ from hivdrwatch.resistance.schema import DR_SCHEMA_VERSION
 
 REPO = Path(__file__).resolve().parents[2]
 POINTER = REPO / "data" / "interim" / "dr_results.parquet.dvc"
+CURATED_POINTER = REPO / "data" / "interim" / "curated" / "aligned.parquet.dvc"
 REFERENCE_PATH = REPO / "data" / "reference" / "drm_positions.json"
 FIXTURE_DIR = REPO / "tests" / "fixtures" / "dashboard"
 FIXTURE_PATH = FIXTURE_DIR / "_synthetic_dr_results.parquet"
+CURATED_FIXTURE_PATH = FIXTURE_DIR / "_synthetic_curated.parquet"
 GOLDEN_PATH = FIXTURE_DIR / "_synthetic_summary.json"
 
 _GENE_OF_CLASS = {"PI": "PR", "NRTI": "RT", "NNRTI": "RT", "INSTI": "IN"}
@@ -116,6 +118,29 @@ def _synthetic() -> pl.DataFrame:
     return pl.DataFrame(stored, schema=_SCHEMA)
 
 
+def _synthetic_curated() -> pl.DataFrame:
+    """Country, year and subtype for the synthetic accessions, plus one that was never scored.
+
+    SYN1 is Kenyan and SYN2 Ugandan, so they land in the heatmap; SYN3 states Thailand, so it
+    is the one accession the region restriction must leave out and count. SYN4 is curated but
+    has no Sierra result, and must not appear in any landscape count.
+    """
+    return pl.DataFrame(
+        {
+            "accession": ["SYN000001.1", "SYN000002.1", "SYN000003.1", "SYN000004.1"],
+            "country": ["KE", "UG", "TH", "KE"],
+            "collection_year": [2010, 2010, 2012, 2011],
+            "subtype": ["A1", "D", "C", "A1"],
+        },
+        schema={
+            "accession": pl.String,
+            "country": pl.String,
+            "collection_year": pl.Int64,
+            "subtype": pl.String,
+        },
+    )
+
+
 def _panels() -> tuple[SdrmPanel, ...]:
     return load_sdrm_panels(REFERENCE_PATH)[0]
 
@@ -126,6 +151,9 @@ def _build(df: pl.DataFrame | None = None, **overrides: Any) -> dict[str, Any]:
         "sdrm_version": "SDRM-2019",
         "input_md5": "abc",
         "input_file_md5": "def",
+        "curated": _synthetic_curated(),
+        "curated_md5": "ghi",
+        "curated_file_md5": "jkl",
         "git_sha": "deadbee",
         "n_accessions_ingested": 4,
     }
@@ -182,23 +210,41 @@ _MD5_B = "fedcba9876543210fedcba9876543210"
 _MD5_C = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 
+def _pointer_file(path: Path, md5: str) -> Path:
+    path.write_text(f"outs:\n- md5: {md5}\n  size: 1\n  hash: md5\n  path: x.parquet\n")
+    return path
+
+
 def _drift_inputs(
-    tmp_path: Path, *, summary_meta: dict[str, str], pointer_md5: str
-) -> tuple[Path, Path]:
+    tmp_path: Path,
+    *,
+    summary_meta: dict[str, str],
+    pointer_md5: str,
+    curated_recorded: str | None = _MD5_A,
+    curated_pointer_md5: str = _MD5_A,
+) -> tuple[Path, Path, Path]:
+    """A summary, the Sierra pointer and the curated pointer.
+
+    The curated digest is recorded as agreeing by default, so a test about the Sierra pointer
+    is not also a test about the curated one; pass `curated_recorded=None` to omit it.
+    """
+    meta = dict(summary_meta)
+    if curated_recorded is not None:
+        meta.setdefault("curated_dvc_md5", curated_recorded)
     summary = tmp_path / "summary.json"
-    summary.write_text(json.dumps({"meta": summary_meta, "views": {}}))
-    pointer = tmp_path / "x.parquet.dvc"
-    pointer.write_text(
-        f"outs:\n- md5: {pointer_md5}\n  size: 1\n  hash: md5\n  path: x.parquet\n"
+    summary.write_text(json.dumps({"meta": meta, "views": {}}))
+    return (
+        summary,
+        _pointer_file(tmp_path / "x.parquet.dvc", pointer_md5),
+        _pointer_file(tmp_path / "curated.parquet.dvc", curated_pointer_md5),
     )
-    return summary, pointer
 
 
 def test_drift_check_passes_when_hashes_agree(tmp_path: Path) -> None:
-    summary, pointer = _drift_inputs(
+    summary, pointer, curated_pointer = _drift_inputs(
         tmp_path, summary_meta={"input_dvc_md5": _MD5_A}, pointer_md5=_MD5_A
     )
-    assert check_input_not_stale(summary, pointer) == 0
+    assert check_input_not_stale(summary, pointer, curated_pointer) == 0
 
 
 def test_committed_summary_is_not_stale_against_the_committed_dvc_pointer() -> None:
@@ -206,17 +252,17 @@ def test_committed_summary_is_not_stale_against_the_committed_dvc_pointer() -> N
     # runs here: `pytest tests/ -q` fails locally if `dvc add` moved the pointer after the
     # committed summary was exported.
     committed = REPO / "src" / "hivdrwatch" / "dashboard" / "static" / "summary.json"
-    assert check_input_not_stale(committed, POINTER) == 0
+    assert check_input_not_stale(committed, POINTER, CURATED_POINTER) == 0
 
 
 def test_drift_check_fails_when_the_pointer_moved(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    summary, pointer = _drift_inputs(
+    summary, pointer, curated_pointer = _drift_inputs(
         tmp_path, summary_meta={"input_dvc_md5": _MD5_A}, pointer_md5=_MD5_B
     )
     with caplog.at_level(logging.ERROR):
-        assert check_input_not_stale(summary, pointer) == 1
+        assert check_input_not_stale(summary, pointer, curated_pointer) == 1
     errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
     assert len(errors) == 1
     assert _MD5_A in errors[0]
@@ -226,29 +272,31 @@ def test_drift_check_fails_when_the_pointer_moved(
 def test_drift_check_compares_the_pointer_digest_not_the_file_digest(tmp_path: Path) -> None:
     # The committed vintage's two digests differ (pointer vs hashed file), so passing here
     # is what lets the guard be green on it. Only the pointer-to-pointer claim is checked.
-    summary, pointer = _drift_inputs(
+    summary, pointer, curated_pointer = _drift_inputs(
         tmp_path,
         summary_meta={"input_dvc_md5": _MD5_A, "input_file_md5": _MD5_C},
         pointer_md5=_MD5_A,
     )
-    assert check_input_not_stale(summary, pointer) == 0
+    assert check_input_not_stale(summary, pointer, curated_pointer) == 0
 
 
 def test_drift_check_is_not_satisfied_by_a_matching_file_digest(tmp_path: Path) -> None:
-    summary, pointer = _drift_inputs(
+    summary, pointer, curated_pointer = _drift_inputs(
         tmp_path,
         summary_meta={"input_dvc_md5": _MD5_A, "input_file_md5": _MD5_B},
         pointer_md5=_MD5_B,
     )
-    assert check_input_not_stale(summary, pointer) == 1
+    assert check_input_not_stale(summary, pointer, curated_pointer) == 1
 
 
 def test_drift_check_fails_rather_than_passes_when_the_summary_records_no_digest(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    summary, pointer = _drift_inputs(tmp_path, summary_meta={}, pointer_md5=_MD5_A)
+    summary, pointer, curated_pointer = _drift_inputs(
+        tmp_path, summary_meta={}, pointer_md5=_MD5_A
+    )
     with caplog.at_level(logging.ERROR):
-        assert check_input_not_stale(summary, pointer) == 1
+        assert check_input_not_stale(summary, pointer, curated_pointer) == 1
     assert any(r.levelno == logging.ERROR for r in caplog.records)
 
 
@@ -257,8 +305,64 @@ def test_drift_check_propagates_an_unreadable_pointer(tmp_path: Path) -> None:
     summary.write_text(json.dumps({"meta": {"input_dvc_md5": _MD5_A}}))
     pointer = tmp_path / "x.dvc"
     pointer.write_text("outs: []\n")
+    curated_pointer = _pointer_file(tmp_path / "c.dvc", _MD5_A)
     with pytest.raises(MissingDvcHashError):
-        check_input_not_stale(summary, pointer)
+        check_input_not_stale(summary, pointer, curated_pointer)
+
+
+def test_drift_check_fails_when_only_the_curated_pointer_moved(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    summary, pointer, curated_pointer = _drift_inputs(
+        tmp_path,
+        summary_meta={"input_dvc_md5": _MD5_A},
+        pointer_md5=_MD5_A,
+        curated_recorded=_MD5_B,
+        curated_pointer_md5=_MD5_C,
+    )
+    with caplog.at_level(logging.ERROR):
+        assert check_input_not_stale(summary, pointer, curated_pointer) == 1
+    errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 1 and "curated_dvc_md5" in errors[0]
+    assert _MD5_B in errors[0] and _MD5_C in errors[0]
+
+
+def test_drift_check_reports_both_pointers_when_both_moved(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    summary, pointer, curated_pointer = _drift_inputs(
+        tmp_path,
+        summary_meta={"input_dvc_md5": _MD5_A},
+        pointer_md5=_MD5_B,
+        curated_recorded=_MD5_A,
+        curated_pointer_md5=_MD5_C,
+    )
+    with caplog.at_level(logging.ERROR):
+        assert check_input_not_stale(summary, pointer, curated_pointer) == 1
+    keys = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert any("input_dvc_md5" in m for m in keys) and any(
+        "curated_dvc_md5" in m for m in keys
+    )
+
+
+def test_drift_check_fails_when_the_summary_records_no_curated_digest(tmp_path: Path) -> None:
+    # A 1.2.0 summary has no curated digest; passing it would leave the second input unguarded.
+    summary, pointer, curated_pointer = _drift_inputs(
+        tmp_path,
+        summary_meta={"input_dvc_md5": _MD5_A},
+        pointer_md5=_MD5_A,
+        curated_recorded=None,
+    )
+    assert check_input_not_stale(summary, pointer, curated_pointer) == 1
+
+
+def test_drift_check_ignores_the_curated_file_digest(tmp_path: Path) -> None:
+    summary, pointer, curated_pointer = _drift_inputs(
+        tmp_path,
+        summary_meta={"input_dvc_md5": _MD5_A, "curated_file_md5": _MD5_C},
+        pointer_md5=_MD5_A,
+    )
+    assert check_input_not_stale(summary, pointer, curated_pointer) == 0
 
 
 # --- file_md5 ----------------------------------------------------------------------
@@ -319,6 +423,48 @@ def test_pointer_digest_and_file_digest_are_recorded_under_distinct_keys() -> No
     assert meta["input_file_md5"] == "from-file"
 
 
+def test_the_curated_inputs_digests_are_recorded_apart_from_the_sierra_inputs() -> None:
+    meta = _build(
+        input_md5="sierra-pointer",
+        input_file_md5="sierra-file",
+        curated_md5="curated-pointer",
+        curated_file_md5="curated-file",
+    )["meta"]
+    assert meta["curated_dvc_md5"] == "curated-pointer"
+    assert meta["curated_file_md5"] == "curated-file"
+    assert meta["input_dvc_md5"] == "sierra-pointer"
+    assert meta["input_file_md5"] == "sierra-file"
+
+
+def test_meta_accounts_for_every_scored_accession_in_the_landscape() -> None:
+    meta = _build()["meta"]
+    assert meta["landscape_min_cell_n"] == 5
+    assert [c["code"] for c in meta["landscape_countries"]] == [
+        "KE", "UG", "TZ", "RW", "BI", "ET", "SS", "SO"
+    ]  # fmt: skip
+    assert {c["code"]: c["name"] for c in meta["landscape_countries"]}["KE"] == "Kenya"
+    assert meta["landscape_n_accessions"] == 2
+    assert meta["landscape_n_excluded_out_of_region"] == 1
+    assert meta["landscape_n_excluded_no_country"] == 0
+    assert meta["landscape_n_excluded_no_year"] == 0
+    assert meta["landscape_n_excluded_other"] == 0
+    excluded = sum(v for k, v in meta.items() if k.startswith("landscape_n_excluded_"))
+    assert meta["landscape_n_accessions"] + excluded == meta["n_accessions_scored"]
+
+
+def test_an_accession_curated_but_never_scored_is_not_counted_in_the_landscape() -> None:
+    meta = _build()["meta"]
+    assert meta["n_accessions_scored"] == 3
+    assert (
+        sum(
+            v
+            for k, v in meta.items()
+            if k.startswith("landscape_n_") and k != "landscape_min_cell_n"
+        )
+        == 3
+    )
+
+
 def test_meta_records_sdrm_observation_counts() -> None:
     # Fixture observations: PR L90M, M46I; RT NRTI M184V (SYN1); RT NNRTI K103N (SYN1),
     # K103S (SYN2). No mixtures, so nothing is multi-state.
@@ -359,13 +505,14 @@ def test_meta_counts_calls_after_deduplication() -> None:
     assert meta["n_calls"] == 7
 
 
-def test_views_are_the_four_aggregations_in_row_form() -> None:
+def test_views_are_the_five_aggregations_in_row_form() -> None:
     views = _build()["views"]
     assert set(views) == {
         "prevalence_by_drug_class",
         "levels_by_drug",
         "gene_coverage",
         "sdrm_frequency",
+        "resistance_landscape",
     }
     assert [v["drug_class"] for v in views["prevalence_by_drug_class"]] == [
         "PI",
@@ -443,10 +590,15 @@ def test_dr_schema_version_is_the_one_the_data_carries_not_the_code_constant(
     )
 
 
-def test_summary_carries_no_region_claim() -> None:
-    blob = json.dumps(_build()).lower()
-    for banned in ("east africa", "kenya", "uganda", "tanzania", "country", "region"):
-        assert banned not in blob
+def test_summary_makes_no_region_claim_beyond_the_targeted_list_it_filters_on() -> None:
+    summary = _build()
+    # The landscape view and the targeted-country list name countries by construction. What
+    # must stay out is a statement about the cohort as a whole: no "East Africa" anywhere,
+    # and no country name outside the list that `meta` states as the filter.
+    blob = json.dumps({"meta": {**summary["meta"], "landscape_countries": []}, "views": {}})
+    assert "east africa" not in json.dumps(summary).lower()
+    for banned in ("kenya", "uganda", "tanzania"):
+        assert banned not in blob.lower()
 
 
 def test_summary_excludes_integrase_drms() -> None:
@@ -532,11 +684,18 @@ def test_committed_fixture_matches_its_builder() -> None:
     assert pl.read_parquet(FIXTURE_PATH).equals(_synthetic())
 
 
+def test_committed_curated_fixture_matches_its_builder() -> None:
+    assert pl.read_parquet(CURATED_FIXTURE_PATH).equals(_synthetic_curated())
+
+
 def test_golden_summary_matches(golden_update: bool) -> None:
     if golden_update:
         FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
         _synthetic().write_parquet(FIXTURE_PATH)
-    summary = _build(pl.read_parquet(FIXTURE_PATH))
+        _synthetic_curated().write_parquet(CURATED_FIXTURE_PATH)
+    summary = _build(
+        pl.read_parquet(FIXTURE_PATH), curated=pl.read_parquet(CURATED_FIXTURE_PATH)
+    )
     _assert_golden(summary, GOLDEN_PATH, update=golden_update)
 
 
@@ -554,11 +713,17 @@ def test_golden_comparison_fails_on_a_changed_summary(tmp_path: Path) -> None:
 def _cli_args(tmp_path: Path, out: Path) -> list[str]:
     pointer = tmp_path / "in.parquet.dvc"
     pointer.write_text("outs:\n- md5: 0123456789abcdef0123456789abcdef\n  hash: md5\n")
+    curated_pointer = tmp_path / "curated.parquet.dvc"
+    curated_pointer.write_text("outs:\n- md5: fedcba9876543210fedcba9876543210\n  hash: md5\n")
     return [
         "--input",
         str(FIXTURE_PATH),
         "--pointer",
         str(pointer),
+        "--curated",
+        str(CURATED_FIXTURE_PATH),
+        "--curated-pointer",
+        str(curated_pointer),
         "--reference",
         str(REFERENCE_PATH),
         "--out",
@@ -577,6 +742,10 @@ def test_cli_writes_only_summary_json(tmp_path: Path) -> None:
     # The file's own digest, not the pointer's: the two are different claims.
     assert meta["input_file_md5"] == hashlib.md5(FIXTURE_PATH.read_bytes()).hexdigest()
     assert meta["input_file_md5"] != meta["input_dvc_md5"]
+    assert meta["curated_dvc_md5"] == "fedcba9876543210fedcba9876543210"
+    assert (
+        meta["curated_file_md5"] == hashlib.md5(CURATED_FIXTURE_PATH.read_bytes()).hexdigest()
+    )
     assert meta["n_accessions_ingested"] == 4
     assert meta["n_calls"] == 7
     assert meta["sdrm_list_version"] == "SDRM-2019"
@@ -594,6 +763,8 @@ def test_cli_defaults_point_inside_the_package_and_repo() -> None:
     args = cli.parse_args(["--ingested-count", "4"])
     assert args.input == Path("data/interim/dr_results.parquet")
     assert args.pointer is None
+    assert args.curated == Path("data/interim/curated/aligned.parquet")
+    assert args.curated_pointer is None
     assert args.reference == Path("data/reference/drm_positions.json")
     assert args.out == cli.DEFAULT_OUT
 
@@ -608,6 +779,17 @@ def test_cli_requires_the_ingested_count(capsys: pytest.CaptureFixture[str]) -> 
 def test_cli_pointer_defaults_to_input_plus_dvc(tmp_path: Path) -> None:
     args = cli.parse_args(["--input", str(tmp_path / "dr.parquet"), "--ingested-count", "4"])
     assert cli.pointer_path(args) == tmp_path / "dr.parquet.dvc"
+
+
+def test_cli_curated_pointer_is_resolved_the_same_way_as_the_main_one(tmp_path: Path) -> None:
+    default = cli.parse_args(
+        ["--curated", str(tmp_path / "c.parquet"), "--ingested-count", "4"]
+    )
+    assert cli.curated_pointer_path(default) == tmp_path / "c.parquet.dvc"
+    override = cli.parse_args(
+        ["--curated-pointer", str(tmp_path / "other.dvc"), "--ingested-count", "4"]
+    )
+    assert cli.curated_pointer_path(override) == tmp_path / "other.dvc"
 
 
 def test_git_sha_falls_back_when_git_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
