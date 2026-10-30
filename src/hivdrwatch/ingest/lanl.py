@@ -161,8 +161,12 @@ class LANLIngester:
         frames = [self._load_one(p) for p in results_files]
         merged = pl.concat(frames, how="diagonal_relaxed")
 
-        # Deduplicate: keep the last occurrence (later file wins by mtime ordering)
-        merged = merged.unique(subset=["accession"], keep="last")
+        # Deduplicate: keep the last occurrence (later file wins by mtime
+        # ordering). `maintain_order` does not change which row is kept — it
+        # pins the row order of the result, which on the LANL-only merge path
+        # reaches `east_africa_pol.parquet` unchanged and so decides the file's
+        # md5 (docs/evaluations/unique-row-ordering.md §3).
+        merged = merged.unique(subset=["accession"], keep="last", maintain_order=True)
 
         before = merged.height
         if "length" in merged.columns:

@@ -172,7 +172,16 @@ def build_fm_dataset(
         )
     )
 
-    joined = labeled.join(covs, on="accession", how="inner")
+    # `(accession, drug)` is unique here, so this is a total order. It has to
+    # be a sort rather than `maintain_order=True` on the two `unique()` calls
+    # above, because the join does not promise to preserve either side's
+    # order. `_subtype_holdout_split` gathers rows by position from a seeded
+    # permutation, so an unsorted pool puts *different sequences* in train vs
+    # val on every run — a fixed seed does not protect a split whose input
+    # order moves. `_stratified_split` already sorts internally for the same
+    # reason; this gives the holdout strategy the same footing and pins the
+    # row order of all three output Parquets.
+    joined = labeled.join(covs, on="accession", how="inner").sort(["accession", "drug"])
 
     if joined.is_empty():
         raise ValueError(

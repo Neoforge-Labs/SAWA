@@ -57,8 +57,8 @@ tree per subtype, and a cluster set — all with schema versions stamped.
 | `causal/dag.py` | ✓ | The domain DAG: exposure(s), outcome, covariates, unobserved confounders. Two DAGs: DRDag (mutation → resistance) + OutbreakDag (deposit-rate confounder baked in). |
 | `causal/estimate.py` | ✓ | DoWhy identify + estimate + 3-refuter loop (placebo / random-common-cause / subset); bootstrap percentile CIs; per-subtype stratified estimator; batch drivers for DR and outbreak. **Merges `identify.py` + `estimate.py`** from the original spec — split if reviewers want the separation. |
 | `causal/pruning.py` | ✓ | Rule-based feature pruning from causal effect frame (drop when CI spans 0 with small effect, or fails ≥2/3 refutations); keep-wins-across-scopes. Named `pruning.py` not `feature_pruning.py`. |
-| `causal/report.py` | ✓ | Effect-frame Polars serializer + self-contained HTML report grouped by data scope. |
-| `causal/flows/causal.py` | ✓ | Prefect flow: DR gold + outbreak gold → effects parquet + HTML + prune configs; MLflow-tracked. |
+| `causal/report.py` | ✓ | Effect-frame Polars serializer + self-contained HTML report grouped by data scope, in a stable section order. |
+| `causal/flows/causal.py` | ~ | Prefect flow: DR gold + outbreak gold → effects parquet + HTML + prune configs; MLflow-tracked. **Does not import** — `from ..causal import` / `from ..tracking import` still point at the pre-Phase-0 `src/hivdrwatch/causal/` location, and nothing in the suite imports the module, so it has 0% coverage (`docs/evaluations/unique-row-ordering.md` §6). |
 | `causal/sensitivity.py` | · | Rosenbaum bounds, e-values, tipping-point analysis (beyond the 3 refutations already in estimate.py). |
 | `causal/counterfactual.py` | · | Counterfactual queries — the "what if DTG had rolled out in 2017?" story. |
 | `causal/data_prep.py` | · | Adapters converting HIV-DR-Watch Parquet outputs into the causal dataset (unit of analysis: patient-visit or clinic-quarter). |
@@ -72,7 +72,7 @@ exposures, a sensitivity analysis table, and one counterfactual figure.
 
 | Module | Status | What it does |
 |---|---|---|
-| `fm/data.py` | ✓ | Subtype-stratified train/val/test splits from SAWA Paper 1 outputs. Two strategies: `stratified` (70/15/15 on subtype×drug×label) and `subtype_holdout` (train on B, test on non-B — Paper 3's thesis). Deterministic given seed. |
+| `fm/data.py` | ✓ | Subtype-stratified train/val/test splits from SAWA Paper 1 outputs. Two strategies: `stratified` (70/15/15 on subtype×drug×label) and `subtype_holdout` (train on B, test on non-B — Paper 3's thesis). Deterministic given seed — the joined frame is sorted on `(accession, drug)` before splitting, without which `subtype_holdout` drew a different train set on every run despite the fixed seed (`docs/evaluations/unique-row-ordering.md` §3). |
 | `fm/kmers.py` | ✓ | Nucleotide/protein k-mer featurizer → scipy sparse CSR matrix; explicit vocab support for fit/transform. |
 | `fm/tokenize.py` | · | Protein tokenization for ESM-family; nucleotide tokenization for Evo (GPU path) |
 | `fm/models/esm2.py` | · | ESM-2 / ESM-C fine-tuning heads for resistance prediction (GPU) |
