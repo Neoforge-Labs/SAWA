@@ -37,6 +37,15 @@ file exists only in this branch's own history, never in a release.**
   the mixture rule biases counts, and separates the country and subtype
   provenance defects. A null `algorithm_publish_date` renders as a dash; a
   null in any other bound value trips the page's shape banner.
+- Input provenance reconciled: `data/interim/dr_results.parquet.dvc` now
+  records `a8279a4d…`, the digest of the file the summary is computed from.
+  The old pointer (`e51cbb39…`) described an earlier file that differs only
+  in `called_at` (2026-08-16 against 2026-08-17) across all 728,087
+  accession-drug pairs; a re-run on 2026-08-17 had never been `dvc add`ed.
+  `meta.input_dvc_md5` and `meta.input_file_md5` now agree. The page's
+  digest-mismatch notice and its test remain, for the next divergence. This
+  makes the pointer truthful; it does not make the upstream ingest
+  byte-reproducible.
 
 ## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.1.0 — 2026-10-30
 
