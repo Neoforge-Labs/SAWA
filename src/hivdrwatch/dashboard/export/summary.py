@@ -14,7 +14,9 @@ across the frame. The summary makes no geographic claim about the sequences.
 
 Summary schema 1.0.0: `meta` (provenance and counts) and `views` (four lists of
 row dicts: prevalence_by_drug_class, levels_by_drug, gene_coverage,
-sdrm_frequency).
+sdrm_frequency). `meta.n_sdrm_observations` and `meta.n_sdrm_observations_multistate`
+are optional additions to 1.0.0, so the page's counting-convention note can state the
+measured size of the single-state attribution rule instead of a typed-in figure.
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ from hivdrwatch.dashboard.export.aggregate import (
     sdrm_frequency,
 )
 from hivdrwatch.dashboard.export.dedup import dedup_dr_results
-from hivdrwatch.dashboard.export.drm import SdrmPanel
+from hivdrwatch.dashboard.export.drm import SdrmPanel, parse_mutation
 from hivdrwatch.resistance.schema import DR_SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
@@ -82,6 +84,44 @@ def _single_value(df: pl.DataFrame, column: str) -> str | None:
     return None if value is None else str(value)
 
 
+def sdrm_observation_counts(
+    df: pl.DataFrame, panels: tuple[SdrmPanel, ...]
+) -> tuple[int, int]:
+    """Count surveillance-mutation observations, and how many matched more than one state.
+
+    An observation is one mutation string on one accession in one panel that matches
+    at least one of the panel's resistant states at its position; it is multi-state when
+    it matches two or more. `match_sdrm` attributes a multi-state observation to a single
+    label, so the second count is the size of that attribution rule's effect. Rows are
+    reduced to one per accession and gene first, because `mutations` repeats on every
+    drug row of a gene.
+    """
+    total = 0
+    multistate = 0
+    for panel in panels:
+        per_accession = df.filter(pl.col("gene") == panel.gene).unique(
+            subset="accession", keep="first", maintain_order=True
+        )
+        raw_counts = (
+            per_accession["mutations"]
+            .explode(empty_as_null=False)
+            .drop_nulls()
+            .value_counts()
+            .iter_rows()
+        )
+        for raw, count in raw_counts:
+            parsed = parse_mutation(raw)
+            if parsed is None:
+                continue
+            position, observed = parsed
+            matched = len(panel.positions.get(position, frozenset()) & observed)
+            if matched:
+                total += count
+            if matched > 1:
+                multistate += count
+    return total, multistate
+
+
 def _round_floats(value: Any) -> Any:
     if isinstance(value, float):
         return round(value, FLOAT_PLACES)
@@ -109,6 +149,7 @@ def build_summary(
     deduped, report = dedup_dr_results(df)
 
     provenance = {column: _single_value(deduped, column) for column in _PROVENANCE_COLUMNS}
+    n_observations, n_multistate = sdrm_observation_counts(deduped, panels)
 
     meta: dict[str, Any] = {
         "schema_version": SUMMARY_SCHEMA_VERSION,
@@ -121,6 +162,8 @@ def build_summary(
         "n_calls": report.n_rows_out,
         "n_accessions_scored": deduped["accession"].n_unique(),
         "n_accessions_ingested": n_accessions_ingested,
+        "n_sdrm_observations": n_observations,
+        "n_sdrm_observations_multistate": n_multistate,
     }
     views: dict[str, list[dict[str, Any]]] = {
         "prevalence_by_drug_class": prevalence_by_drug_class(deduped).to_dicts(),

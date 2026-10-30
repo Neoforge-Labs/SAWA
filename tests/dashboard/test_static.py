@@ -90,6 +90,11 @@ def _by_id(root: _Node, element_id: str) -> _Node:
     return matches[0]
 
 
+def _share(part: int, whole: int) -> str:
+    """Python twin of `fmtShare` in app.js."""
+    return f"{part / whole * 100:.1f}%" if whole else "0.0%"
+
+
 def _bound_value(path: str, attrs: dict[str, str]) -> str:
     """Python twin of `resolveBinding` + `applyBindings` in app.js."""
     scope, key = path.split(".")
@@ -104,6 +109,10 @@ def _bound_value(path: str, attrs: dict[str, str]) -> str:
             - SUMMARY["meta"]["n_accessions_scored"],
             "n_drugs": len({r["drug"] for r in views["levels_by_drug"]}),
             "n_classes": len({r["drug_class"] for r in views["levels_by_drug"]}),
+            "pct_sdrm_multistate": _share(
+                SUMMARY["meta"]["n_sdrm_observations_multistate"],
+                SUMMARY["meta"]["n_sdrm_observations"],
+            ),
         }[key]
     else:
         raise AssertionError(f"unknown binding scope {scope!r}")
@@ -120,6 +129,11 @@ def _rendered_text(node: _Node) -> str:
     if "data-bind" in node.attrs:
         return _bound_value(node.attrs["data-bind"], node.attrs)
     return "".join(_rendered_text(c) if isinstance(c, _Node) else c for c in node.children)
+
+
+def _raw_text(node: _Node) -> str:
+    """Text as written in the file, before any binding is applied."""
+    return "".join(_raw_text(c) if isinstance(c, _Node) else c for c in node.children)
 
 
 def _squash(text: str) -> str:
@@ -300,7 +314,28 @@ def test_mixture_convention_and_its_measured_limit_are_both_stated() -> None:
         "a mixture counts as carrying a surveillance mutation when any of its states" in note
     )
     assert "attributed to a single one" in note
-    assert "1.6% of observations (427 of 27,391)" in note
+    assert "That affects" in note and "of observations" in note
+
+
+def test_mixture_percentage_is_computed_from_the_summary_counts() -> None:
+    meta = SUMMARY["meta"]
+    multi, total = meta["n_sdrm_observations_multistate"], meta["n_sdrm_observations"]
+    assert 0 < multi < total, "the vintage has no multi-state observations to describe"
+    # Expected text is built here from the raw counts, independently of the binding twin.
+    expected = (
+        f"That affects {multi / total * 100:.1f}% of observations ({multi:,} of {total:,})"
+    )
+    assert expected in _note("mixture-convention")
+
+
+def test_no_mixture_figure_is_typed_into_the_page() -> None:
+    raw = _squash(_raw_text(_by_id(PAGE, "mixture-convention")))
+    assert not re.search(r"\d", raw), f"digits typed into the convention note: {raw}"
+    js = _js_function("fmtShare")
+    assert "(part / whole) * 100).toFixed(1)" in js
+    assert "fmtShare(meta.n_sdrm_observations_multistate, meta.n_sdrm_observations)" in (
+        _js_function("deriveFigures")
+    )
 
 
 def test_limitation_note_links_the_provenance_evaluation_that_exists() -> None:

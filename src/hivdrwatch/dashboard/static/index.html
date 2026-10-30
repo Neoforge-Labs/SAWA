@@ -61,7 +61,7 @@
       <figcaption>The most frequent surveillance mutations in each gene, ranked by the number of sequences carrying them, as a share of sequences scored for that gene.</figcaption>
     </figure>
     <p id="sdrm-scope" class="note">Integrase mutations are not shown. The vendored surveillance list predates the dolutegravir era: Bennett et al. 2009 has no integrase component, and the integrase block in the reference file is the raltegravir/elvitegravir-era list, missing R263K, G118R and E138K. Showing it would attribute to Bennett a list it does not contain.</p>
-    <p id="mixture-convention" class="note">Counting convention: a mixture counts as carrying a surveillance mutation when any of its states is one. Where a mixture matches more than one state, it is attributed to a single one. That affects 1.6% of observations (427 of 27,391), so at positions with several surveillance states a mutation&rsquo;s count can be slightly understated.</p>
+    <p id="mixture-convention" class="note">Counting convention: a mixture counts as carrying a surveillance mutation when any of its states is one. Where a mixture matches more than one state, it is attributed to a single one. That affects <span data-bind="derived.pct_sdrm_multistate"></span> of observations (<span data-bind="meta.n_sdrm_observations_multistate"></span> of <span data-bind="meta.n_sdrm_observations"></span>), so at positions with several surveillance states a mutation&rsquo;s count can be slightly understated.</p>
   </section>
 
   <section id="coverage" aria-labelledby="coverage-h">

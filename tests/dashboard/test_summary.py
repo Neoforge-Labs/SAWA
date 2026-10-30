@@ -34,6 +34,7 @@ from hivdrwatch.dashboard.export.summary import (
     build_summary,
     input_dvc_md5,
     render_summary,
+    sdrm_observation_counts,
     write_summary,
 )
 from hivdrwatch.resistance.schema import DR_SCHEMA_VERSION
@@ -184,6 +185,40 @@ def test_meta_records_provenance_without_asserting_data_values() -> None:
     assert meta["n_accessions_scored"] == 3
     assert meta["n_accessions_ingested"] == 4
     assert meta["n_calls"] == 7
+
+
+def test_meta_records_sdrm_observation_counts() -> None:
+    # Fixture observations: PR L90M, M46I; RT NRTI M184V (SYN1); RT NNRTI K103N (SYN1),
+    # K103S (SYN2). No mixtures, so nothing is multi-state.
+    meta = _build()["meta"]
+    assert meta["n_sdrm_observations"] == 5
+    assert meta["n_sdrm_observations_multistate"] == 0
+
+
+def test_sdrm_observation_counts_separate_single_and_multistate_matches() -> None:
+    both_rt = ["M184VI", "K103N", "V35T", "I220*"]
+    other_rt = ["K103NS", "V35T"]
+    pr = ["M46IL", "L90M", "R41K"]
+    rows = [
+        _row("A", "PI", "ATV/r", "high", pr),
+        _row("A", "NRTI", "3TC", "high", both_rt),
+        _row("A", "NNRTI", "EFV", "high", both_rt),
+        _row("B", "NRTI", "3TC", "low", other_rt),
+        _row("B", "NNRTI", "EFV", "low", other_rt),
+        _row("B", "INSTI", "DTG", "low", ["E138K", "G148H"]),
+        _row("C", "PI", "ATV/r", "low", ["L90M"]),
+    ]
+    frame = pl.DataFrame(rows, schema=_SCHEMA)
+    # PR: M46IL (I and L both resistant) is multi-state; L90M is single and on A and C.
+    # RT NRTI: A's M184VI (V and I) is multi-state. RT NNRTI: A's K103N single, B's K103NS multi.
+    # A's two RT drug rows repeat the same strings and must not double-count; R41K, V35T,
+    # the stop codon and the integrase strings match no panel.
+    assert sdrm_observation_counts(frame, _panels()) == (6, 3)
+
+
+def test_sdrm_observation_counts_are_zero_for_a_frame_without_surveillance_mutations() -> None:
+    frame = pl.DataFrame([_row("A", "PI", "ATV/r", "susceptible", ["R41K"])], schema=_SCHEMA)
+    assert sdrm_observation_counts(frame, _panels()) == (0, 0)
 
 
 def test_meta_counts_calls_after_deduplication() -> None:

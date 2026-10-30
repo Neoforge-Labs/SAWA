@@ -34,6 +34,10 @@ function fmtPct(frac) {
   return `${(frac * 100).toFixed(1)}%`;
 }
 
+function fmtShare(part, whole) {
+  return whole > 0 ? `${((part / whole) * 100).toFixed(1)}%` : "0.0%";
+}
+
 function svgEl(tag, attrs = {}, text = null) {
   const el = document.createElementNS(SVG_NS, tag);
   for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, String(value));
@@ -80,6 +84,7 @@ function deriveFigures(summary) {
     n_unscored: meta.n_accessions_ingested - meta.n_accessions_scored,
     n_drugs: new Set(views.levels_by_drug.map((row) => row.drug)).size,
     n_classes: new Set(views.levels_by_drug.map((row) => row.drug_class)).size,
+    pct_sdrm_multistate: fmtShare(meta.n_sdrm_observations_multistate, meta.n_sdrm_observations),
   };
 }
 
