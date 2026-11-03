@@ -24,6 +24,7 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class BenchmarkResult:
     schema_version: str = BENCHMARK_SCHEMA_VERSION
     notes: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "stage": self.stage,
             "seed": self.seed,
@@ -99,7 +100,7 @@ class BenchmarkResult:
 
 
 @contextmanager
-def measure_block(n_sequences: int) -> Iterator[dict]:
+def measure_block(n_sequences: int) -> Iterator[dict[str, Any]]:
     """Time and RSS-measure a code block.
 
     Yields a mutable dict; on exit populates `wall_seconds`, `peak_mb`,
@@ -116,7 +117,7 @@ def measure_block(n_sequences: int) -> Iterator[dict]:
     """
     start_wall = time.perf_counter()
     start_rss = _peak_rss_mb()
-    payload: dict = {}
+    payload: dict[str, Any] = {}
     try:
         yield payload
     finally:

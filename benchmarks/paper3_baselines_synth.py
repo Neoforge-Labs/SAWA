@@ -29,12 +29,13 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import polars as pl
 
 from foundation_models.baselines import KmerLogisticRegression, OneHotRandomForest
-from foundation_models.data import build_fm_dataset
+from foundation_models.data import SplitStrategy, build_fm_dataset
 from foundation_models.evaluate import per_subtype_metrics
 
 from .common import HostInfo, today_iso
@@ -43,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SIZES: tuple[int, ...] = (2000, 8000, 20000)
 DEFAULT_SEED: int = 42
+SPLIT_STRATEGIES: tuple[SplitStrategy, ...] = ("stratified", "subtype_holdout")
 SEQ_LEN: int = 200
 ALPHABET: tuple[str, ...] = ("A", "C", "G", "T")
 
@@ -109,7 +111,9 @@ def generate_corpus(n: int, seed: int) -> SyntheticCorpus:
     return SyntheticCorpus(dr=dr, curated=curated)
 
 
-def evaluate_pair(corpus: SyntheticCorpus, *, strategy: str, seed: int) -> tuple[dict, dict]:
+def evaluate_pair(
+    corpus: SyntheticCorpus, *, strategy: SplitStrategy, seed: int
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Fit both baselines on the split, return per-subtype metrics."""
     ds = build_fm_dataset(corpus.dr, corpus.curated, strategy=strategy, seed=seed)
     train_seqs = ds.train["sequence"].to_list()
@@ -151,11 +155,11 @@ def evaluate_pair(corpus: SyntheticCorpus, *, strategy: str, seed: int) -> tuple
     return lr_summary, rf_summary
 
 
-def run(sizes: tuple[int, ...], seed: int) -> dict:
-    rows: list[dict] = []
+def run(sizes: tuple[int, ...], seed: int) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
     for n in sizes:
         corpus = generate_corpus(n, seed=seed)
-        for strategy in ("stratified", "subtype_holdout"):
+        for strategy in SPLIT_STRATEGIES:
             lr, rf = evaluate_pair(corpus, strategy=strategy, seed=seed)
             rows.append(
                 {
