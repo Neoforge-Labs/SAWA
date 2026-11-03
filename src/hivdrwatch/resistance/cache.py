@@ -46,10 +46,11 @@ class SierraCache:
         if not p.exists():
             return None
         try:
-            return json.loads(p.read_text(encoding="utf-8"))
+            payload: dict[str, Any] = json.loads(p.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             logger.warning("corrupt cache entry %s; ignoring", p)
             return None
+        return payload
 
     def put(self, sha: str, payload: dict[str, Any]) -> None:
         p = self.path_for(sha)
@@ -83,4 +84,5 @@ class SierraCache:
         p = self._algo_path()
         if not p.exists():
             return None
-        return json.loads(p.read_text(encoding="utf-8"))
+        algorithm: dict[str, Any] = json.loads(p.read_text(encoding="utf-8"))
+        return algorithm

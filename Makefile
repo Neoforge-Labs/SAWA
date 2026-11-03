@@ -4,7 +4,11 @@
 # that touch the compose stack prefix `up-` / `down-`. Bare targets
 # are "do the obvious thing" for a fresh checkout.
 
-SHELL := /usr/bin/env bash
+# Make execs SHELL directly and does not word-split it, so `/usr/bin/env bash`
+# is read as one 25-character program name. GNU Make 3.81 (macOS) tolerated it;
+# 4.x (every Linux runner and the containers) fails every recipe with
+# "No such file or directory". Keep this an executable path.
+SHELL := /bin/bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
 
@@ -35,6 +39,8 @@ help:
 	@echo "  make sierra           # sierra DR calls (cache-first)"
 	@echo "  make curate           # align + trim + QC + dedup → silver"
 	@echo "  make cluster          # tn93 + assignments + outbreak features"
+	@echo "  make dashboard        # Sierra calls → static dashboard summary.json"
+	@echo "                        # INGESTED_COUNT=<n> is required: accessions that entered ingest"
 	@echo "  make cluster-validate # our clusterer vs ground truth"
 	@echo "                        # add WITH_HIVTRACE=1 for parity vs HIV-TRACE"
 	@echo "  make phylo            # per-subtype IQ-TREE + TreeTime"
@@ -212,6 +218,15 @@ curate:
 .PHONY: cluster
 cluster:
 	python -m hivdrwatch.pipeline.cluster --aligned-fasta $(ALIGNED_FASTA) --curated $(CURATED_OUT) --work-dir $(INTERIM_DIR)/cluster --gold-dir $(GOLD_DIR) $${TO_POSTGRES:+--to-postgres}
+
+# INGESTED_COUNT has no default here, as --ingested-count has none in the export: the
+# parquet holds only accessions that returned a Sierra result, so the ingested total cannot
+# be derived from it, and a default would write a stale number into a published provenance
+# claim when the vintage is regenerated.
+.PHONY: dashboard
+dashboard:
+	: "$${INGESTED_COUNT:?INGESTED_COUNT is required: the number of accessions that entered ingest, e.g. make dashboard INGESTED_COUNT=<n>}"
+	python -m hivdrwatch.dashboard.export --input $(INTERIM_DIR)/dr_results.parquet --curated $(CURATED_OUT) --ingested-count "$$INGESTED_COUNT"
 
 .PHONY: pipeline
 pipeline: ingest sierra curate cluster

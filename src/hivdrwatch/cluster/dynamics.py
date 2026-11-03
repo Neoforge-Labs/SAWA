@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from typing import Any
 
 import polars as pl
 
@@ -70,7 +71,7 @@ def cluster_growth_rate(time_series: pl.DataFrame, *, window_years: int = 3) -> 
         raise ValueError("window_years must be >= 1")
 
     # For every (cluster, country), pivot to year → n_new, compute sums over windows.
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for (cluster_id, country), group in time_series.group_by(
         ["cluster_id", "country"], maintain_order=True
     ):
@@ -112,7 +113,7 @@ def cluster_subtype_mix(
         how="inner",
     )
 
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for (cluster_id,), group in joined.group_by(["cluster_id"], maintain_order=True):
         subtypes = group["subtype"].to_list()
         counter = Counter([s for s in subtypes if s])
@@ -157,7 +158,7 @@ def cluster_geographic_spread(
         how="inner",
     ).filter(pl.col("country").is_not_null())
 
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for (cluster_id,), group in joined.group_by(["cluster_id"], maintain_order=True):
         countries = group["country"].to_list()
         counter = Counter(countries)

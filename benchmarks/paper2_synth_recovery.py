@@ -27,12 +27,16 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import polars as pl
 from sklearn.linear_model import LogisticRegression
 
 from .common import HostInfo, today_iso
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +106,7 @@ def generate(n: int, seed: int) -> SyntheticFrames:
 
     # Labels: per drug class, positive iff any causal mutation for that class
     # is present. This is the ground-truth causal structure.
-    label_rows: list[dict] = []
+    label_rows: list[dict[str, Any]] = []
     for drug_class in {dc for _m, dc, _e in TRUE_CAUSAL}:
         cs = [m for m, dc2, _e in TRUE_CAUSAL if dc2 == drug_class]
         pos = np.zeros(n, dtype=np.int8)
@@ -162,7 +166,7 @@ def _fit_adjusted_effect(
     return point, float(lo), float(hi)
 
 
-def _one_hot(df, cols):
+def _one_hot(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     import pandas as pd
 
     if not cols:
@@ -170,8 +174,8 @@ def _one_hot(df, cols):
     return pd.get_dummies(df, columns=cols, drop_first=True, dtype=np.int8)
 
 
-def run(sizes: tuple[int, ...], seed: int) -> dict:
-    rows: list[dict] = []
+def run(sizes: tuple[int, ...], seed: int) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
     for n in sizes:
         f = generate(n, seed=seed)
         joined = f.mutations.join(f.covariates, on="accession").join(f.labels, on="accession")

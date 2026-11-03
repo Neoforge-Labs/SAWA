@@ -240,7 +240,7 @@ class SierraClient:
             raise SierraError(f"Sierra transient error: {resp.status_code}")
         if resp.status_code != 200:
             raise SierraError(f"Sierra error {resp.status_code}: {resp.text[:400]}")
-        payload = resp.json()
+        payload: dict[str, Any] = resp.json()
         if "errors" in payload:
             raise SierraError(f"Sierra GraphQL errors: {payload['errors']}")
         return payload
@@ -271,7 +271,7 @@ def _parse_dr_results(
         mutations = _flatten_mutations(dr.get("mutationsByTypes") or [])
         for score_entry in dr.get("drugScores") or []:
             drug_class_name = (score_entry.get("drugClass") or {}).get("name")
-            if drug_class_name not in DrugClass.__members__:
+            if drug_class_name is None or drug_class_name not in DrugClass.__members__:
                 continue
             drug_info = score_entry.get("drug") or {}
             out.append(

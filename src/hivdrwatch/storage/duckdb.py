@@ -18,6 +18,10 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    import polars as pl
 
 logger = logging.getLogger(__name__)
 
@@ -88,14 +92,16 @@ class DuckDBAnalytics:
         )
         logger.info("attached postgres as %s (read_only=%s)", alias, read_only)
 
-    def sql(self, query: str):
+    def sql(self, query: str) -> pl.DataFrame:
         """Run `query`, return the result as a Polars DataFrame."""
         try:
             import polars as pl
         except ImportError as e:  # pragma: no cover
             raise ImportError("polars required for sql()") from e
         arrow = self._con.execute(query).arrow()
-        return pl.from_arrow(arrow)
+        # `.arrow()` yields a pyarrow Table, for which `from_arrow` returns a
+        # DataFrame; the Series arm of its signature covers array inputs only.
+        return cast("pl.DataFrame", pl.from_arrow(arrow))
 
     def table_exists(self, name: str) -> bool:
         row = self._con.execute(

@@ -169,7 +169,8 @@ def _align_batch(
             out.append((accession, None))
             continue
         try:
-            alignments = aligner.align(ref_upper, query)
+            # Biopython's PairwiseAligner methods are unannotated.
+            alignments = aligner.align(ref_upper, query)  # type: ignore[no-untyped-call]
             best = alignments[0]
         except (ValueError, Exception):
             out.append((accession, None))
@@ -189,7 +190,7 @@ def _make_aligner() -> Align.PairwiseAligner:
     matrix used by MAFFT for DNA — they should give qualitatively
     similar alignment to `mafft --keeplength`.
     """
-    aligner = Align.PairwiseAligner()
+    aligner = Align.PairwiseAligner()  # type: ignore[no-untyped-call]  # unannotated in Biopython
     aligner.mode = "global"
     aligner.match_score = 2.0
     aligner.mismatch_score = -1.0
@@ -202,7 +203,7 @@ def _make_aligner() -> Align.PairwiseAligner:
     return aligner
 
 
-def _extract_keeplength(alignment, ref_length: int) -> str:
+def _extract_keeplength(alignment: Align.Alignment, ref_length: int) -> str:
     """Extract the query aligned to reference coordinates.
 
     Iterates the alignment; keeps a query character for every reference

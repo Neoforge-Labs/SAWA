@@ -45,9 +45,23 @@ import argparse
 import json
 import logging
 import time
+from collections.abc import Iterable, MutableMapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    import polars as pl
+    from torch.utils.data import Dataset
+
+    # torch is an optional extra, so the dataset class below duck-types
+    # Dataset instead of subclassing it — DataLoader only needs __len__ and
+    # __getitem__ at runtime. A conditional base class is not an option:
+    # on a CPU-only install Dataset resolves to Any, and strict mode's
+    # disallow_subclassing_any rejects that. So the loaders cast instead,
+    # which also gives DataLoader its element type — without the cast mypy
+    # infers Dataset[Never] and rejects every dataset we hand it.
+    type _TokenizedDataset = Dataset[MutableMapping[str, Any]]
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +110,7 @@ class TrainResult:
     test_auprc: float
     wall_seconds: float
     ckpt_path: str
-    config: dict
+    config: dict[str, Any]
 
 
 # ------------------------------------------------------------------
@@ -135,7 +149,9 @@ def _resolve_device(pref: str) -> str:
     return "cpu"
 
 
-def _load_splits(manifest_path: Path, drug_class: str, strategy: str):
+def _load_splits(
+    manifest_path: Path, drug_class: str, strategy: str
+) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, dict[str, Any]]:
     """Load train/val/test parquets for a drug class from the FM manifest."""
     import polars as pl
 
@@ -160,9 +176,7 @@ def _load_splits(manifest_path: Path, drug_class: str, strategy: str):
 class _SequenceLabelDataset:
     """Torch Dataset over (sequence_aa, label_binary) rows."""
 
-    def __init__(self, df, tokenizer, max_length: int) -> None:
-        from torch.utils.data import Dataset  # noqa: F401
-
+    def __init__(self, df: pl.DataFrame, tokenizer: Any, max_length: int) -> None:
         # Store as parallel python lists — Polars → list conversion is
         # a one-time cost, and downstream iteration is fast.
         self.sequences = df["sequence_aa"].to_list()
@@ -173,8 +187,9 @@ class _SequenceLabelDataset:
     def __len__(self) -> int:
         return len(self.sequences)
 
-    def __getitem__(self, idx: int) -> dict:
-        enc = self.tokenizer(
+    def __getitem__(self, idx: int) -> MutableMapping[str, Any]:
+        # BatchEncoding is a UserDict, not a dict.
+        enc: MutableMapping[str, Any] = self.tokenizer(
             self.sequences[idx],
             truncation=True,
             max_length=self.max_length,
@@ -185,13 +200,13 @@ class _SequenceLabelDataset:
         return enc
 
 
-def _make_collator(tokenizer):
+def _make_collator(tokenizer: Any) -> Any:
     from transformers import DataCollatorWithPadding
 
     return DataCollatorWithPadding(tokenizer=tokenizer)
 
 
-def _label_balanced_subsample(df, n: int, seed: int):
+def _label_balanced_subsample(df: pl.DataFrame, n: int, seed: int) -> pl.DataFrame:
     """Take ``n`` rows preserving the source frame's positive rate.
 
     Falls back to a plain shuffle-and-head if there are no positives
@@ -215,8 +230,7 @@ def _label_balanced_subsample(df, n: int, seed: int):
     ).sample(fraction=1.0, seed=seed)  # shuffle so batches aren't sorted
 
 
-def _compute_pos_weight(train_df) -> float:
-
+def _compute_pos_weight(train_df: pl.DataFrame) -> float:
     n_pos = int(train_df["label_binary"].sum())
     n_neg = train_df.height - n_pos
     if n_pos == 0:
@@ -225,19 +239,24 @@ def _compute_pos_weight(train_df) -> float:
     return float(n_neg / n_pos)
 
 
-def _metrics(labels, probs) -> tuple[float, float]:
+def _metrics(labels: Sequence[int], probs: Sequence[float]) -> tuple[float, float]:
     """Return (AUROC, AUPRC). Both guarded for degenerate label sets."""
     import numpy as np
     from sklearn.metrics import average_precision_score, roc_auc_score
 
-    labels = np.asarray(labels)
-    probs = np.asarray(probs)
-    if labels.sum() == 0 or labels.sum() == labels.size:
+    labels_arr = np.asarray(labels)
+    probs_arr = np.asarray(probs)
+    if labels_arr.sum() == 0 or labels_arr.sum() == labels_arr.size:
         return (float("nan"), float("nan"))
-    return float(roc_auc_score(labels, probs)), float(average_precision_score(labels, probs))
+    return (
+        float(roc_auc_score(labels_arr, probs_arr)),
+        float(average_precision_score(labels_arr, probs_arr)),
+    )
 
 
-def _evaluate(model, loader, device) -> tuple[float, float, list[int], list[float]]:
+def _evaluate(
+    model: Any, loader: Iterable[Any], device: str
+) -> tuple[float, float, list[int], list[float]]:
     import torch
 
     model.eval()
@@ -347,17 +366,23 @@ def train_from_manifest(
 
     collator = _make_collator(tokenizer)
     train_loader = DataLoader(
-        train_ds,
+        cast("_TokenizedDataset", train_ds),
         batch_size=cfg.batch_size,
         shuffle=True,
         collate_fn=collator,
         num_workers=0,
     )
     val_loader = DataLoader(
-        val_ds, batch_size=cfg.batch_size, shuffle=False, collate_fn=collator
+        cast("_TokenizedDataset", val_ds),
+        batch_size=cfg.batch_size,
+        shuffle=False,
+        collate_fn=collator,
     )
     test_loader = DataLoader(
-        test_ds, batch_size=cfg.batch_size, shuffle=False, collate_fn=collator
+        cast("_TokenizedDataset", test_ds),
+        batch_size=cfg.batch_size,
+        shuffle=False,
+        collate_fn=collator,
     )
 
     pos_weight = cfg.positive_class_weight or _compute_pos_weight(train_df)
@@ -395,7 +420,7 @@ def train_from_manifest(
             logger.warning("mlflow not installed; skipping tracking")
 
     best_val_auroc = -1.0
-    best_state: dict | None = None
+    best_state: dict[str, Any] | None = None
     patience = cfg.early_stop_patience
     stalled = 0
 

@@ -19,6 +19,12 @@ Backwards compatibility: the `metrics` / `clusterer` top-level fields
 still describe our tn93 clusterer (so existing readers keep working).
 The canonical new shape is `results: [{clusterer, metrics}, ...]`.
 
+Parity provenance: `with_hivtrace` records whether HIV-TRACE was
+requested and `hivtrace_skipped` the reason it produced no result
+(null when it ran, or was never requested). A requested-but-skipped run
+therefore differs from a deliberate tn93-only run on the artifact
+itself, not only in the logs.
+
 Run:
     make cluster-validate                # tn93 only
     make cluster-validate WITH_HIVTRACE=1  # tn93 + HIV-TRACE parity
@@ -33,6 +39,7 @@ from dataclasses import dataclass
 from datetime import date
 from itertools import combinations
 from pathlib import Path
+from typing import Any
 
 from prefect import flow, get_run_logger, task
 
@@ -59,16 +66,28 @@ class ClustererResult:
     clusterer: str
     threshold: float
     n_predicted_clusters: int
-    metrics: dict
+    metrics: dict[str, int | float | None]
     membership: dict[str, str]  # kept for pair-agreement, dropped from JSON
 
-    def to_json_dict(self) -> dict:
+    def to_json_dict(self) -> dict[str, Any]:
         return {
             "clusterer": self.clusterer,
             "threshold": self.threshold,
             "n_predicted_clusters": self.n_predicted_clusters,
             "metrics": self.metrics,
         }
+
+
+# Machine-readable reason recorded in the results JSON when HIV-TRACE was
+# requested but could not run.
+HIVTRACE_SKIP_IMAGE_UNAVAILABLE = "image_unavailable"
+
+
+@dataclass(frozen=True)
+class HIVTraceSkipped:
+    """HIV-TRACE was requested and did not run; `reason` lands in the results JSON."""
+
+    reason: str
 
 
 # ------------------------------------------------------------------
@@ -202,7 +221,7 @@ def cluster_ours(
 @task
 def cluster_hivtrace(
     sim: SimulationResult, distances_csv: Path, threshold: float
-) -> ClustererResult | None:
+) -> ClustererResult | HIVTraceSkipped:
     log = get_run_logger()
     all_accessions = list(sim.accession_to_seq.keys())
     network_json = distances_csv.parent / "hivtrace_network.json"
@@ -212,7 +231,7 @@ def cluster_hivtrace(
         )
     except HIVTraceNotAvailable as e:
         log.warning("skipping HIV-TRACE parity: %s", e)
-        return None
+        return HIVTraceSkipped(reason=HIVTRACE_SKIP_IMAGE_UNAVAILABLE)
     metrics = score_clusters(membership, sim.truth_membership())
     n_pred_clusters = len({v for v in membership.values() if not v.startswith("SINGLETON_")})
     log.info(
@@ -231,7 +250,7 @@ def cluster_hivtrace(
     )
 
 
-def pair_agreement(a: dict[str, str], b: dict[str, str]) -> dict:
+def pair_agreement(a: dict[str, str], b: dict[str, str]) -> dict[str, int | float]:
     """Fraction of unordered pairs on which two clusterings agree.
 
     A pair (i, j) agrees iff (a[i]==a[j]) equals (b[i]==b[j]).
@@ -256,7 +275,7 @@ def pair_agreement(a: dict[str, str], b: dict[str, str]) -> dict:
 @task
 def write_results(
     ours: ClustererResult,
-    hivtrace: ClustererResult | None,
+    hivtrace: ClustererResult | HIVTraceSkipped | None,
     sim: SimulationResult,
     out_path: Path,
     threshold: float,
@@ -265,10 +284,13 @@ def write_results(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     results = [ours.to_json_dict()]
-    parity: dict | None = None
-    if hivtrace is not None:
+    parity: dict[str, int | float] | None = None
+    hivtrace_skipped: str | None = None
+    if isinstance(hivtrace, ClustererResult):
         results.append(hivtrace.to_json_dict())
         parity = pair_agreement(ours.membership, hivtrace.membership)
+    elif isinstance(hivtrace, HIVTraceSkipped):
+        hivtrace_skipped = hivtrace.reason
 
     payload = {
         # Back-compat single-clusterer fields (describe our tn93 clusterer).
@@ -278,6 +300,10 @@ def write_results(
         # Canonical multi-clusterer fields (Fig 3 aggregator consumes these).
         "results": results,
         "parity": parity,
+        # `hivtrace is None` means never requested; a skip is a request that
+        # failed, and must stay distinguishable from it in the artifact.
+        "with_hivtrace": hivtrace is not None,
+        "hivtrace_skipped": hivtrace_skipped,
         "sim": {
             "n_clusters": sim.n_clusters,
             "n_sequences": sim.n_sequences,
@@ -293,7 +319,11 @@ def write_results(
     with tracked_run(
         experiment="cluster-validate",
         run_name=f"parity-{sim.n_clusters}c-{sim.n_sequences}n",
-        tags={"seed": str(sim.seed), "has_hivtrace": str(hivtrace is not None)},
+        tags={
+            "seed": str(sim.seed),
+            "has_hivtrace": str(parity is not None),
+            "hivtrace_skipped": str(hivtrace_skipped or ""),
+        },
     ) as run:
         run.log_params(
             {

@@ -125,7 +125,9 @@ def export_subtype_dataset(
             "Biopython required for Auspice export; install with `uv add biopython`"
         ) from e
 
-    tree = Phylo.read(tree_newick, "newick")
+    # Biopython re-exports `read` without `__all__` and leaves it unannotated;
+    # `Bio.Phylo.read` is still the documented public entry point.
+    tree = Phylo.read(tree_newick, "newick")  # type: ignore[attr-defined,no-untyped-call]
     tips = [t for t in tree.get_terminals()]
     tip_accessions = [_strip_accession(t.name) for t in tips]
 
@@ -267,9 +269,9 @@ def _propagate_internal_dates(tree: Any) -> None:
             clade.node_attrs["num_date"] = {"value": min(child_dates)}
 
 
-def _biopython_to_auspice(clade: Any) -> dict:
+def _biopython_to_auspice(clade: Any) -> dict[str, Any]:
     """Convert a Biopython Clade (subtree root) to Auspice-v2 tree JSON."""
-    node: dict = {
+    node: dict[str, Any] = {
         "name": clade.name or _auto_internal_name(clade),
         "node_attrs": getattr(clade, "node_attrs", {}),
     }
@@ -295,7 +297,7 @@ def _build_meta(
     sawa_version: str,
     git_sha: str,
     resistance_drug_class: str | None,
-) -> dict:
+) -> dict[str, Any]:
     """Auspice meta block — title, colourings, filters, build info."""
     resistance_label = (
         f"{resistance_drug_class} resistance (Sierra intermediate or high)"

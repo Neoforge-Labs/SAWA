@@ -131,7 +131,7 @@ def tracked_run(
         return
 
     try:
-        import mlflow  # type: ignore[import-not-found]
+        import mlflow
     except ImportError:
         logger.warning("mlflow not installed; tracking disabled for this run")
         yield TrackedRun(None)

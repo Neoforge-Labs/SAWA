@@ -61,7 +61,7 @@ class ClusterValidationResult:
     n_predicted_clusters: int
     n_truth_clusters: int
 
-    def as_dict(self) -> dict:
+    def as_dict(self) -> dict[str, int | float | None]:
         return {
             "n_sequences": self.n_sequences,
             "n_pairs": self.n_pairs,

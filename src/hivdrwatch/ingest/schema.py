@@ -43,7 +43,7 @@ from datetime import date
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, Field, StringConstraints, field_validator
+from pydantic import BaseModel, Field, StringConstraints, ValidationInfo, field_validator
 
 SCHEMA_VERSION = "0.2.0"
 
@@ -172,6 +172,18 @@ def subtype_from_designation(text: str | None) -> Subtype:
         return Subtype.RECOMBINANT
     return Subtype.UNKNOWN
 
+
+# East African priority countries (ISO 3166-1 alpha-2 → GenBank country name)
+EAST_AFRICA_COUNTRIES: dict[str, str] = {
+    "KE": "Kenya",
+    "UG": "Uganda",
+    "TZ": "Tanzania",
+    "RW": "Rwanda",
+    "BI": "Burundi",
+    "ET": "Ethiopia",
+    "SS": "South Sudan",
+    "SO": "Somalia",
+}
 
 # GenBank's `/country=` (now `/geo_loc_name=`) and LANL's Country column,
 # lower-cased, → ISO 3166-1 alpha-2. Covers every name present in SAWA's
@@ -304,7 +316,7 @@ class SequenceRecord(BaseModel):
 
     @field_validator("length")
     @classmethod
-    def _length_matches_sequence(cls, v: int, info) -> int:
+    def _length_matches_sequence(cls, v: int, info: ValidationInfo) -> int:
         seq = info.data.get("sequence")
         if seq is not None and len(seq) != v:
             raise ValueError(f"length {v} does not match sequence length {len(seq)}")

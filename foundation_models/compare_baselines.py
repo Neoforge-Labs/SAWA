@@ -33,12 +33,21 @@ import logging
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import polars as pl
 
 from .baselines import KmerLogisticRegression, OneHotRandomForest
 from .evaluate import compute_metrics
+
+if TYPE_CHECKING:
+    from torch.utils.data import Dataset
+
+    # See the same alias in esm.py: torch is an optional extra, so the local
+    # dataset below duck-types Dataset rather than subclassing it, and the
+    # DataLoader call casts to give mypy the element type.
+    type _TokenizedDataset = Dataset[Any]
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +66,9 @@ class ModelRow:
     n_positive_test: int
 
 
-def _load_splits(manifest_path: Path, drug_class: str, strategy: str):
+def _load_splits(
+    manifest_path: Path, drug_class: str, strategy: str
+) -> tuple[pl.DataFrame, pl.DataFrame, dict[str, Any]]:
     manifest = json.loads(manifest_path.read_text())
     runs = manifest.get("runs", [])
     match = next(
@@ -136,16 +147,18 @@ def _score_esm2(
     collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     class _Ds:
-        def __init__(self, xs):
+        def __init__(self, xs: list[str]) -> None:
             self.xs = xs
 
-        def __len__(self):
+        def __len__(self) -> int:
             return len(self.xs)
 
-        def __getitem__(self, i):
+        def __getitem__(self, i: int) -> Any:
             return tokenizer(self.xs[i], truncation=True, max_length=max_length, padding=False)
 
-    loader = DataLoader(_Ds(seqs), batch_size=batch_size, collate_fn=collator)
+    loader = DataLoader(
+        cast("_TokenizedDataset", _Ds(seqs)), batch_size=batch_size, collate_fn=collator
+    )
     probs: list[float] = []
     with torch.no_grad():
         for batch in loader:
@@ -258,7 +271,9 @@ def compare(
     return all_rows
 
 
-def write_outputs(rows: list[ModelRow], out_dir: Path, drug_class: str, strategy: str):
+def write_outputs(
+    rows: list[ModelRow], out_dir: Path, drug_class: str, strategy: str
+) -> tuple[Path, Path]:
     """Emit the per-drug Parquet + a headline JSON summary."""
     out_dir.mkdir(parents=True, exist_ok=True)
     parquet_path = out_dir / f"comparison_{drug_class.lower()}_{strategy}.parquet"

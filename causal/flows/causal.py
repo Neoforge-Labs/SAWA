@@ -24,7 +24,9 @@ import polars as pl
 from prefect import flow, get_run_logger, task
 from prefect.tasks import task_input_hash
 
-from ..causal import (
+from hivdrwatch.tracking import tracked_run
+
+from .. import (
     DAG_VERSION,
     build_dr_causal_frames,
     derive_prune_config,
@@ -36,7 +38,7 @@ from ..causal import (
     write_html_report,
 )
 from ..dag import DRDag
-from ..tracking import tracked_run
+from ..schema import CausalEffect
 
 
 @task(cache_key_fn=task_input_hash)
@@ -67,7 +69,7 @@ def run_dr_effects(
     drugs: list[str] | None,
     bootstrap_samples: int,
     per_subtype: bool,
-) -> list:
+) -> list[CausalEffect]:
     log = get_run_logger()
     if df.is_empty():
         return []
@@ -76,7 +78,7 @@ def run_dr_effects(
         # Parquet and the section order of the HTML report.
         drugs = sorted(d for d in df["drug"].unique().to_list() if d is not None)
 
-    effects = []
+    effects: list[CausalEffect] = []
     if drugs:
         for drug in drugs:
             effects.extend(
@@ -112,7 +114,7 @@ def run_dr_effects_from_paper1(
     per_subtype: bool,
     per_drug: bool,
     subtype_min_samples: int,
-) -> list:
+) -> list[CausalEffect]:
     """New path (Sprint 1 for Paper 2): build causal frames on the fly
     from Paper 1's dr_results + curated Parquet, then estimate per scope.
 
@@ -141,7 +143,7 @@ def run_dr_effects_from_paper1(
     )
 
     dag_mutations = DRDag().mutation_features
-    all_effects: list = []
+    all_effects: list[CausalEffect] = []
     for scope, frame in frames.items():
         scope_tag = f"DR/{counts.scope_kind}={scope}"
         if frame.height < subtype_min_samples:
@@ -187,7 +189,7 @@ def run_dr_effects_from_paper1(
 
 
 @task
-def run_outbreak_effects(df: pl.DataFrame, bootstrap_samples: int) -> list:
+def run_outbreak_effects(df: pl.DataFrame, bootstrap_samples: int) -> list[CausalEffect]:
     log = get_run_logger()
     if df.is_empty():
         return []
@@ -198,7 +200,7 @@ def run_outbreak_effects(df: pl.DataFrame, bootstrap_samples: int) -> list:
 
 @task
 def write_outputs(
-    dr_effects: list, outbreak_effects: list, out_dir: Path
+    dr_effects: list[CausalEffect], outbreak_effects: list[CausalEffect], out_dir: Path
 ) -> tuple[Path, Path]:
     log = get_run_logger()
     out_dir.mkdir(parents=True, exist_ok=True)

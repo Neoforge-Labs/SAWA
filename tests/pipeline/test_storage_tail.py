@@ -2,8 +2,8 @@
 
 Covers:
   * enable/disable via CLI flag and env var
-  * skip path when Parquet is missing
-  * skip path when DB is unreachable (mocked)
+  * SKIPPED (not requested) vs FAILED (requested, not delivered) vs LOADED
+  * failure paths: Parquet missing, DB unreachable (mocked), loader raises
   * happy path calls the correct loader with the right args
   * unknown stage doesn't crash
   * every stage in _LOADERS is one of the declared Stage values
@@ -19,6 +19,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+
+from hivdrwatch.pipeline._storage_tail import TailStatus
 
 # --- Helpers ---
 
@@ -88,7 +90,8 @@ class TestEnableGate:
 
         p = _make_parquet(tmp_path, "x.parquet")
         result = storage_tail("ingest", p)  # no flag, no env
-        assert result is None
+        assert result.status is TailStatus.SKIPPED
+        assert result.reason == "not_enabled"
         assert patch_storage_tail.require_postgres.call_count == 0
         assert patch_storage_tail.load_sequences.call_count == 0
 
@@ -97,7 +100,7 @@ class TestEnableGate:
 
         p = _make_parquet(tmp_path, "x.parquet")
         result = storage_tail("ingest", p, enabled=True)
-        assert result is not None
+        assert result.status is TailStatus.LOADED
         assert patch_storage_tail.load_sequences.call_count == 1
 
     def test_enabled_via_env_var(
@@ -108,7 +111,7 @@ class TestEnableGate:
         monkeypatch.setenv(ENV_ENABLE, "1")
         p = _make_parquet(tmp_path, "x.parquet")
         result = storage_tail("ingest", p)  # no explicit enabled arg
-        assert result is not None
+        assert result.status is TailStatus.LOADED
         assert patch_storage_tail.load_sequences.call_count == 1
 
     def test_arg_overrides_env(
@@ -122,25 +125,37 @@ class TestEnableGate:
         # to env when the arg is *None* (the "unspecified" sentinel);
         # False is a explicit disable.
         result = storage_tail("ingest", p, enabled=False)
-        assert result is None
+        assert result.status is TailStatus.SKIPPED
         assert patch_storage_tail.load_sequences.call_count == 0
 
 
-class TestSkipPaths:
-    def test_missing_parquet_skips_cleanly(self, patch_storage_tail, tmp_path: Path) -> None:
+class TestRequestedButNotDelivered:
+    """Once loading is requested, anything short of a completed load is FAILED.
+
+    The helper never raises, so the status is the only way the calling
+    flow can tell these apart from a load nobody asked for.
+    """
+
+    def test_missing_parquet_is_failed_without_raising(
+        self, patch_storage_tail, tmp_path: Path
+    ) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         result = storage_tail("ingest", tmp_path / "does_not_exist.parquet", enabled=True)
-        assert result is None
+        assert result.status is TailStatus.FAILED
+        assert result.reason == "parquet_not_found"
         assert patch_storage_tail.require_postgres.call_count == 0
 
-    def test_db_unreachable_skips_cleanly(self, patch_storage_tail, tmp_path: Path) -> None:
+    def test_db_unreachable_is_failed_without_raising(
+        self, patch_storage_tail, tmp_path: Path
+    ) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         patch_storage_tail.require_postgres.return_value = False
         p = _make_parquet(tmp_path, "x.parquet")
         result = storage_tail("ingest", p, enabled=True)
-        assert result is None
+        assert result.status is TailStatus.FAILED
+        assert result.reason == "postgres_unavailable"
         assert patch_storage_tail.load_sequences.call_count == 0
 
     def test_loader_exception_never_crashes_flow(
@@ -152,16 +167,23 @@ class TestSkipPaths:
         p = _make_parquet(tmp_path, "x.parquet")
         # Must not raise.
         result = storage_tail("ingest", p, enabled=True)
-        assert result is None
+        assert result.status is TailStatus.FAILED
+        assert result.counts is None
+        # Class name only: the message can carry connection details.
+        assert result.reason == "RuntimeError"
+        assert "went away" not in str(result)
 
-    def test_unknown_stage_skips_cleanly(self, patch_storage_tail, tmp_path: Path) -> None:
+    def test_unknown_stage_is_failed_without_raising(
+        self, patch_storage_tail, tmp_path: Path
+    ) -> None:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         p = _make_parquet(tmp_path, "x.parquet")
         # Type-check would catch this, but the helper should still
         # degrade gracefully at runtime.
         result = storage_tail("nope", p, enabled=True)  # type: ignore[arg-type]
-        assert result is None
+        assert result.status is TailStatus.FAILED
+        assert result.reason == "unknown_stage"
 
 
 class TestLoaderDispatch:
@@ -202,7 +224,9 @@ class TestReturnedCounts:
         from hivdrwatch.pipeline._storage_tail import storage_tail
 
         p = _make_parquet(tmp_path, "x.parquet")
-        counts = storage_tail("ingest", p, enabled=True)
+        result = storage_tail("ingest", p, enabled=True)
+        assert result.status is TailStatus.LOADED
+        counts = result.counts
         assert counts is not None
         assert counts.inserted == 42
         assert counts.skipped == 3
@@ -214,3 +238,20 @@ class TestContract:
         from hivdrwatch.pipeline._storage_tail import _LOADERS
 
         assert set(_LOADERS) == {"ingest", "sierra", "cluster"}
+
+
+class TestOutcomesAreDistinguishable:
+    def test_failed_load_is_not_equal_to_a_disabled_one(
+        self, patch_storage_tail, tmp_path: Path
+    ) -> None:
+        """The reported defect: both used to return None."""
+        from hivdrwatch.pipeline._storage_tail import storage_tail
+
+        p = _make_parquet(tmp_path, "x.parquet")
+        disabled = storage_tail("ingest", p, enabled=False)
+        patch_storage_tail.load_sequences.side_effect = RuntimeError("boom")
+        failed = storage_tail("ingest", p, enabled=True)
+
+        assert disabled.status is TailStatus.SKIPPED
+        assert failed.status is TailStatus.FAILED
+        assert disabled != failed

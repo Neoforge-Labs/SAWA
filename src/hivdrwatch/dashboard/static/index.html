@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>SAWA resistance summary</title>
+<meta name="description" content="HIV-1 drug-resistance calls on public pol sequences, with the denominator behind every figure.">
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="app.js"></script>
+</head>
+<body data-summary-schema="1.3.0">
+<div id="schema-banner" class="banner" role="alert" hidden></div>
+
+<main>
+  <header id="provenance" class="band">
+    <p class="eyebrow">SAWA &middot; open HIV-1 drug-resistance surveillance</p>
+    <h1>Resistance calls on public HIV-1 <em>pol</em> sequences</h1>
+    <p class="lede">SAWA is an open, reproducible pipeline that ingests public HIV-1 <em>pol</em> sequences, calls resistance with Stanford HIVdb Sierra, and publishes the denominator behind every figure. This page summarises one data vintage; it makes no live calls and is drawn from a committed JSON file.</p>
+
+    <p id="cohort">The cohort is public HIV-1 <em>pol</em> sequences retrieved by an East-Africa-targeted LANL/GenBank query. That names the query, not the sequences. <span data-bind="meta.n_accessions_scored"></span> of <span data-bind="meta.n_accessions_ingested"></span> ingested accessions returned a Sierra result (<span data-bind="derived.n_unscored"></span> did not), giving <span data-bind="meta.n_calls"></span> resistance calls across <span data-bind="derived.n_drugs"></span> drugs in <span data-bind="derived.n_classes"></span> classes.</p>
+
+    <p id="algorithm">Algorithm <span data-bind="meta.algorithm_version"></span>, published <span data-bind="meta.algorithm_publish_date"></span>; calls made <span data-bind="meta.called_at"></span>.</p>
+
+    <p id="limitation" class="note">Geography is now shown; subtype breakdowns are not. The <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/docs/evaluations/ingest-provenance.md">ingest provenance evaluation</a> found that an earlier vintage wrote the country field from the search query rather than from the record, and separately that the subtype field was misparsed, so every CRF was stored as subtype C. This vintage was rebuilt after both were fixed. Country is now read from each record&rsquo;s own source feature, with its source kept per row, and a record that states none has no country. The landscape view below is drawn from that field. Subtype breakdowns remain absent although the subtype field is now correct, because that view sums across subtypes and no subtype-stratified view has been built.</p>
+
+    <noscript><p class="note">This page draws its figures from <code>summary.json</code> with a small script. Without JavaScript, the data file is still readable on its own.</p></noscript>
+  </header>
+
+  <section id="prevalence" aria-labelledby="prevalence-h">
+    <h2 id="prevalence-h">Resistance prevalence by drug class</h2>
+    <p>A sequence counts as resistant to a class if any drug in it scores intermediate or high-level resistance in HIVdb. Classes are in manuscript order.</p>
+    <p id="treatment-history" class="note">Treatment history is not recorded for these sequences. These are not pretreatment-resistance estimates: the corpus mixes surveillance, treatment-failure and trial sequences in unknown proportion, so the figures below should not be read against pretreatment drug-resistance surveys.</p>
+    <figure>
+      <div id="chart-prevalence" class="chart" data-chart="prevalence"></div>
+      <figcaption>Share of sequences scored for the class&rsquo;s gene. Each bar states its own denominator, and the denominators differ.</figcaption>
+    </figure>
+    <p id="denominator-note" class="note">The denominator is &ldquo;Sierra returned a score for this gene&rdquo;. That is not the same as &ldquo;the surveillance codons were sequenced&rdquo;: the data carry no per-gene coordinates, so true codon coverage cannot be computed without re-calling Sierra, and a sequence that stops short of a codon counts as unmutated there. Only <span data-bind="gene.IN"></span> of <span data-bind="meta.n_accessions_scored"></span> sequences have integrase coverage, because most deposited <em>pol</em> sequences cover PR and RT only.</p>
+    <p id="unit-note" class="note">Every prevalence, level and coverage figure on this page counts accessions, and &ldquo;sequences&rdquo; means accessions. The <span data-bind="meta.n_accessions_scored"></span> scored accessions hold <span data-bind="meta.n_distinct_sequences"></span> distinct sequences, so <span data-bind="derived.n_repeated_sequences"></span> repeat a sequence already present under another accession. Patient identity is not recorded, so these are not independent patients.</p>
+  </section>
+
+  <section id="landscape" aria-labelledby="landscape-h">
+    <h2 id="landscape-h">Resistance by country and year</h2>
+    <p id="landscape-intro">Each cell is one country in one collection year. Its colour is the share of the sequences in it that score intermediate or high-level resistance to any drug in the class, by the same rule as above, and the number of sequences it rests on is printed in it where there is room and given in its tooltip, or when you tap it. Rows are countries, columns are years, and the colour runs from pale at 0% to dark at 100% on one scale shared by all four classes. This view sums across subtypes: Paper 1&rsquo;s Figure 2 stratifies by subtype and this page does not, so there is no subtype breakdown here even though the subtype field is now correct.</p>
+    <p id="landscape-cohort-note" class="note">Cell-to-cell differences may reflect cohort composition rather than epidemiology. The corpus records no treatment history, so a pretreatment survey and a cohort of people already on treatment cannot be told apart, and they produce very different shares. Kenya in 2010 shows <span data-bind="cell.NNRTI.KE.2010.pct"></span> of <span data-bind="cell.NNRTI.KE.2010.n"></span> sequences resistant to an NNRTI; Uganda in 2016 shows <span data-bind="cell.NNRTI.UG.2016.pct"></span> of <span data-bind="cell.NNRTI.UG.2016.n"></span>. That is a roughly <span data-bind="ratio.NNRTI.UG.2016.KE.2010"></span>-fold spread between two large cells, which a pretreatment survey set beside a treatment-experienced cohort would produce on its own. Read each cell as a description of the sequences in it, not as a trend over time or a comparison between countries.</p>
+    <figure id="landscape-figure">
+      <ul id="legend-landscape" class="legend" aria-label="Heatmap key"></ul>
+      <div class="heatmap">
+        <h3>PI</h3>
+        <div id="chart-landscape-PI" class="chart" data-chart="landscape" data-class="PI"></div>
+        <p id="omitted-landscape-PI" class="readout" hidden></p>
+        <p id="readout-landscape-PI" class="readout" aria-live="polite">Hover or tap a cell for its counts.</p>
+      </div>
+      <div class="heatmap">
+        <h3>NRTI</h3>
+        <div id="chart-landscape-NRTI" class="chart" data-chart="landscape" data-class="NRTI"></div>
+        <p id="omitted-landscape-NRTI" class="readout" hidden></p>
+        <p id="readout-landscape-NRTI" class="readout" aria-live="polite">Hover or tap a cell for its counts.</p>
+      </div>
+      <div class="heatmap">
+        <h3>NNRTI</h3>
+        <div id="chart-landscape-NNRTI" class="chart" data-chart="landscape" data-class="NNRTI"></div>
+        <p id="omitted-landscape-NNRTI" class="readout" hidden></p>
+        <p id="readout-landscape-NNRTI" class="readout" aria-live="polite">Hover or tap a cell for its counts.</p>
+      </div>
+      <div class="heatmap">
+        <h3>INSTI</h3>
+        <div id="chart-landscape-INSTI" class="chart" data-chart="landscape" data-class="INSTI"></div>
+        <p id="omitted-landscape-INSTI" class="readout" hidden></p>
+        <p id="readout-landscape-INSTI" class="readout" aria-live="polite">Hover or tap a cell for its counts.</p>
+      </div>
+      <figcaption id="landscape-caption">A cell with fewer than <span data-bind="meta.landscape_min_cell_n"></span> sequences is grey with a slash and gives no percentage, so a sparse cell is never read as a low one; an empty cell has no sequences. Each class draws only the years in which at least one of its cells reaches that floor, so a gap between columns is a run of years left out, not years of low resistance. As with the prevalence figure, each share is of the sequences scored for the class&rsquo;s gene, and the cohort caveat above applies to every cell.</figcaption>
+    </figure>
+    <p id="landscape-sampling-note" class="note">Sampling effort is not uniform. Cells at or above the floor hold between <span data-bind="meta.landscape_min_cell_n"></span> and <span data-bind="derived.landscape_max_cell_n"></span> sequences, and half of them hold <span data-bind="derived.landscape_median_cell_n"></span> or fewer, which is why each cell shows its own n. A share over a handful of sequences moves a long way with one more resistant sample, and that is the reason cells under the floor are left uncoloured.</p>
+    <p id="landscape-exclusions-note" class="note">Not every scored accession is in this view. Of <span data-bind="meta.n_accessions_scored"></span> scored accessions, <span data-bind="meta.landscape_n_accessions"></span> are drawn. <span data-bind="meta.landscape_n_excluded_out_of_region"></span> state a country outside the targeted region (<span data-bind="derived.landscape_region_names"></span>) and are left out: the search over-matched, and these records state their own country, which the <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/docs/evaluations/ingest-provenance.md">provenance evaluation</a> breaks down. <span data-bind="meta.landscape_n_excluded_no_country"></span> state no country. <span data-bind="meta.landscape_n_excluded_no_year"></span> are from the targeted region but record no collection year, so they have no column (<span data-bind="derived.pct_landscape_undated"></span> of the region&rsquo;s accessions), and nothing here shows whether their resistance resembles that of the dated records. The prevalence figures above include every scored accession, in the region or not.<span id="landscape-absent" hidden> <span data-bind="derived.landscape_absent_countries"></span> have no cell at or above the floor and so no row.</span></p>
+  </section>
+
+  <section id="levels" aria-labelledby="levels-h">
+    <h2 id="levels-h">Resistance level by drug</h2>
+    <p>Every drug across Sierra&rsquo;s five levels, grouped by class. Bars are anchored on high-level resistance so drugs can be compared along one edge.</p>
+    <ul id="legend-levels" class="legend" aria-label="Resistance levels"></ul>
+    <figure>
+      <div id="chart-levels" class="chart" data-chart="levels"></div>
+      <figcaption>Each bar sums to the sequences scored for that drug. The right-hand figure is the share scoring high-level resistance. Integrase drugs rest on a thinner denominator than the others.</figcaption>
+    </figure>
+  </section>
+
+  <section id="sdrm" aria-labelledby="sdrm-h">
+    <h2 id="sdrm-h">Surveillance resistance mutations</h2>
+    <p>Sierra reports every variant relative to consensus, and the most frequent are natural polymorphisms, not resistance. Only positions and states on the <span data-bind="meta.sdrm_list_version"></span> surveillance list (Bennett et al. 2009, updated 2019) are counted, for protease (PR) and reverse transcriptase (RT).</p>
+    <ul class="legend" aria-label="Mutation panels">
+      <li><span class="swatch swatch-PR"></span>PR</li>
+      <li><span class="swatch swatch-RT_NRTI"></span>RT, NRTI list</li>
+      <li><span class="swatch swatch-RT_NNRTI"></span>RT, NNRTI list</li>
+    </ul>
+    <figure>
+      <div id="chart-sdrm-rt" class="chart" data-chart="sdrm" data-gene="RT"></div>
+      <div id="chart-sdrm-pr" class="chart" data-chart="sdrm" data-gene="PR"></div>
+      <figcaption>The most frequent surveillance mutations in each gene, ranked by the number of sequences carrying them, as a share of sequences scored for that gene.</figcaption>
+    </figure>
+    <p id="sdrm-scope" class="note">Integrase mutations are not shown. The vendored surveillance list predates the dolutegravir era: Bennett et al. 2009 has no integrase component, and the integrase block in the reference file is the raltegravir/elvitegravir-era list, missing R263K, G118R and E138K. Showing it would attribute to Bennett a list it does not contain.</p>
+    <p id="mixture-convention" class="note">Counting convention: a mixture counts as carrying a surveillance mutation when any of its states is one. Where a mixture matches more than one state, it is attributed to the alphabetically first matching state. That affects <span data-bind="derived.pct_sdrm_multistate"></span> of observations (<span data-bind="meta.n_sdrm_observations_multistate"></span> of <span data-bind="meta.n_sdrm_observations"></span>). The effect falls on one side only: the earlier state&rsquo;s count is correct, because the mixture does carry it, while the later state&rsquo;s count is understated by the mixtures that also matched an earlier one.</p>
+  </section>
+
+  <section id="coverage" aria-labelledby="coverage-h">
+    <h2 id="coverage-h">Gene coverage</h2>
+    <p>Sequences with a Sierra score for each gene, as a share of the <span data-bind="meta.n_accessions_scored"></span> scored accessions. This is what sets the denominators above.</p>
+    <figure>
+      <div id="chart-coverage" class="chart" data-chart="coverage"></div>
+      <figcaption>Genes in order along <em>pol</em>: protease, reverse transcriptase, integrase.</figcaption>
+    </figure>
+  </section>
+</main>
+
+<footer id="footer">
+  <p>
+    <a href="https://github.com/Neoforge-Labs/SAWA">github.com/Neoforge-Labs/SAWA</a> &middot;
+    cite via <a href="https://github.com/Neoforge-Labs/SAWA/blob/main/CITATION.cff">CITATION.cff</a> &middot;
+    data file <a href="summary.json">summary.json</a>
+  </p>
+  <p>
+    Algorithm <span data-bind="meta.algorithm_version"></span> &middot;
+    data vintage <span data-bind="meta.called_at"></span> &middot;
+    generated at commit <a data-bind="meta.git_sha" data-trunc="7" data-href="https://github.com/Neoforge-Labs/SAWA/commit/{value}"></a> &middot;
+    DVC pointer md5 <span data-bind="meta.input_dvc_md5" data-trunc="8"></span> &middot;
+    input file md5 <span data-bind="meta.input_file_md5" data-trunc="8"></span> &middot;
+    curated table pointer md5 <span data-bind="meta.curated_dvc_md5" data-trunc="8"></span> &middot;
+    curated table file md5 <span data-bind="meta.curated_file_md5" data-trunc="8"></span>
+  </p>
+  <p id="digest-note" class="note" hidden>These digests differ. A file this summary was computed from does not hash to the md5 its DVC pointer records, so the data vintage is not yet reconciled with its pointer.</p>
+</footer>
+</body>
+</html>

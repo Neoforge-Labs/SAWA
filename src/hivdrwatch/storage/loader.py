@@ -24,13 +24,22 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any, cast
 
 import polars as pl
-from sqlalchemy import inspect
+from sqlalchemy import CursorResult, Table, inspect
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .schema import STORAGE_SCHEMA_VERSION, ClusterMembership, DRCall, PipelineRun, Sequence
+from .schema import (
+    STORAGE_SCHEMA_VERSION,
+    Base,
+    ClusterMembership,
+    DRCall,
+    PipelineRun,
+    Sequence,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +61,38 @@ def _iso(v: date | datetime | None) -> datetime | None:
     return datetime(v.year, v.month, v.day, tzinfo=UTC)
 
 
-def _config_hash(config: dict) -> str:
+def _config_hash(config: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+# SQLSTATE 23505 (PostgreSQL/psycopg), MySQL error 1062, and the SQLite
+# extended result codes for UNIQUE and PRIMARY KEY violations.
+_UNIQUE_SQLSTATES = frozenset({"23505"})
+_UNIQUE_MYSQL_ERRNOS = frozenset({1062})
+_UNIQUE_SQLITE_NAMES = frozenset({"SQLITE_CONSTRAINT_UNIQUE", "SQLITE_CONSTRAINT_PRIMARYKEY"})
+
+
+def _is_duplicate_row(exc: IntegrityError) -> bool:
+    """True unless the driver says this integrity error is not a unique violation.
+
+    A NOT NULL or foreign-key failure is an `IntegrityError` too, and
+    counting it as "row already present" would report success for rows
+    that were never written. When the driver exposes no code at all the
+    error is still taken as a duplicate: that is the case this fallback
+    exists for, and the alternative is aborting the load on every
+    conflict.
+    """
+    orig = exc.orig
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    if isinstance(sqlstate, str):
+        return sqlstate in _UNIQUE_SQLSTATES
+    sqlite_name = getattr(orig, "sqlite_errorname", None)
+    if isinstance(sqlite_name, str):
+        return sqlite_name in _UNIQUE_SQLITE_NAMES
+    args = getattr(orig, "args", ())
+    if args and isinstance(args[0], int) and not isinstance(args[0], bool):
+        return args[0] in _UNIQUE_MYSQL_ERRNOS
+    return True
 
 
 def _open_run(
@@ -62,7 +101,7 @@ def _open_run(
     stage: str,
     schema_version: str,
     git_sha: str | None,
-    config: dict | None,
+    config: dict[str, Any] | None,
     notes: str | None = None,
 ) -> PipelineRun:
     run = PipelineRun()
@@ -85,16 +124,24 @@ def _close_run(session: Session, run: PipelineRun, row_count: int) -> None:
     session.flush()
 
 
-def _insert_many(session: Session, table, rows: Iterable[dict]) -> tuple[int, int]:
+def _insert_many(
+    session: Session, model: type[Base], rows: Iterable[dict[str, Any]]
+) -> tuple[int, int]:
     """Insert with dialect-specific idempotency; return (inserted, skipped)."""
     rows = list(rows)
     if not rows:
         return 0, 0
 
+    # SQLAlchemy types `__table__` as FromClause on every declarative class,
+    # but a class declared with `__tablename__` always maps a concrete Table.
+    table = cast(Table, model.__table__)
+
     dialect = session.get_bind().dialect.name
     if dialect == "postgresql":
-        stmt = pg_insert(table).values(rows).on_conflict_do_nothing()
-        result = session.execute(stmt)
+        pg_stmt = pg_insert(table).values(rows).on_conflict_do_nothing()
+        # DML statements return a CursorResult; `Session.execute` is typed
+        # with the broader Result, which has no `rowcount`.
+        result = cast("CursorResult[Any]", session.execute(pg_stmt))
         inserted = result.rowcount if result.rowcount is not None else len(rows)
         return inserted, len(rows) - inserted
 
@@ -107,8 +154,8 @@ def _insert_many(session: Session, table, rows: Iterable[dict]) -> tuple[int, in
         # per row without breaking the run linkage.
         from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-        stmt = sqlite_insert(table).values(rows).prefix_with("OR IGNORE")
-        result = session.execute(stmt)
+        sqlite_stmt = sqlite_insert(table).values(rows).prefix_with("OR IGNORE")
+        result = cast("CursorResult[Any]", session.execute(sqlite_stmt))
         inserted = result.rowcount if result.rowcount is not None else len(rows)
         return inserted, len(rows) - inserted
 
@@ -122,8 +169,10 @@ def _insert_many(session: Session, table, rows: Iterable[dict]) -> tuple[int, in
             session.execute(insert(table).values(**row))
             savepoint.commit()
             inserted += 1
-        except Exception:  # duplicate
+        except IntegrityError as e:
             savepoint.rollback()
+            if not _is_duplicate_row(e):
+                raise
     return inserted, len(rows) - inserted
 
 
@@ -151,7 +200,7 @@ def load_sequences(
         config={"parquet": str(parquet_path)},
     )
     now = datetime.now(UTC)
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for row in df.iter_rows(named=True):
         rows.append(
             {
@@ -176,7 +225,7 @@ def load_sequences(
             }
         )
 
-    inserted, skipped = _insert_many(session, Sequence.__table__, rows)
+    inserted, skipped = _insert_many(session, Sequence, rows)
     _close_run(session, run, row_count=inserted)
     logger.info("sequences loaded: %d inserted, %d skipped", inserted, skipped)
     return LoadCounts(inserted, skipped, run.id)
@@ -206,7 +255,7 @@ def load_dr_calls(
         config={"parquet": str(parquet_path)},
     )
     now = datetime.now(UTC)
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for row in df.iter_rows(named=True):
         rows.append(
             {
@@ -221,7 +270,7 @@ def load_dr_calls(
             }
         )
 
-    inserted, skipped = _insert_many(session, DRCall.__table__, rows)
+    inserted, skipped = _insert_many(session, DRCall, rows)
     _close_run(session, run, row_count=inserted)
     logger.info("dr_calls loaded: %d inserted, %d skipped", inserted, skipped)
     return LoadCounts(inserted, skipped, run.id)
@@ -250,7 +299,7 @@ def load_cluster_memberships(
         config={"parquet": str(parquet_path)},
     )
     now = datetime.now(UTC)
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for row in df.iter_rows(named=True):
         rows.append(
             {
@@ -263,7 +312,7 @@ def load_cluster_memberships(
             }
         )
 
-    inserted, skipped = _insert_many(session, ClusterMembership.__table__, rows)
+    inserted, skipped = _insert_many(session, ClusterMembership, rows)
     _close_run(session, run, row_count=inserted)
     logger.info("cluster_memberships loaded: %d inserted, %d skipped", inserted, skipped)
     return LoadCounts(inserted, skipped, run.id)

@@ -37,6 +37,11 @@ jobs:
       - name: Ruff — format check
         run: uv run ruff format --check .
 
+      # Every package passes strict (see [tool.mypy] in pyproject.toml). Checking the
+      # tree rather than a list means a package added later is covered by default.
+      - name: Mypy — strict
+        run: uv run mypy src causal foundation_models benchmarks
+
       - name: Pytest
         env:
           # Never talk to real Sierra/NCBI in CI — the resistance client
@@ -51,3 +56,43 @@ jobs:
           name: coverage-py${{ matrix.python-version }}
           path: .coverage
           if-no-files-found: ignore
+
+  # Detects a stale summary, nothing more. It compares the pointer digests recorded in the
+  # committed summary.json, meta.input_dvc_md5 (Sierra results) and meta.curated_dvc_md5
+  # (the curated table the countries and years come from), against the md5 in each committed
+  # .dvc pointer, so it fires when `dvc add` moved either pointer after the summary was
+  # exported. It does NOT verify the aggregation, and it does NOT detect a parquet that
+  # disagrees with its own pointer: the only DVC remote is a MinIO on localhost
+  # (.dvc/config), unreachable from a hosted runner, so CI never holds the data. The
+  # *_file_md5 digests (of the files actually hashed at export time) are likewise
+  # unverifiable here, and are not consulted. The page footer discloses when the Sierra
+  # input's two digests differ.
+  summary-input-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Summary input pointers match the DVC pointers
+        run: |
+          uv run python -c "
+          import logging, sys
+          from pathlib import Path
+          from hivdrwatch.dashboard.export.summary import check_input_not_stale
+          logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+          sys.exit(check_input_not_stale(
+              Path('src/hivdrwatch/dashboard/static/summary.json'),
+              Path('data/interim/dr_results.parquet.dvc'),
+              Path('data/interim/curated/aligned.parquet.dvc'),
+          ))
+          "

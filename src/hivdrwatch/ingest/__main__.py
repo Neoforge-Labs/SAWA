@@ -30,6 +30,7 @@ import logging
 import sys
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
@@ -102,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         log.info("loading LANL curation from %s", args.lanl_dir)
         lanl_df = ingester.load_directory(min_length=args.min_length)
         gb = GenBankIngester(email=args.email, raw_dir=args.genbank_dir)
-        records: list[dict] = []
+        records: list[dict[str, Any]] = []
         for country in args.countries:
             log.info("fetching GenBank for %s", country)
             for rec in gb.fetch_country(

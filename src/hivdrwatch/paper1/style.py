@@ -84,7 +84,13 @@ def resistance_cmap() -> Any:
     We use viridis reversed so darker = higher prevalence, matching the
     convention in most HIV-DR surveillance papers. Colorblind-safe by
     construction.
+
+    This returned unreversed viridis until 2026-11, which inverted the
+    stated convention: Figure 2 read lighter as higher while the dashboard,
+    following this docstring, read darker as higher. The same data carried
+    opposite colour meanings across the two. `test_style.py` now pins the
+    direction so it cannot invert again unnoticed.
     """
     import matplotlib as mpl
 
-    return mpl.colormaps["viridis"]
+    return mpl.colormaps["viridis_r"]

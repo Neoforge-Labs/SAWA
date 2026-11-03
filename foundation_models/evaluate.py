@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict, dataclass
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -40,7 +41,7 @@ class ClassificationMetrics:
     brier: float | None
     ece: float | None
 
-    def as_dict(self) -> dict:
+    def as_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -110,7 +111,7 @@ def per_subtype_metrics(
     Result columns:
         drug, subtype, n, n_positive, auroc, pr_auc, brier, ece
     """
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for (drug, subtype), group in df.group_by([drug_col, subtype_col]):
         y_true = group[label_col].to_numpy()
         y_prob = group[prob_col].to_numpy()

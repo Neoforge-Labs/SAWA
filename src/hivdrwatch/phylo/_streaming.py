@@ -23,6 +23,12 @@ import logging
 import subprocess
 import threading
 from collections import deque
+from typing import IO
+
+# Prefect hands back a LoggerAdapter inside a flow run, and these helpers only
+# call .info/.warning, which both satisfy. Narrowing to Logger forced callers to
+# suppress a type error for a call that was always valid.
+type StreamLogger = logging.Logger | logging.LoggerAdapter[logging.Logger]
 
 # Keep at most this many characters of captured stdout/stderr around
 # for the return value. Older lines are discarded but were already
@@ -34,7 +40,7 @@ def stream_subprocess(
     cmd: list[str],
     *,
     prefix: str,
-    logger: logging.Logger,
+    logger: StreamLogger,
     stderr_prefix: str | None = None,
     timeout_s: float | None = None,
 ) -> tuple[int, str, str]:
@@ -66,7 +72,7 @@ def stream_subprocess(
     stdout_chars = [0]  # mutable counter for the closure
     stderr_chars = [0]
 
-    def _drain(stream, buf: deque[str], counter: list[int], line_prefix: str) -> None:
+    def _drain(stream: IO[str], buf: deque[str], counter: list[int], line_prefix: str) -> None:
         for line in stream:
             line = line.rstrip("\n")
             if not line:

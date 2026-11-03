@@ -6,6 +6,133 @@ per-stage `*_SCHEMA_VERSION` constants, not a package version.
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 
+## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.3.0 — 2026-10-30
+
+**The page's schema gate refuses any `summary.json` not at 1.3.0; a 1.2.0
+file lacks the landscape view and the fields the page binds to, and must be
+re-exported.**
+
+### Added
+
+- `views.resistance_landscape`: the share of sequences resistant to a drug
+  class per country and collection year, from
+  `paper1.fig02_aggregate.aggregate_resistance_landscape` (called, not
+  reimplemented) summed over subtype with the `MIN_CELL_N` floor applied
+  again to the sum, and restricted to the ingest search region
+  (`EAST_AFRICA_COUNTRIES`). The page draws it as one heatmap per class;
+  cells under the floor render as grey "not enough data", never in the
+  colour ramp, and each carries its n.
+- `meta`: `curated_dvc_md5` and `curated_file_md5` (the curated table's
+  pointer and file digests, apart from the Sierra input's);
+  `landscape_min_cell_n`; `landscape_countries`; and an accounting of every
+  scored accession that sums to `n_accessions_scored`:
+  `landscape_n_accessions`, `landscape_n_excluded_out_of_region`,
+  `landscape_n_excluded_no_country`, `landscape_n_excluded_no_year`,
+  `landscape_n_excluded_other`.
+- `--curated` and `--curated-pointer` on the export, resolved like
+  `--input` and `--pointer`; `make dashboard` passes the curated table under
+  `INTERIM_DIR`.
+
+### Changed
+
+- `check_input_not_stale` takes the curated pointer as a third, required
+  argument and fails if either pointer moved since the export. The
+  `summary-input-drift` job passes both. The page's digest notice covers
+  both inputs.
+- The page's limitation note no longer says geographic breakdowns are
+  absent: the vintage was rebuilt with record-derived country, and the
+  geographic view is shown. It now says subtype breakdowns remain absent
+  because the landscape sums across subtypes, not because the subtype field
+  is wrong. The old "3,108 accessions state a country outside the targeted
+  region" figure is dropped from the page; the live count is bound from
+  `meta`.
+- The export refuses a curated table with a repeated accession and cells
+  that disagree with the accession accounting.
+
+### Not done
+
+- A subtype-stratified view.
+
+## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.2.0 — 2026-10-30
+
+**The page's schema gate refuses any `summary.json` not at 1.2.0; a 1.1.0
+file exists only in this branch's own history, never in a release.**
+
+### Changed
+
+- Summary schema 1.1.0 → 1.2.0 (minor: new required field). `meta` gains
+  `n_distinct_sequences`, the number of distinct `sequence_sha256` values
+  among the scored accessions. Every count the page publishes is of
+  accessions, and several accessions carry one sequence, so the page needs
+  this number to state the unit and how far it differs from distinct
+  sequences. Any 1.1.0 file lacks it and must be re-exported.
+- `DedupReport` gains `n_distinct_sequences`.
+- `meta.dr_schema_version` is now the `schema_version` the data frame
+  carries instead of the code constant, so it cannot name a schema the rows
+  were not written at. Same type and, on the current vintage, same value; a
+  mismatch with the constant logs a warning.
+- The export now refuses an `n_accessions_ingested` smaller than the scored
+  count (`IngestedCountBelowScoredError`) and a null `algorithm_version`,
+  `called_at` or `schema_version` (`NullProvenanceError`).
+- `meta.git_sha` carries a `-dirty` suffix when `git status --porcelain` is
+  non-empty or could not be read, so a summary built from uncommitted code
+  says so. `make dashboard` no longer defaults `INGESTED_COUNT`; it must be
+  passed.
+- The page states the unit (accessions, with the measured count that
+  repeat a sequence), that treatment history is not recorded so the
+  prevalence figures are not pretreatment-resistance estimates, which way
+  the mixture rule biases counts, and separates the country and subtype
+  provenance defects. A null `algorithm_publish_date` renders as a dash; a
+  null in any other bound value trips the page's shape banner.
+- Input provenance reconciled: `data/interim/dr_results.parquet.dvc` now
+  records `a8279a4d…`, the digest of the file the summary is computed from.
+  The old pointer (`e51cbb39…`) described an earlier file that differs only
+  in `called_at` (2026-08-16 against 2026-08-17) across all 728,087
+  accession-drug pairs; a re-run on 2026-08-17 had never been `dvc add`ed.
+  `meta.input_dvc_md5` and `meta.input_file_md5` now agree. The page's
+  digest-mismatch notice and its test remain, for the next divergence. This
+  makes the pointer truthful; it does not make the upstream ingest
+  byte-reproducible.
+
+## dashboard summary `SUMMARY_SCHEMA_VERSION` 1.1.0 — 2026-10-30
+
+**New module. The page's schema gate refuses any `summary.json` not at
+1.1.0 instead of half-drawing it; a 1.0.0 file exists only in this branch's
+own history, never in a release.**
+
+### Added
+
+- `src/hivdrwatch/dashboard/`: `export/` deduplicates Sierra results,
+  matches PR and RT surveillance mutations and aggregates four views into
+  a deterministic `summary.json`; a dependency-free static page draws it.
+  Registered as `hivdrwatch dashboard` and `make dashboard`.
+- `.github/workflows/pages.yml` publishes the static page to GitHub Pages
+  once Pages is enabled on the repository (it is not yet), and the
+  `summary-input-drift` job in `test.yml` fails when the DVC pointer has
+  moved since the summary was exported. The guard compares
+  `meta.input_dvc_md5` against the committed pointer only; it does not
+  verify the aggregation or the parquet.
+
+### Changed
+
+- Summary schema 1.0.0 → 1.1.0 (minor: new required fields). `meta` gains
+  `n_sdrm_observations` and `n_sdrm_observations_multistate`, so the page
+  states the measured size of the single-state attribution rule rather
+  than a typed-in figure, and `input_file_md5`, the digest of the file
+  actually read, kept apart from `input_dvc_md5`, which is only what the
+  DVC pointer claims. The page requires all three, so this is a
+  compatibility break in the JSON contract and not a cosmetic version
+  move. Any 1.0.0 file lacks them and must be re-exported.
+
+### Not done
+
+- Geographic and subtype-stratified views: the shipped vintage's country
+  and subtype are unreliable (`docs/evaluations/ingest-provenance.md`),
+  so they return after a provenance rebuild.
+- Integrase surveillance mutations: the vendored SDRM list has no
+  dolutegravir-era integrase block.
+- Flow 1's API-backed Auspice + deck.gl dashboard (`MODULES.md`).
+
 ## ingest `SCHEMA_VERSION` 0.2.0 — 2026-10-21
 
 **`subtype` and `country` change meaning. 0.1.0 and 0.2.0 records must not

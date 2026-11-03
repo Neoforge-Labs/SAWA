@@ -34,6 +34,7 @@ from typing import Literal
 
 import polars as pl
 
+from ._streaming import StreamLogger
 from .iqtree import IqtreeResult, run_iqtree
 from .schema import (
     PHYLO_SCHEMA_VERSION,
@@ -238,9 +239,10 @@ def write_subtype_alignment(
     module constant `MIN_ALIGNED_COVERAGE` for the default rationale.
     """
     if seq_col not in subset.columns:
-        seq_col = "sequence" if "sequence" in subset.columns else None
-        if seq_col is None:
+        fallback_col = "sequence" if "sequence" in subset.columns else None
+        if fallback_col is None:
             raise ValueError("neither 'aligned_pol' nor 'sequence' in subset")
+        seq_col = fallback_col
 
     if min_coverage is not None and seq_col == "aligned_pol":
         subset = filter_by_coverage(subset, seq_col=seq_col, min_coverage=min_coverage)
@@ -272,7 +274,7 @@ def build_subtype_tree(
     skip_treetime: bool = False,
     min_coverage: float = MIN_ALIGNED_COVERAGE,
     min_taxa: int = MIN_TAXA_FOR_TREE,
-    stream_logger: logging.Logger | None = None,
+    stream_logger: StreamLogger | None = None,
 ) -> tuple[list[TreeMetadata], IqtreeResult, TreetimeResult | None]:
     """End-to-end: alignment FASTA → IQ-TREE → TreeTime → manifest rows."""
     out_dir = trees_root / subtype
@@ -474,7 +476,7 @@ def build_all_trees(
     skip_treetime: bool = False,
     min_taxa: int = MIN_TAXA_FOR_TREE,
     min_coverage: float = MIN_ALIGNED_COVERAGE,
-    stream_logger: logging.Logger | None = None,
+    stream_logger: StreamLogger | None = None,
     partition_report_path: Path | None = None,
 ) -> list[TreeMetadata]:
     """Build ML + time-scaled trees for every eligible subtype.

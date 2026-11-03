@@ -40,6 +40,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+# mappy is a compiled extension with no stubs or py.typed marker, so mypy cannot
+# locate it even though it is installed.
 import mappy as mp
 
 from .reference import HXB2_POL_LENGTH

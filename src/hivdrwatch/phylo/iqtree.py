@@ -24,7 +24,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from ._streaming import stream_subprocess
+from ._streaming import StreamLogger, stream_subprocess
 from .schema import SubstitutionModel
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ def run_iqtree(
     fast: bool = DEFAULT_FAST,
     image: str = DEFAULT_IMAGE,
     memory_limit: str = DEFAULT_MEMORY_LIMIT,
-    stream_logger: logging.Logger | None = None,
+    stream_logger: StreamLogger | None = None,
 ) -> IqtreeResult:
     """Run IQ-TREE 2 in Docker; return the artifact record.
 
