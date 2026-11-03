@@ -21,6 +21,7 @@ import logging
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +76,8 @@ def extract_patient_token(sequence_name: str | None) -> tuple[str, str]:
 
 
 def assign_patient_groups(
-    rows: Iterable[dict],
-) -> list[dict]:
+    rows: Iterable[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """Add `patient_group_id` and `is_earliest_per_patient` to each row.
 
     Input rows must have `accession`, `sequence_name`, `country`,
