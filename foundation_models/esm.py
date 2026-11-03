@@ -48,10 +48,20 @@ import time
 from collections.abc import Iterable, MutableMapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     import polars as pl
+    from torch.utils.data import Dataset
+
+    # torch is an optional extra, so the dataset class below duck-types
+    # Dataset instead of subclassing it — DataLoader only needs __len__ and
+    # __getitem__ at runtime. A conditional base class is not an option:
+    # on a CPU-only install Dataset resolves to Any, and strict mode's
+    # disallow_subclassing_any rejects that. So the loaders cast instead,
+    # which also gives DataLoader its element type — without the cast mypy
+    # infers Dataset[Never] and rejects every dataset we hand it.
+    type _TokenizedDataset = Dataset[MutableMapping[str, Any]]
 
 logger = logging.getLogger(__name__)
 
@@ -167,8 +177,6 @@ class _SequenceLabelDataset:
     """Torch Dataset over (sequence_aa, label_binary) rows."""
 
     def __init__(self, df: pl.DataFrame, tokenizer: Any, max_length: int) -> None:
-        from torch.utils.data import Dataset  # noqa: F401
-
         # Store as parallel python lists — Polars → list conversion is
         # a one-time cost, and downstream iteration is fast.
         self.sequences = df["sequence_aa"].to_list()
@@ -358,17 +366,23 @@ def train_from_manifest(
 
     collator = _make_collator(tokenizer)
     train_loader = DataLoader(
-        train_ds,
+        cast("_TokenizedDataset", train_ds),
         batch_size=cfg.batch_size,
         shuffle=True,
         collate_fn=collator,
         num_workers=0,
     )
     val_loader = DataLoader(
-        val_ds, batch_size=cfg.batch_size, shuffle=False, collate_fn=collator
+        cast("_TokenizedDataset", val_ds),
+        batch_size=cfg.batch_size,
+        shuffle=False,
+        collate_fn=collator,
     )
     test_loader = DataLoader(
-        test_ds, batch_size=cfg.batch_size, shuffle=False, collate_fn=collator
+        cast("_TokenizedDataset", test_ds),
+        batch_size=cfg.batch_size,
+        shuffle=False,
+        collate_fn=collator,
     )
 
     pos_weight = cfg.positive_class_weight or _compute_pos_weight(train_df)

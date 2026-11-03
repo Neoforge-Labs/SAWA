@@ -126,6 +126,16 @@ python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 
+# transformers ships py.typed, but leaves helpers such as
+# `get_linear_schedule_with_warmup` unannotated, so calling one from a strict
+# module is a no-untyped-call error. An inline ignore would be wrong twice
+# over: it would assert the checker is mistaken when it is not, and
+# warn_unused_ignores turns it into an error on CPU-only installs where
+# transformers is unresolvable and the call is already Any. This names the
+# real situation instead, and narrows it to untyped calls into one package —
+# every other strict check still applies to those call sites.
+untyped_calls_exclude = ["transformers"]
+
 # mappy ships as a compiled extension with no stubs and no py.typed marker, so
 # mypy cannot resolve it even though it is installed and pinned.
 [[tool.mypy.overrides]]

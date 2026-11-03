@@ -33,13 +33,21 @@ import logging
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import polars as pl
 
 from .baselines import KmerLogisticRegression, OneHotRandomForest
 from .evaluate import compute_metrics
+
+if TYPE_CHECKING:
+    from torch.utils.data import Dataset
+
+    # See the same alias in esm.py: torch is an optional extra, so the local
+    # dataset below duck-types Dataset rather than subclassing it, and the
+    # DataLoader call casts to give mypy the element type.
+    type _TokenizedDataset = Dataset[Any]
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +156,9 @@ def _score_esm2(
         def __getitem__(self, i: int) -> Any:
             return tokenizer(self.xs[i], truncation=True, max_length=max_length, padding=False)
 
-    loader = DataLoader(_Ds(seqs), batch_size=batch_size, collate_fn=collator)
+    loader = DataLoader(
+        cast("_TokenizedDataset", _Ds(seqs)), batch_size=batch_size, collate_fn=collator
+    )
     probs: list[float] = []
     with torch.no_grad():
         for batch in loader:
