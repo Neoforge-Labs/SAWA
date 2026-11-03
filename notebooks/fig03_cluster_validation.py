@@ -8,8 +8,10 @@ Reads `data/gold/cluster_validation.json` (produced by
   Right panel: pair-agreement fraction between the two clusterers,
                as a single annotated bar.
 
-If HIV-TRACE wasn't run (e.g. the Docker image isn't built yet), the
-figure gracefully renders only our clusterer and prints a warning.
+The parity panel always carries a provenance note (`provenance_note`):
+parity ran, HIV-TRACE was never requested, or HIV-TRACE was requested and
+skipped. The last is drawn in red so a degraded run cannot pass for a
+deliberate tn93-only one.
 
 Launch:
     marimo edit notebooks/fig03_cluster_validation.py
@@ -26,6 +28,7 @@ app = marimo.App(width="full")
 
 @app.cell
 def _():
+    import textwrap
     from pathlib import Path
 
     import matplotlib.pyplot as plt
@@ -38,6 +41,8 @@ def _():
         FIG3_METRICS,
         load_parity_payload,
         metrics_frame,
+        provenance_note,
+        provenance_state,
         summarize,
     )
 
@@ -58,7 +63,10 @@ def _():
         np,
         pl,
         plt,
+        provenance_note,
+        provenance_state,
         summarize,
+        textwrap,
     )
 
 
@@ -81,7 +89,10 @@ def _(
     np,
     pl,
     plt,
+    provenance_note,
+    provenance_state,
     summary,
+    textwrap,
 ):
     fig, axes = plt.subplots(
         1,
@@ -137,6 +148,8 @@ def _(
     ax_metrics.grid(axis="y", linestyle="--", alpha=0.3)
 
     # Parity panel
+    note = textwrap.fill(provenance_note(summary), width=30)
+    degraded = provenance_state(summary) == "requested_skipped"
     if summary.pair_agreement is not None:
         ax_parity.bar(
             [0],
@@ -159,15 +172,17 @@ def _(
         ax_parity.set_xticklabels(["pair agreement"])
         ax_parity.set_title("ours vs HIV-TRACE")
         ax_parity.grid(axis="y", linestyle="--", alpha=0.3)
+        ax_parity.set_xlabel(note, fontsize=6.5)
     else:
         ax_parity.text(
             0.5,
             0.5,
-            "HIV-TRACE not run\n(run `make cluster-validate WITH_HIVTRACE=1`)",
+            note,
             ha="center",
             va="center",
             fontsize=8,
-            wrap=True,
+            color="firebrick" if degraded else "black",
+            fontweight="bold" if degraded else "normal",
         )
         ax_parity.set_axis_off()
 
@@ -180,8 +195,9 @@ def _(
 
 
 @app.cell
-def _(fig_path_pdf, fig_path_png, summary):
+def _(fig_path_pdf, fig_path_png, provenance_note, summary):
     print("parity:")
+    print(f"  provenance: {provenance_note(summary)}")
     print(f"  clusterers: {summary.n_clusterers}")
     print(
         f"  simulated: N={summary.n_sequences} across {summary.n_truth_clusters} truth clusters"

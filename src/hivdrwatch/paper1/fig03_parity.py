@@ -10,6 +10,12 @@ and produces two Polars frames:
 Also exposes `parity_agreement(payload)` returning the pair-agreement
 fraction between the two clusterers (or None if HIV-TRACE wasn't run).
 
+`provenance_note(summary)` is the caption text that tells a reviewer which
+of three runs produced the figure: parity ran, HIV-TRACE was never
+requested, or HIV-TRACE was requested and skipped. The last must never read
+like the second, because a tn93-only figure from a degraded run is not
+evidence of parity.
+
 Kept separate from the notebook so shape and semantics are unit-testable.
 """
 
@@ -19,7 +25,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 
@@ -35,9 +41,20 @@ CLUSTERER_ORDER: tuple[str, ...] = (
 )
 
 
+type ProvenanceState = Literal["parity_ran", "not_requested", "requested_skipped"]
+
+# Shown when a run asked for HIV-TRACE, produced no HIV-TRACE result, and
+# recorded no reason (a payload written by something other than cluster_validate).
+UNRECORDED_SKIP_REASON = "no reason recorded"
+
+
 @dataclass(frozen=True)
 class ParitySummary:
-    """High-level parity numbers for the notebook's caption text."""
+    """High-level parity numbers for the notebook's caption text.
+
+    `with_hivtrace` and `hivtrace_skipped` default to "not requested" so
+    results JSONs written before cluster_validate recorded them still load.
+    """
 
     n_clusterers: int
     n_sequences: int
@@ -45,6 +62,8 @@ class ParitySummary:
     pair_agreement: float | None
     ours_f1: float
     hivtrace_f1: float | None
+    with_hivtrace: bool = False
+    hivtrace_skipped: str | None = None
 
 
 def load_parity_payload(json_path: Path) -> dict[str, Any]:
@@ -58,7 +77,8 @@ def load_parity_payload(json_path: Path) -> dict[str, Any]:
     if "results" in payload:
         return payload
 
-    # Backfill from the pre-parity single-clusterer format.
+    # Backfill from the pre-parity single-clusterer format. Mutates in place so
+    # top-level provenance keys (`with_hivtrace`, `hivtrace_skipped`) survive.
     payload["results"] = [
         {
             "clusterer": payload["clusterer"],
@@ -126,15 +146,54 @@ def summarize(payload: dict[str, Any]) -> ParitySummary:
         pair_agreement=float(parity["fraction_agree"]) if parity else None,
         ours_f1=ours_f1,
         hivtrace_f1=hivtrace_f1,
+        with_hivtrace=bool(payload.get("with_hivtrace", False)),
+        hivtrace_skipped=payload.get("hivtrace_skipped"),
+    )
+
+
+def provenance_state(summary: ParitySummary) -> ProvenanceState:
+    """Classify how the run relates to HIV-TRACE.
+
+    The presence of an HIV-TRACE result decides `parity_ran`, not the
+    `with_hivtrace` flag: a pre-fix file from a successful parity run has no
+    flag but does have the bars, and calling it "not requested" would be false.
+    """
+    if summary.hivtrace_f1 is not None:
+        return "parity_ran"
+    if summary.hivtrace_skipped is not None or summary.with_hivtrace:
+        return "requested_skipped"
+    return "not_requested"
+
+
+def provenance_note(summary: ParitySummary) -> str:
+    """One-paragraph provenance caption for the parity panel."""
+    state = provenance_state(summary)
+    if state == "parity_ran":
+        if summary.pair_agreement is None:
+            return "Parity run: tn93 clusterer and HIV-TRACE both scored."
+        return (
+            "Parity run: tn93 clusterer and HIV-TRACE both scored; "
+            f"pair agreement {summary.pair_agreement:.3f}."
+        )
+    if state == "not_requested":
+        return "tn93 clusterer only. HIV-TRACE parity was not requested for this run."
+    reason = summary.hivtrace_skipped or UNRECORDED_SKIP_REASON
+    return (
+        f"DEGRADED RUN: HIV-TRACE parity was requested but skipped ({reason}). "
+        "Showing the tn93 clusterer only; this figure does not support a parity claim."
     )
 
 
 __all__ = [
     "CLUSTERER_ORDER",
     "FIG3_METRICS",
+    "UNRECORDED_SKIP_REASON",
     "ParitySummary",
+    "ProvenanceState",
     "confusion_frame",
     "load_parity_payload",
     "metrics_frame",
+    "provenance_note",
+    "provenance_state",
     "summarize",
 ]
