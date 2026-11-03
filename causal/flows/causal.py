@@ -24,7 +24,9 @@ import polars as pl
 from prefect import flow, get_run_logger, task
 from prefect.tasks import task_input_hash
 
-from ..causal import (
+from hivdrwatch.tracking import tracked_run
+
+from .. import (
     DAG_VERSION,
     build_dr_causal_frames,
     derive_prune_config,
@@ -36,7 +38,6 @@ from ..causal import (
     write_html_report,
 )
 from ..dag import DRDag
-from ..tracking import tracked_run
 
 
 @task(cache_key_fn=task_input_hash)
