@@ -29,6 +29,7 @@ from typing import Any, cast
 import polars as pl
 from sqlalchemy import CursorResult, Table, inspect
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .schema import (
@@ -62,6 +63,36 @@ def _iso(v: date | datetime | None) -> datetime | None:
 
 def _config_hash(config: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+# SQLSTATE 23505 (PostgreSQL/psycopg), MySQL error 1062, and the SQLite
+# extended result codes for UNIQUE and PRIMARY KEY violations.
+_UNIQUE_SQLSTATES = frozenset({"23505"})
+_UNIQUE_MYSQL_ERRNOS = frozenset({1062})
+_UNIQUE_SQLITE_NAMES = frozenset({"SQLITE_CONSTRAINT_UNIQUE", "SQLITE_CONSTRAINT_PRIMARYKEY"})
+
+
+def _is_duplicate_row(exc: IntegrityError) -> bool:
+    """True unless the driver says this integrity error is not a unique violation.
+
+    A NOT NULL or foreign-key failure is an `IntegrityError` too, and
+    counting it as "row already present" would report success for rows
+    that were never written. When the driver exposes no code at all the
+    error is still taken as a duplicate: that is the case this fallback
+    exists for, and the alternative is aborting the load on every
+    conflict.
+    """
+    orig = exc.orig
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    if isinstance(sqlstate, str):
+        return sqlstate in _UNIQUE_SQLSTATES
+    sqlite_name = getattr(orig, "sqlite_errorname", None)
+    if isinstance(sqlite_name, str):
+        return sqlite_name in _UNIQUE_SQLITE_NAMES
+    args = getattr(orig, "args", ())
+    if args and isinstance(args[0], int) and not isinstance(args[0], bool):
+        return args[0] in _UNIQUE_MYSQL_ERRNOS
+    return True
 
 
 def _open_run(
@@ -138,8 +169,10 @@ def _insert_many(
             session.execute(insert(table).values(**row))
             savepoint.commit()
             inserted += 1
-        except Exception:  # duplicate
+        except IntegrityError as e:
             savepoint.rollback()
+            if not _is_duplicate_row(e):
+                raise
     return inserted, len(rows) - inserted
 
 
