@@ -43,7 +43,7 @@ from datetime import date
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, Field, StringConstraints, field_validator
+from pydantic import BaseModel, Field, StringConstraints, ValidationInfo, field_validator
 
 SCHEMA_VERSION = "0.2.0"
 
@@ -316,7 +316,7 @@ class SequenceRecord(BaseModel):
 
     @field_validator("length")
     @classmethod
-    def _length_matches_sequence(cls, v: int, info) -> int:
+    def _length_matches_sequence(cls, v: int, info: ValidationInfo) -> int:
         seq = info.data.get("sequence")
         if seq is not None and len(seq) != v:
             raise ValueError(f"length {v} does not match sequence length {len(seq)}")

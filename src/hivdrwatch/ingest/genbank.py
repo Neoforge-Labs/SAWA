@@ -27,7 +27,7 @@ import time
 from collections.abc import Iterator
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO, cast
 
 from Bio import Entrez, SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -40,7 +40,9 @@ from tenacity import (
 )
 
 from .schema import (
-    EAST_AFRICA_COUNTRIES,
+    EAST_AFRICA_COUNTRIES as EAST_AFRICA_COUNTRIES,
+)
+from .schema import (
     SequenceRecord,
     Source,
     Subtype,
@@ -77,6 +79,25 @@ MIN_POL_LENGTH = 800  # under this and phylogenetic signal is too weak
 MAX_POL_LENGTH = 4000
 
 
+# Biopython's Entrez and SeqIO entry points carry no annotations, so mypy
+# strict rejects each call. The wrappers keep that to one narrow ignore per
+# entry point instead of one per call site, and give callers a signature.
+def _entrez_esearch(**params: Any) -> Any:
+    return Entrez.esearch(**params)  # type: ignore[no-untyped-call]
+
+
+def _entrez_efetch(**params: Any) -> Any:
+    return Entrez.efetch(**params)  # type: ignore[no-untyped-call]
+
+
+def _entrez_read(handle: Any) -> Any:
+    return Entrez.read(handle)  # type: ignore[no-untyped-call]
+
+
+def _parse_genbank(handle: TextIO) -> Iterator[SeqRecord]:
+    return SeqIO.parse(handle, "genbank")  # type: ignore[no-untyped-call,no-any-return]
+
+
 class GenBankIngester:
     """Fetch, parse, and validate HIV pol sequences from NCBI.
 
@@ -94,8 +115,10 @@ class GenBankIngester:
     ) -> None:
         if not email or "@" not in email:
             raise ValueError("NCBI requires a real email address for E-utilities access")
-        Entrez.email = email
-        Entrez.api_key = api_key or os.getenv("NCBI_API_KEY")
+        # Biopython declares both module globals as `None` and ships no
+        # annotations, so mypy infers the attribute type as None.
+        Entrez.email = email  # type: ignore[assignment]
+        Entrez.api_key = api_key or os.getenv("NCBI_API_KEY")  # type: ignore[assignment]
         self.raw_dir = raw_dir
         self.raw_dir.mkdir(parents=True, exist_ok=True)
         self.batch_size = batch_size
@@ -200,8 +223,8 @@ class GenBankIngester:
     def _esearch_all(self, query: str) -> list[str]:
         """esearch with WebEnv to page through arbitrarily large result sets."""
         self._rate_limit()
-        handle = Entrez.esearch(db="nucleotide", term=query, usehistory="y", retmax=0)
-        head = Entrez.read(handle)
+        handle = _entrez_esearch(db="nucleotide", term=query, usehistory="y", retmax=0)
+        head = _entrez_read(handle)
         handle.close()
         total = int(head["Count"])
         if total == 0:
@@ -213,7 +236,7 @@ class GenBankIngester:
         page = 10_000  # esearch retmax cap
         for start in range(0, total, page):
             self._rate_limit()
-            h = Entrez.esearch(
+            h = _entrez_esearch(
                 db="nucleotide",
                 term=query,
                 retstart=start,
@@ -221,7 +244,7 @@ class GenBankIngester:
                 webenv=webenv,
                 query_key=query_key,
             )
-            chunk = Entrez.read(h)
+            chunk = _entrez_read(h)
             h.close()
             ids.extend(chunk["IdList"])
         return ids
@@ -287,23 +310,22 @@ class GenBankIngester:
                     raw_path.stat().st_size,
                 )
                 with raw_path.open() as fh:
-                    yield from SeqIO.parse(fh, "genbank")
+                    yield from _parse_genbank(fh)
                 return
             logger.warning("cache file %s looks truncated; re-fetching", raw_path.name)
             raw_path.unlink(missing_ok=True)
 
         self._rate_limit()
         logger.info("fetching batch of %d (first id=%s)", len(ids), ids[0])
-        handle = Entrez.efetch(db="nucleotide", id=",".join(ids), rettype="gb", retmode="text")
+        handle = _entrez_efetch(
+            db="nucleotide", id=",".join(ids), rettype="gb", retmode="text"
+        )
         raw_text = handle.read()
         handle.close()
 
         # Validate BEFORE persisting so we don't cache a truncated response.
         if not _text_looks_valid_gb(raw_text):
-            raise http.client.IncompleteRead(
-                len(raw_text.encode("utf-8")),
-                expected=None,
-            )
+            raise http.client.IncompleteRead(len(raw_text.encode("utf-8")), expected=None)  # type: ignore[arg-type]
 
         # Atomic write: temp file + rename so a mid-write crash can't
         # leave a truncated cache entry that we'd mistake for valid.
@@ -313,7 +335,7 @@ class GenBankIngester:
 
         # Re-parse from disk so parsing is identical to replay.
         with raw_path.open() as fh:
-            yield from SeqIO.parse(fh, "genbank")
+            yield from _parse_genbank(fh)
 
     def _parse(self, record: SeqRecord, requested_country: str) -> SequenceRecord | None:
         try:
@@ -499,7 +521,8 @@ def _infer_gene_region(length: int) -> str:
 
 
 def _extract_pubmed_id(record: SeqRecord) -> str | None:
-    for ref in record.annotations.get("references", []):
+    references = cast("list[Any]", record.annotations.get("references", []))
+    for ref in references:
         if getattr(ref, "pubmed_id", None):
             return str(ref.pubmed_id)
     return None
