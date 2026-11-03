@@ -4,7 +4,11 @@
 # that touch the compose stack prefix `up-` / `down-`. Bare targets
 # are "do the obvious thing" for a fresh checkout.
 
-SHELL := /usr/bin/env bash
+# Make execs SHELL directly and does not word-split it, so `/usr/bin/env bash`
+# is read as one 25-character program name. GNU Make 3.81 (macOS) tolerated it;
+# 4.x (every Linux runner and the containers) fails every recipe with
+# "No such file or directory". Keep this an executable path.
+SHELL := /bin/bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
 
