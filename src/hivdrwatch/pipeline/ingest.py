@@ -214,11 +214,15 @@ def ingest_flow(
         if out.exists():
             run.log_artifact(out)
 
-    # Storage tail — load bronze Parquet into Postgres if enabled.
-    # Never crashes the flow; Parquet on disk remains source of truth.
-    from ._storage_tail import storage_tail
+        # Storage tail — load bronze Parquet into Postgres if enabled.
+        # Never crashes the flow; Parquet on disk remains source of truth.
+        # Inside the run so a failed load is tagged on the MLflow record
+        # instead of being indistinguishable from a load nobody asked for.
+        from ._storage_tail import record_storage_tail, storage_tail
 
-    storage_tail("ingest", out, enabled=to_postgres)
+        tail = storage_tail("ingest", out, enabled=to_postgres)
+        record_storage_tail(tail, log)
+        run.set_tags({"storage_tail": tail.status.value})
 
     return out
 

@@ -127,10 +127,10 @@ def dr_ingest_flow(
     )
     dr_path, st_path = write_dr_parquet(dr_results, subtypes, out_dir)
 
-    # Storage tail — never crashes the flow.
-    from ._storage_tail import storage_tail
+    # Storage tail — never crashes the flow, but its outcome is logged.
+    from ._storage_tail import record_storage_tail, storage_tail
 
-    storage_tail("sierra", dr_path, enabled=to_postgres)
+    record_storage_tail(storage_tail("sierra", dr_path, enabled=to_postgres), get_run_logger())
 
     return {
         "dr_results": dr_path,

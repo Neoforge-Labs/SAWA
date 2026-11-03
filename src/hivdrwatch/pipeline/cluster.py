@@ -353,10 +353,12 @@ def cluster_flow(
     features_df = outbreak_rollup(curated, cluster_df)
     cluster_path, features_path = write_gold(cluster_df, features_df, gold_dir)
 
-    # Storage tail — never crashes the flow.
-    from ._storage_tail import storage_tail
+    # Storage tail — never crashes the flow, but its outcome is logged.
+    from ._storage_tail import record_storage_tail, storage_tail
 
-    storage_tail("cluster", cluster_path, enabled=to_postgres)
+    record_storage_tail(
+        storage_tail("cluster", cluster_path, enabled=to_postgres), get_run_logger()
+    )
 
     return cluster_path, features_path
 
