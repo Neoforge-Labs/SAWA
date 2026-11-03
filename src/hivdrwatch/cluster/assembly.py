@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
 
 import networkx as nx
 import polars as pl
@@ -61,7 +62,7 @@ def assign_clusters(
     # Deterministic ordering: descending size, then ascending min accession.
     components.sort(key=lambda c: (-len(c), min(c)))
 
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     singletons = 0
     for i, component in enumerate(components):
         cluster_id = f"C-{i:05d}"

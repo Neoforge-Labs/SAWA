@@ -47,6 +47,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TextIO
 
 import numpy as np
 
@@ -87,7 +88,7 @@ class SimulationResult:
         """
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
-        def _write(fh, accession: str) -> None:
+        def _write(fh: TextIO, accession: str) -> None:
             seq = self.accession_to_seq[accession]
             fh.write(f">{accession}\n")
             if wrap and wrap > 0:
