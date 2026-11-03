@@ -24,6 +24,7 @@ on first connect).
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -49,14 +50,14 @@ class Base(MappedAsDataclass, DeclarativeBase, init=False):
     """Shared SQLAlchemy declarative base."""
 
 
-class PipelineRun(Base):
+class PipelineRun(Base, init=False):
     """One canonical pipeline run — every downstream row cites its id."""
 
     __tablename__ = "pipeline_runs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=_utcnow
+        DateTime(timezone=True), nullable=False, insert_default=_utcnow
     )
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -66,7 +67,7 @@ class PipelineRun(Base):
     )  # ingest, sierra, curate, ...
     schema_version: Mapped[str] = mapped_column(String(16), nullable=False)
     storage_schema_version: Mapped[str] = mapped_column(
-        String(16), nullable=False, default=STORAGE_SCHEMA_VERSION
+        String(16), nullable=False, insert_default=STORAGE_SCHEMA_VERSION
     )
     git_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
     config_hash: Mapped[str | None] = mapped_column(
@@ -76,7 +77,7 @@ class PipelineRun(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class Sequence(Base):
+class Sequence(Base, init=False):
     """One canonical HIV-1 pol sequence with metadata + ingest provenance."""
 
     __tablename__ = "sequences"
@@ -89,7 +90,7 @@ class Sequence(Base):
     # Sequence + coord
     sequence: Mapped[str] = mapped_column(Text, nullable=False)
     length: Mapped[int] = mapped_column(Integer, nullable=False)
-    gene_region: Mapped[str] = mapped_column(String(8), nullable=False, default="pol")
+    gene_region: Mapped[str] = mapped_column(String(8), nullable=False, insert_default="pol")
 
     # Provenance
     country: Mapped[str | None] = mapped_column(String(2), nullable=True, index=True)
@@ -97,7 +98,7 @@ class Sequence(Base):
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     collection_year: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     subtype: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="unknown", index=True
+        String(16), nullable=False, insert_default="unknown", index=True
     )
     subtype_source: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
@@ -114,7 +115,7 @@ class Sequence(Base):
     pipeline_run_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     raw_record_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     ingested_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=_utcnow
+        DateTime(timezone=True), nullable=False, insert_default=_utcnow
     )
 
     __table_args__ = (
@@ -122,7 +123,7 @@ class Sequence(Base):
     )
 
 
-class DRCall(Base):
+class DRCall(Base, init=False):
     """One Stanford HIVdb Sierra resistance call for one (sequence, drug)."""
 
     __tablename__ = "dr_calls"
@@ -136,12 +137,13 @@ class DRCall(Base):
     level: Mapped[str] = mapped_column(
         String(16), nullable=False, index=True
     )  # susceptible..high
-    mutations: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # {position: mutation}
+    # {position: mutation}; JSON object keys are strings
+    mutations: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     algorithm_version: Mapped[str] = mapped_column(String(16), nullable=False)
 
     pipeline_run_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     called_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=_utcnow
+        DateTime(timezone=True), nullable=False, insert_default=_utcnow
     )
 
     __table_args__ = (
@@ -155,7 +157,7 @@ class DRCall(Base):
     )
 
 
-class ClusterMembership(Base):
+class ClusterMembership(Base, init=False):
     """One sequence's cluster assignment under one clustering run."""
 
     __tablename__ = "cluster_memberships"
@@ -168,7 +170,7 @@ class ClusterMembership(Base):
 
     pipeline_run_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     computed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=_utcnow
+        DateTime(timezone=True), nullable=False, insert_default=_utcnow
     )
 
     __table_args__ = (
