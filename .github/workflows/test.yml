@@ -45,6 +45,8 @@ jobs:
         run: uv run mypy src/hivdrwatch/dashboard src/hivdrwatch/cli
           src/hivdrwatch/ingest src/hivdrwatch/resistance
           src/hivdrwatch/align src/hivdrwatch/api
+          src/hivdrwatch/storage src/hivdrwatch/cluster src/hivdrwatch/phylo
+          foundation_models
 
       - name: Pytest
         env:

@@ -132,6 +132,20 @@ plugins = ["pydantic.mypy"]
 module = "mappy"
 ignore_missing_imports = true
 
+# networkx ships no stubs and types-networkx lags the API we use.
+[[tool.mypy.overrides]]
+module = "networkx"
+ignore_missing_imports = true
+
+# sklearn and scipy are installed but ship no py.typed marker; torch and
+# transformers belong to the optional `fm` extra and are absent on CPU-only
+# installs. Inline ignores are not an option: strict enables
+# warn_unused_ignores, so they would become errors wherever the package IS
+# resolvable.
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "scipy.*", "torch", "torch.*", "transformers", "transformers.*"]
+ignore_missing_imports = true
+
 [dependency-groups]
 # uv installs from this group by default. Keep it in sync with the
 # `[project.optional-dependencies].dev` list above — the latter is
