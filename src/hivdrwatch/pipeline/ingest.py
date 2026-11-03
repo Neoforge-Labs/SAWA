@@ -30,6 +30,7 @@ import logging
 import os
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 from prefect import flow, get_run_logger, task
@@ -69,7 +70,7 @@ def fetch_genbank_country(
     since: date | None,
     until: date | None,
     min_length: int,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Fetch one country's GenBank records incrementally.
 
     Retried by Prefect on transient failures (E-utilities does hiccup).
@@ -99,7 +100,7 @@ def fetch_genbank_country(
 
 @task
 def merge_and_write(
-    genbank_records: list[dict],
+    genbank_records: list[dict[str, Any]],
     lanl_df: pl.DataFrame,
     out_path: Path,
 ) -> Path:
@@ -115,7 +116,7 @@ def merge_and_write(
 
 @task
 def bump_country_watermarks(
-    per_country_records: dict[str, list[dict]],
+    per_country_records: dict[str, list[dict[str, Any]]],
     genbank_dir: Path,
     watermarks: dict[str, date],
 ) -> Path:
@@ -157,8 +158,8 @@ def ingest_flow(
 
     lanl_df = load_lanl(lanl_dir, min_length)
 
-    per_country_records: dict[str, list[dict]] = {}
-    genbank_records: list[dict] = []
+    per_country_records: dict[str, list[dict[str, Any]]] = {}
+    genbank_records: list[dict[str, Any]] = []
     watermarks: dict[str, date] = {}
 
     if skip_genbank:

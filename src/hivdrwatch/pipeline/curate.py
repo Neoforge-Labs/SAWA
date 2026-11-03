@@ -27,6 +27,7 @@ import argparse
 import logging
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 from prefect import flow, get_run_logger, task
@@ -104,7 +105,7 @@ def align(
 @task
 def curate_rows(
     df: pl.DataFrame, aligned: dict[str, str], reference_fasta: Path
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Assemble the per-sequence curated row: trim + QC + provenance."""
     log = get_run_logger()
 
@@ -112,7 +113,7 @@ def curate_rows(
         reference_fasta, len(next(iter(aligned.values()), ""))
     )
     today = date.today()
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
 
     for row in df.iter_rows(named=True):
         accession = row["accession"]
@@ -161,12 +162,12 @@ def curate_rows(
 
 
 @task
-def dedup(rows: list[dict]) -> list[dict]:
+def dedup(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return assign_patient_groups(rows)
 
 
 @task
-def write_curated_parquet(rows: list[dict], out_path: Path) -> Path:
+def write_curated_parquet(rows: list[dict[str, Any]], out_path: Path) -> Path:
     log = get_run_logger()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # `sequence_name` is provenance-only; drop before write to match schema.

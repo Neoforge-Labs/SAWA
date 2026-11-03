@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from datetime import date
 from itertools import combinations
 from pathlib import Path
+from typing import Any
 
 from prefect import flow, get_run_logger, task
 
@@ -59,10 +60,10 @@ class ClustererResult:
     clusterer: str
     threshold: float
     n_predicted_clusters: int
-    metrics: dict
+    metrics: dict[str, int | float | None]
     membership: dict[str, str]  # kept for pair-agreement, dropped from JSON
 
-    def to_json_dict(self) -> dict:
+    def to_json_dict(self) -> dict[str, Any]:
         return {
             "clusterer": self.clusterer,
             "threshold": self.threshold,
@@ -231,7 +232,7 @@ def cluster_hivtrace(
     )
 
 
-def pair_agreement(a: dict[str, str], b: dict[str, str]) -> dict:
+def pair_agreement(a: dict[str, str], b: dict[str, str]) -> dict[str, int | float]:
     """Fraction of unordered pairs on which two clusterings agree.
 
     A pair (i, j) agrees iff (a[i]==a[j]) equals (b[i]==b[j]).
@@ -265,7 +266,7 @@ def write_results(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     results = [ours.to_json_dict()]
-    parity: dict | None = None
+    parity: dict[str, int | float] | None = None
     if hivtrace is not None:
         results.append(hivtrace.to_json_dict())
         parity = pair_agreement(ours.membership, hivtrace.membership)

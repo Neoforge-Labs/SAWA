@@ -27,6 +27,7 @@ from prefect.tasks import task_input_hash
 
 from ..phylo import (
     MIN_TAXA_FOR_TREE,
+    TreeMetadata,
     build_all_trees,
     write_manifest,
 )
@@ -54,7 +55,7 @@ def build_trees(
     min_taxa: int,
     min_coverage: float,
     partition_report_path: Path,
-) -> list:
+) -> list[TreeMetadata]:
     log = get_run_logger()
     # Pass the Prefect run logger down so IQ-TREE/TreeTime subprocess
     # output streams into the Prefect UI in real time (instead of only
@@ -69,7 +70,10 @@ def build_trees(
         skip_treetime=skip_treetime,
         min_taxa=min_taxa,
         min_coverage=min_coverage,
-        stream_logger=log,
+        # Prefect hands back a LoggerAdapter inside a run; the phylo helpers only call
+        # .info/.warning on it, which the adapter provides. Their `logging.Logger`
+        # annotation is narrower than what they use.
+        stream_logger=log,  # type: ignore[arg-type]
         partition_report_path=partition_report_path,
     )
     log.info(
@@ -81,7 +85,7 @@ def build_trees(
 
 
 @task
-def write_and_track(rows: list, manifest_path: Path) -> Path:
+def write_and_track(rows: list[TreeMetadata], manifest_path: Path) -> Path:
     log = get_run_logger()
     out = write_manifest(rows, manifest_path)
     log.info("manifest → %s", out)
