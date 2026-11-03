@@ -43,10 +43,11 @@ import logging
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
-from .data import build_fm_dataset
+from .data import SplitStrategy, build_fm_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +180,7 @@ _PRIMARY_GENE: dict[str, str] = {
 }
 
 
-def _in_frame_pol_from_genes(row: dict) -> str:
+def _in_frame_pol_from_genes(row: dict[str, Any]) -> str:
     """Concatenate pr_nt + rt_nt + in_nt into a single in-frame pol NT.
 
     Missing sub-genes are silently omitted (their absence is already
@@ -201,7 +202,7 @@ def prepare_drug_class(
     drug_class: str,
     out_dir: Path,
     *,
-    strategy: str = "stratified",
+    strategy: SplitStrategy = "stratified",
     holdout_train_subtypes: tuple[str, ...] = ("A1", "C", "D"),
     seed: int = 42,
     translate_to_protein: bool = True,
@@ -340,8 +341,8 @@ def prepare_drug_class(
         n_test=test.height,
         n_unique_accessions=ds.counts.n_unique_accessions,
         n_subtypes=ds.counts.n_subtypes,
-        positive_rate_train=float(train["label_binary"].mean() or 0.0),
-        positive_rate_test=float(test["label_binary"].mean() or 0.0),
+        positive_rate_train=_positive_rate(train),
+        positive_rate_test=_positive_rate(test),
         sequence_column_used=sequence_source,
         strip_gaps=True,
         aa_translation_applied=translate_to_protein,
@@ -366,6 +367,12 @@ def prepare_drug_class(
         summary.aa_stop_codon_rate * 100,
     )
     return summary
+
+
+def _positive_rate(frame: pl.DataFrame) -> float:
+    """Mean of `label_binary`, or 0.0 for an empty or all-null column."""
+    mean = frame["label_binary"].mean()
+    return float(mean) if isinstance(mean, int | float) else 0.0
 
 
 def write_manifest(summaries: list[ClassRunSummary], out_path: Path) -> Path:
