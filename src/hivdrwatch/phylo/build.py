@@ -233,9 +233,10 @@ def write_subtype_alignment(
     module constant `MIN_ALIGNED_COVERAGE` for the default rationale.
     """
     if seq_col not in subset.columns:
-        seq_col = "sequence" if "sequence" in subset.columns else None
-        if seq_col is None:
+        fallback_col = "sequence" if "sequence" in subset.columns else None
+        if fallback_col is None:
             raise ValueError("neither 'aligned_pol' nor 'sequence' in subset")
+        seq_col = fallback_col
 
     if min_coverage is not None and seq_col == "aligned_pol":
         subset = filter_by_coverage(subset, seq_col=seq_col, min_coverage=min_coverage)

@@ -23,6 +23,7 @@ import logging
 import subprocess
 import threading
 from collections import deque
+from typing import IO
 
 # Keep at most this many characters of captured stdout/stderr around
 # for the return value. Older lines are discarded but were already
@@ -66,7 +67,7 @@ def stream_subprocess(
     stdout_chars = [0]  # mutable counter for the closure
     stderr_chars = [0]
 
-    def _drain(stream, buf: deque[str], counter: list[int], line_prefix: str) -> None:
+    def _drain(stream: IO[str], buf: deque[str], counter: list[int], line_prefix: str) -> None:
         for line in stream:
             line = line.rstrip("\n")
             if not line:
