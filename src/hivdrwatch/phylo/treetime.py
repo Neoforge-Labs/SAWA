@@ -29,7 +29,7 @@ from pathlib import Path
 
 import polars as pl
 
-from ._streaming import stream_subprocess
+from ._streaming import StreamLogger, stream_subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ def run_treetime(
     *,
     image: str = DEFAULT_IMAGE,
     memory_limit: str = DEFAULT_MEMORY_LIMIT,
-    stream_logger: logging.Logger | None = None,
+    stream_logger: StreamLogger | None = None,
 ) -> TreetimeResult:
     """Time-scale a Newick tree with TreeTime, given tip dates.
 

@@ -70,10 +70,7 @@ def build_trees(
         skip_treetime=skip_treetime,
         min_taxa=min_taxa,
         min_coverage=min_coverage,
-        # Prefect hands back a LoggerAdapter inside a run; the phylo helpers only call
-        # .info/.warning on it, which the adapter provides. Their `logging.Logger`
-        # annotation is narrower than what they use.
-        stream_logger=log,  # type: ignore[arg-type]
+        stream_logger=log,
         partition_report_path=partition_report_path,
     )
     log.info(

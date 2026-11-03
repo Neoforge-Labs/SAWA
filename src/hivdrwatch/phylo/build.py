@@ -34,6 +34,7 @@ from typing import Literal
 
 import polars as pl
 
+from ._streaming import StreamLogger
 from .iqtree import IqtreeResult, run_iqtree
 from .schema import (
     PHYLO_SCHEMA_VERSION,
@@ -268,7 +269,7 @@ def build_subtype_tree(
     skip_treetime: bool = False,
     min_coverage: float = MIN_ALIGNED_COVERAGE,
     min_taxa: int = MIN_TAXA_FOR_TREE,
-    stream_logger: logging.Logger | None = None,
+    stream_logger: StreamLogger | None = None,
 ) -> tuple[list[TreeMetadata], IqtreeResult, TreetimeResult | None]:
     """End-to-end: alignment FASTA → IQ-TREE → TreeTime → manifest rows."""
     out_dir = trees_root / subtype
@@ -470,7 +471,7 @@ def build_all_trees(
     skip_treetime: bool = False,
     min_taxa: int = MIN_TAXA_FOR_TREE,
     min_coverage: float = MIN_ALIGNED_COVERAGE,
-    stream_logger: logging.Logger | None = None,
+    stream_logger: StreamLogger | None = None,
     partition_report_path: Path | None = None,
 ) -> list[TreeMetadata]:
     """Build ML + time-scaled trees for every eligible subtype.
