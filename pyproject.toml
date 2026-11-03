@@ -126,6 +126,12 @@ python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 
+# mappy ships as a compiled extension with no stubs and no py.typed marker, so
+# mypy cannot resolve it even though it is installed and pinned.
+[[tool.mypy.overrides]]
+module = "mappy"
+ignore_missing_imports = true
+
 [dependency-groups]
 # uv installs from this group by default. Keep it in sync with the
 # `[project.optional-dependencies].dev` list above — the latter is
