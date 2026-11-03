@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
@@ -30,6 +30,10 @@ from .schema import (
     RefutationResult,
     RefutationVerdict,
 )
+
+if TYPE_CHECKING:
+    import networkx as nx
+    import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +171,7 @@ def _run_dowhy(
     df: pl.DataFrame,
     treatment: str,
     outcome: str,
-    graph,
+    graph: nx.DiGraph,
     adjustment: set[str],
     method: EstimationMethod,
     data_scope: str,
@@ -203,7 +207,7 @@ def _run_dowhy(
         )
 
     try:
-        from dowhy import CausalModel  # type: ignore[import-not-found]
+        from dowhy import CausalModel
     except ImportError:
         logger.warning("dowhy not installed; skipping causal estimation")
         return _unidentified_row(
@@ -288,7 +292,7 @@ def _run_dowhy(
 
 def _bootstrap_ci(
     *,
-    pandas_df,
+    pandas_df: pd.DataFrame,
     treatment: str,
     outcome: str,
     gml: str,
@@ -313,7 +317,7 @@ def _bootstrap_ci(
 
     try:
         import numpy as np
-        from dowhy import CausalModel  # type: ignore[import-not-found]
+        from dowhy import CausalModel
     except ImportError:
         return (None, None, None)
 
@@ -363,7 +367,7 @@ def _bootstrap_ci(
 
 
 def _run_refutations(
-    model, identified, estimate, original_estimate: float
+    model: Any, identified: Any, estimate: Any, original_estimate: float
 ) -> list[RefutationResult]:
     """Best-effort refutation — placebo, random common cause, subset.
 
