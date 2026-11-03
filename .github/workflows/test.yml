@@ -37,16 +37,10 @@ jobs:
       - name: Ruff — format check
         run: uv run ruff format --check .
 
-      # mypy runs strict (see [tool.mypy] in pyproject.toml) but only over the
-      # packages that currently pass. The rest of the tree carries ~180 pre-existing
-      # errors; gating everything today would fail every PR regardless of its content.
-      # This list is a ratchet: add a package here once it is clean, never remove one.
-      - name: Mypy — strict, on the packages that pass
-        run: uv run mypy src/hivdrwatch/dashboard src/hivdrwatch/cli
-          src/hivdrwatch/ingest src/hivdrwatch/resistance
-          src/hivdrwatch/align src/hivdrwatch/api
-          src/hivdrwatch/storage src/hivdrwatch/cluster src/hivdrwatch/phylo
-          foundation_models
+      # Every package passes strict (see [tool.mypy] in pyproject.toml). Checking the
+      # tree rather than a list means a package added later is covered by default.
+      - name: Mypy — strict
+        run: uv run mypy src causal foundation_models benchmarks
 
       - name: Pytest
         env:

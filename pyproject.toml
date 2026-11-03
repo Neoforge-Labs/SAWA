@@ -146,6 +146,12 @@ ignore_missing_imports = true
 module = ["sklearn.*", "scipy.*", "torch", "torch.*", "transformers", "transformers.*"]
 ignore_missing_imports = true
 
+# dowhy and pandas ship no stubs. pandas-stubs exists but would surface a
+# fresh error surface across causal/ and benchmarks/ for no present benefit.
+[[tool.mypy.overrides]]
+module = ["dowhy", "dowhy.*", "pandas", "pandas.*"]
+ignore_missing_imports = true
+
 [dependency-groups]
 # uv installs from this group by default. Keep it in sync with the
 # `[project.optional-dependencies].dev` list above — the latter is
