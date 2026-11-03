@@ -325,7 +325,7 @@ class GenBankIngester:
 
         # Validate BEFORE persisting so we don't cache a truncated response.
         if not _text_looks_valid_gb(raw_text):
-            raise http.client.IncompleteRead(len(raw_text.encode("utf-8")), expected=None)  # type: ignore[arg-type]
+            raise http.client.IncompleteRead(raw_text.encode("utf-8"), expected=None)
 
         # Atomic write: temp file + rename so a mid-write crash can't
         # leave a truncated cache entry that we'd mistake for valid.
