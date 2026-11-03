@@ -63,7 +63,14 @@ def create_app() -> FastAPI:
         key_func=get_remote_address, default_limits=[settings.rate_limit_default]
     )
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    # slowapi's handler is typed to receive RateLimitExceeded, while Starlette
+    # types handlers as taking Exception. Starlette dispatches on the registered
+    # exception class, so the narrower parameter is safe; slowapi documents this
+    # exact registration.
+    app.add_exception_handler(
+        RateLimitExceeded,
+        _rate_limit_exceeded_handler,  # type: ignore[arg-type]
+    )
 
     # --- Routers ---
     app.include_router(health.router)
