@@ -19,6 +19,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
@@ -46,14 +47,14 @@ class ParitySummary:
     hivtrace_f1: float | None
 
 
-def load_parity_payload(json_path: Path) -> dict:
+def load_parity_payload(json_path: Path) -> dict[str, Any]:
     """Read the cluster_validate JSON, tolerating the pre-parity format.
 
     Pre-parity JSONs only have top-level `clusterer`/`metrics`. We
     normalize into the new `results` list shape so downstream aggregators
     can assume a single shape.
     """
-    payload = json.loads(json_path.read_text())
+    payload: dict[str, Any] = json.loads(json_path.read_text())
     if "results" in payload:
         return payload
 
@@ -70,9 +71,9 @@ def load_parity_payload(json_path: Path) -> dict:
     return payload
 
 
-def metrics_frame(payload: dict) -> pl.DataFrame:
+def metrics_frame(payload: dict[str, Any]) -> pl.DataFrame:
     """Long frame with one row per (clusterer, metric, value)."""
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for r in payload.get("results", []):
         clusterer = r["clusterer"]
         m = r.get("metrics", {})
@@ -86,9 +87,9 @@ def metrics_frame(payload: dict) -> pl.DataFrame:
     return pl.from_dicts(rows)
 
 
-def confusion_frame(payload: dict) -> pl.DataFrame:
+def confusion_frame(payload: dict[str, Any]) -> pl.DataFrame:
     """One row per (clusterer, tp/fp/fn/tn)."""
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for r in payload.get("results", []):
         m = r.get("metrics", {})
         rows.append(
@@ -103,7 +104,7 @@ def confusion_frame(payload: dict) -> pl.DataFrame:
     return pl.from_dicts(rows) if rows else pl.DataFrame()
 
 
-def summarize(payload: dict) -> ParitySummary:
+def summarize(payload: dict[str, Any]) -> ParitySummary:
     """Compact caption-shaped summary."""
     results = payload.get("results", [])
     sim = payload.get("sim", {})

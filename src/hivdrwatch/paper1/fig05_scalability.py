@@ -12,6 +12,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
@@ -47,7 +48,7 @@ def load_scalability_frame(results_dir: Path) -> tuple[pl.DataFrame, Scalability
     if not results_dir.exists():
         raise FileNotFoundError(f"results dir not found: {results_dir}")
 
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     files = sorted(results_dir.glob("scale_*.json"))
     for path in files:
         try:
@@ -86,9 +87,9 @@ def load_scalability_frame(results_dir: Path) -> tuple[pl.DataFrame, Scalability
     summary = ScalabilitySummary(
         n_stages=frame["stage"].n_unique(),
         n_points=frame.height,
-        max_n=int(frame["n_sequences"].max()),
-        min_wall_seconds=float(frame["wall_seconds"].min()),
-        max_wall_seconds=float(frame["wall_seconds"].max()),
+        max_n=max(r["n_sequences"] for r in rows),
+        min_wall_seconds=min(r["wall_seconds"] for r in rows),
+        max_wall_seconds=max(r["wall_seconds"] for r in rows),
     )
     logger.info(
         "loaded scalability: %d stages, %d points, N up to %d",

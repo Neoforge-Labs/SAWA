@@ -63,7 +63,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 import polars as pl
 
@@ -326,7 +326,7 @@ def aggregate_dtg_landscape(
         index=["country", "subtype"],
         on="epoch",
     )
-    delta_rows: list[dict] = []
+    delta_rows: list[dict[str, Any]] = []
     for row in wide.iter_rows(named=True):
         n_pre = int(row.get("n_sequences_pre") or 0)
         n_post = int(row.get("n_sequences_post") or 0)
