@@ -30,10 +30,16 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
 
 from .kmers import DEFAULT_ALPHABET, kmer_matrix
+
+if TYPE_CHECKING:
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.linear_model import LogisticRegression
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +54,8 @@ class KmerLogisticRegression:
     alphabet: str = DEFAULT_ALPHABET
     seed: int = 42
     # Fit-time state
-    _model: object | None = field(default=None, init=False, repr=False)
-    _vocab: np.ndarray | None = field(default=None, init=False, repr=False)
+    _model: LogisticRegression | None = field(default=None, init=False, repr=False)
+    _vocab: npt.NDArray[np.object_] | None = field(default=None, init=False, repr=False)
 
     def fit(self, seqs: Sequence[str], y: Sequence[int]) -> KmerLogisticRegression:
         from sklearn.linear_model import LogisticRegression
@@ -82,7 +88,9 @@ class KmerLogisticRegression:
             alphabet=self.alphabet,
             vocabulary=self._vocab,
         )
-        return self._model.predict_proba(x)[:, 1]
+        # sklearn is unannotated, so the checker sees Any here.
+        probs: npt.NDArray[np.float64] = self._model.predict_proba(x)[:, 1]
+        return probs
 
     def predict(self, seqs: Sequence[str], *, threshold: float = 0.5) -> np.ndarray:
         return (self.predict_proba(seqs) >= threshold).astype(np.int8)
@@ -101,7 +109,7 @@ class OneHotRandomForest:
     alphabet: str = DEFAULT_ALPHABET
     n_jobs: int = -1
     seed: int = 42
-    _model: object | None = field(default=None, init=False, repr=False)
+    _model: RandomForestClassifier | None = field(default=None, init=False, repr=False)
     _seq_len: int | None = field(default=None, init=False, repr=False)
 
     def fit(self, seqs: Sequence[str], y: Sequence[int]) -> OneHotRandomForest:
@@ -129,7 +137,8 @@ class OneHotRandomForest:
         if self._model is None or self._seq_len is None:
             raise RuntimeError("model not fitted; call .fit() first")
         x, _ = self._encode(seqs, expected_len=self._seq_len)
-        return self._model.predict_proba(x)[:, 1]
+        probs: npt.NDArray[np.float64] = self._model.predict_proba(x)[:, 1]
+        return probs
 
     def predict(self, seqs: Sequence[str], *, threshold: float = 0.5) -> np.ndarray:
         return (self.predict_proba(seqs) >= threshold).astype(np.int8)

@@ -22,9 +22,14 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
+
+if TYPE_CHECKING:
+    from scipy.sparse import csr_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +63,8 @@ def kmer_matrix(
     *,
     alphabet: str = DEFAULT_ALPHABET,
     normalize: bool = True,
-    vocabulary: Sequence[str] | None = None,
-):
+    vocabulary: Iterable[str] | None = None,
+) -> tuple[csr_matrix, npt.NDArray[np.object_]]:
     """Vectorize a sequence set into a (n_seqs × |vocab|) sparse matrix.
 
     Returns `(matrix, vocabulary)` where `vocabulary` is a numpy array
