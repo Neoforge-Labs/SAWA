@@ -18,10 +18,11 @@ from "requested and delivered" (LOADED) and "requested and not
 delivered" (FAILED), so a broken database write is visible to the
 calling flow rather than looking like a load nobody asked for.
 
-The `require_dsa()` guard from CLAUDE.md is a HARD block: KEMRI code
-paths must never invoke this helper. Enforced upstream in the KEMRI
-adapters (Phase 2), not here — this helper doesn't need to know about
-data provenance because it only runs on the LANL/GenBank public paths.
+This helper does not know about data provenance and does not need to:
+DSA-gated sources are refused at the `SequenceRecord` boundary by
+`hivdrwatch.governance.require_dsa`, so nothing gated reaches a Parquet
+that this helper could load. A KEMRI-specific tail (Phase 2) calls
+`require_dsa()` at its own entry point as well.
 """
 
 from __future__ import annotations

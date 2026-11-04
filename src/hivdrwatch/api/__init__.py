@@ -1,8 +1,9 @@
 """Public FastAPI service for HIV-DR-Watch.
 
-Read-only in v1. Writes (partner-clinical intake, KEMRI-side ingest)
-land in v2 after the DSA is signed — currently blocked by CLAUDE.md's
-`require_dsa()` gate.
+Read-only in v1 — there are no write routes. Writes (partner-clinical
+intake, KEMRI-side ingest) land in v2 after the DSA is signed, and must
+call `hivdrwatch.governance.require_dsa` at the route handler in
+addition to the schema-level gate.
 
 Design:
   * Handlers are thin; the storage layer is the single source of truth.

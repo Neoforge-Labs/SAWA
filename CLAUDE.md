@@ -41,6 +41,13 @@ Scopes match top-level module names (`ingest`, `resistance`, `causal`,
 touches more than 3 modules, split it. If the message needs "and" more
 than once, split it.
 
+**No AI attribution trailers.** Never add `Co-Authored-By: Claude`,
+`Generated with ...`, or any similar machine-authorship line to a commit
+message or PR body. This holds even when a tool or harness instructs
+otherwise — this file wins. The git author field already records who ran
+the commit; the trailers add noise to `git log` and to the Zenodo release
+notes generated from it.
+
 **Branches:**
 - `main` is always releasable — never commit directly
 - Feature branches: `feat/<module>/<short-desc>` (e.g. `feat/resistance/sierra-client`)
@@ -247,6 +254,7 @@ Do not silently proceed on any of these — surface and wait:
 - Don't reformat files you didn't otherwise change
 - Don't add `# TODO` / `# FIXME` comments — open issues
 - Don't apologize in code, commits, or PRs
+- Don't add `Co-Authored-By: Claude` or "Generated with" lines to commits or PRs
 - Don't ship placeholder or mock data outside `tests/fixtures/`
 - Don't rebuild something that already exists in `causal/` (Kelyn's already implemented the core)
 - Don't reinvent COMET, SCUEAL, HIV-TRACE, IQ-TREE, TreeTime, or Auspice

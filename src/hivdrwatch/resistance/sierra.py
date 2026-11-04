@@ -7,6 +7,10 @@ Design decisions:
 - **Cache is the primary interface.** Every sequence goes through
   `SierraCache` first; only cache misses hit the network. This means CI can
   run `--offline` against a checked-in fixture cache, and re-runs cost zero.
+- **Offline is also settable by env.** `HIVDRWATCH_OFFLINE=1` makes every
+  client offline by default, so a CI job can forbid network access without
+  threading a flag through every call site. An explicit `offline=` kwarg
+  always wins; callers that want the env to decide pass `None`.
 - **Batch up to 100 sequences per GraphQL request.** Sierra accepts larger
   bodies but 100 is the sweet spot for latency + error blast radius.
 - **Pin the algorithm version on every call.** Sierra returns
@@ -29,6 +33,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 import time
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
@@ -85,6 +90,17 @@ class AlgorithmVersion:
     publish_date: date | None
 
 
+# Env var alternative to the --offline CLI flag. Set to any truthy value
+# to make every SierraClient offline by default. Mirrors
+# `pipeline._storage_tail.ENV_ENABLE`.
+ENV_OFFLINE = "HIVDRWATCH_OFFLINE"
+
+
+def _env_offline() -> bool:
+    raw = os.getenv(ENV_OFFLINE, "").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 class SierraError(RuntimeError):
     """Sierra returned an error we can't recover from."""
 
@@ -98,7 +114,7 @@ class SierraClient:
         *,
         endpoint: str = SIERRA_URL,
         batch_size: int = DEFAULT_BATCH_SIZE,
-        offline: bool = False,
+        offline: bool | None = None,
         client: httpx.Client | None = None,
     ) -> None:
         if batch_size < 1 or batch_size > 100:
@@ -106,7 +122,7 @@ class SierraClient:
         self.cache = cache
         self.endpoint = endpoint
         self.batch_size = batch_size
-        self.offline = offline
+        self.offline = _env_offline() if offline is None else offline
         # Injectable client for tests; owned lifecycle if we create it.
         self._client = client
         self._owns_client = client is None

@@ -1,14 +1,16 @@
 """Paper 1 Figure 4 — DTG-era INSTI resistance case study.
 
-Preregistered analysis: `paper1_tools/preregistration_fig04.md`.
+Preregistered analysis: `paper1_tools/preregistration_fig04.md` (v2).
 Do NOT change the aggregation semantics without amending the preregistration
 first.
 
 Renders:
   * Left: pre vs post INSTI prevalence per (country × subtype),
-    with 95% Wilson score intervals.
-  * Right: delta prevalence (post − pre) with 95% Newcombe hybrid CI;
-    strata with a signal (CI excludes zero) are highlighted.
+    with 95% Clopper–Pearson exact binomial intervals.
+  * Right: delta prevalence (post − pre) with 95% Newcombe hybrid CI.
+    Highlighted strata are those meeting the prereg §6 signal criterion
+    — direction up, delta ≥ 0.5 pp, BH-adjusted Fisher q ≤ 0.05. The
+    plotted CI is descriptive, not the criterion.
 
 Reads:
     data/interim/dr_results.parquet

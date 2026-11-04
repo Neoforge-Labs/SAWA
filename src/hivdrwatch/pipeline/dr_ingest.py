@@ -13,7 +13,8 @@ Run locally:
         --out-dir data/interim
 
 Cache is the primary interface — re-runs of the same input do zero network
-work. Use --offline to hard-fail on cache misses (useful for CI).
+work. Use --offline to hard-fail on cache misses (useful for CI), or set
+HIVDRWATCH_OFFLINE=1 to make that the default without passing the flag.
 """
 
 from __future__ import annotations
@@ -60,7 +61,7 @@ def call_sierra(
     cache_dir: Path,
     *,
     batch_size: int = 100,
-    offline: bool = False,
+    offline: bool | None = None,
 ) -> tuple[list[DRResult], list[SubtypeCall], AlgorithmVersion]:
     """Run every sequence through Sierra (cache-first). Returns flat lists."""
     log = get_run_logger()
@@ -118,7 +119,7 @@ def dr_ingest_flow(
     out_dir: Path,
     *,
     batch_size: int = 100,
-    offline: bool = False,
+    offline: bool | None = None,
     to_postgres: bool | None = None,
 ) -> dict[str, Path | str]:
     df = load_merged_sequences(input_parquet)
@@ -189,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
         cache_dir=args.cache_dir,
         out_dir=args.out_dir,
         batch_size=args.batch_size,
-        offline=args.offline,
+        offline=args.offline or None,
         to_postgres=args.to_postgres or None,
     )
     print(f"algorithm: {result['algorithm_version']}")
