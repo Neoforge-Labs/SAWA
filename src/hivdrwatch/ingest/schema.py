@@ -7,6 +7,11 @@ pipelines source-agnostic.
 Schema versioning: bump SCHEMA_VERSION on any breaking change. The version
 is written into every Parquet output so future analyses can detect drift.
 
+DSA gate: `Source.KEMRI` is refused unless the KEMRI Data Sharing
+Agreement is signed — see `hivdrwatch.governance`. Validation is the
+choke point every ingestion path crosses, which is why the gate lives
+here rather than in each adapter.
+
 Migration notes
 ---------------
 **0.1.0 → 0.2.0 — `subtype` and `country` semantics.**
@@ -44,6 +49,8 @@ from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, Field, StringConstraints, ValidationInfo, field_validator
+
+from ..governance import GATED_SOURCES, require_dsa
 
 SCHEMA_VERSION = "0.2.0"
 
@@ -302,6 +309,19 @@ class SequenceRecord(BaseModel):
     # --- ingestion trail ---
     ingested_at: date
     raw_record_hash: str  # SHA-256 of the source record for change detection
+
+    @field_validator("source")
+    @classmethod
+    def _gate_restricted_sources(cls, v: Source) -> Source:
+        """Block DSA-gated sources at the schema boundary.
+
+        Every ingestion path builds a `SequenceRecord`, so gating here
+        means a future KEMRI adapter cannot bypass the DSA by omitting
+        an explicit `require_dsa()` call.
+        """
+        if v.value in GATED_SOURCES:
+            require_dsa(f"ingesting a {v.value!r}-sourced sequence record")
+        return v
 
     @field_validator("sequence")
     @classmethod
