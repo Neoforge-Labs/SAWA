@@ -15,6 +15,7 @@ import pytest
 from hivdrwatch.resistance.cache import SierraCache, sequence_sha256
 from hivdrwatch.resistance.schema import DrugClass, ResistanceLevel
 from hivdrwatch.resistance.sierra import (
+    ENV_OFFLINE,
     AlgorithmVersion,
     SierraClient,
     SierraError,
@@ -284,6 +285,13 @@ class TestSierraClientOfflineMode:
 
 
 class TestSierraClientHTTP:
+    """Exercises the network path against a mocked transport.
+
+    These construct the client with an explicit `offline=False`: the
+    default now consults HIVDRWATCH_OFFLINE, which CI sets, and a test
+    that asserts on HTTP behaviour must not depend on ambient env.
+    """
+
     def test_fetch_and_cache(self, tmp_path: Path, httpx_mock) -> None:
         httpx_mock.add_response(
             url="https://hivdb.stanford.edu/graphql",
@@ -291,7 +299,7 @@ class TestSierraClientHTTP:
         )
         cache = SierraCache(tmp_path)
         with httpx.Client() as http:
-            client = SierraClient(cache=cache, client=http)
+            client = SierraClient(cache=cache, client=http, offline=False)
             dr, subtypes = client.analyze_sequences(
                 [("AF004885", "ACGT" * 60), ("MK123456", "GGGG" * 60)]
             )
@@ -312,7 +320,7 @@ class TestSierraClientHTTP:
         httpx_mock.add_response(url="https://hivdb.stanford.edu/graphql", json=single_response)
         cache = SierraCache(tmp_path)
         with httpx.Client() as http:
-            client = SierraClient(cache=cache, client=http)
+            client = SierraClient(cache=cache, client=http, offline=False)
             dr, _subtypes = client.analyze_sequences(
                 [("AF004885", "ACGT" * 60), ("MK123456", "ACGT" * 60)]
             )
@@ -320,3 +328,50 @@ class TestSierraClientHTTP:
         assert len(dr) == 4
         assert {r.accession for r in dr} == {"AF004885", "MK123456"}
         # httpx_mock will raise on unmatched requests, so only 1 POST happened.
+
+
+class TestOfflineEnvDefault:
+    """`HIVDRWATCH_OFFLINE` must actually gate the network.
+
+    CI sets this env var as its guard against tests reaching the real
+    Sierra endpoint. Before this was wired up nothing read it, so the
+    guard was inert — the flag was constructor-only.
+    """
+
+    def test_env_var_name(self) -> None:
+        assert ENV_OFFLINE == "HIVDRWATCH_OFFLINE"
+
+    def test_defaults_to_online_when_env_unset(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(ENV_OFFLINE, raising=False)
+        assert SierraClient(cache=SierraCache(tmp_path)).offline is False
+
+    @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "on"])
+    def test_env_var_enables_offline(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, value: str
+    ) -> None:
+        monkeypatch.setenv(ENV_OFFLINE, value)
+        assert SierraClient(cache=SierraCache(tmp_path)).offline is True
+
+    @pytest.mark.parametrize("value", ["", "0", "false", "no", "off"])
+    def test_non_affirmative_env_leaves_client_online(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, value: str
+    ) -> None:
+        monkeypatch.setenv(ENV_OFFLINE, value)
+        assert SierraClient(cache=SierraCache(tmp_path)).offline is False
+
+    def test_explicit_true_overrides_unset_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(ENV_OFFLINE, raising=False)
+        assert SierraClient(cache=SierraCache(tmp_path), offline=True).offline is True
+
+    def test_explicit_false_overrides_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # An explicit kwarg is a deliberate caller decision and wins. The
+        # CLI therefore passes None rather than False when --offline is
+        # absent, so the env var still decides on the default path.
+        monkeypatch.setenv(ENV_OFFLINE, "1")
+        assert SierraClient(cache=SierraCache(tmp_path), offline=False).offline is False

@@ -44,8 +44,10 @@ jobs:
 
       - name: Pytest
         env:
-          # Never talk to real Sierra/NCBI in CI — the resistance client
-          # honors this env var and returns cached fixtures only.
+          # Makes every SierraClient offline by default, so a cache miss
+          # raises instead of reaching hivdb.stanford.edu. The NCBI fetch
+          # path has no offline mode; no test exercises it (only pure
+          # helpers in genbank.py are covered), so nothing in CI calls out.
           HIVDRWATCH_OFFLINE: "1"
         run: uv run pytest tests/ -q --cov=hivdrwatch --cov=causal --cov-report=term-missing
 
