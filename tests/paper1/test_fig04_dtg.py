@@ -14,6 +14,7 @@ import pytest
 from hivdrwatch.paper1.fig04_dtg import (
     FDR_Q,
     INSTI_CLASS,
+    MIN_DELTA_PREV,
     MIN_EPOCH_N_PRIMARY,
     MIN_EPOCH_N_SECONDARY,
     POST_YEARS,
@@ -86,6 +87,45 @@ class TestConstants:
 
     def test_fdr_q(self) -> None:
         assert FDR_Q == 0.05
+
+    def test_min_delta_prev_is_half_a_percentage_point(self) -> None:
+        # Preregistration §3 H1 / §6 signal criterion (2).
+        assert MIN_DELTA_PREV == 0.005
+
+
+class TestClinicalRelevanceFloor:
+    """Preregistration §6 criterion (2): a signal needs ≥ 0.5 pp.
+
+    Without this floor a huge, highly significant stratum could report a
+    signal on a prevalence shift too small to mean anything clinically.
+    """
+
+    def test_significant_but_trivial_delta_is_not_a_signal(self) -> None:
+        # 4/4000 -> 20/4000 = +0.4 pp. Fisher p is small (BH q well
+        # under 0.05) but the shift is below the 0.5 pp floor.
+        dr_rows, curated_rows = _mk_stratum(
+            "KE", "A1", 2015, 2021, n_pre=4000, n_pre_r=4, n_post=4000, n_post_r=20
+        )
+        _, delta, summary = aggregate_dtg_landscape(_dr(dr_rows), _curated(curated_rows))
+        row = delta.to_dicts()[0]
+        assert row["tier"] == "primary"
+        assert row["signal_direction"] == "up"
+        assert row["bh_q"] <= FDR_Q, "precondition: must be FDR-significant"
+        assert row["delta_prev"] < MIN_DELTA_PREV
+        assert row["signal"] is False
+        assert summary.n_signal_primary == 0
+
+    def test_significant_and_material_delta_is_a_signal(self) -> None:
+        # 4/4000 -> 60/4000 = +1.4 pp — clears the floor.
+        dr_rows, curated_rows = _mk_stratum(
+            "KE", "A1", 2015, 2021, n_pre=4000, n_pre_r=4, n_post=4000, n_post_r=60
+        )
+        _, delta, summary = aggregate_dtg_landscape(_dr(dr_rows), _curated(curated_rows))
+        row = delta.to_dicts()[0]
+        assert row["delta_prev"] >= MIN_DELTA_PREV
+        assert row["bh_q"] <= FDR_Q
+        assert row["signal"] is True
+        assert summary.n_signal_primary == 1
 
 
 class TestClopperPearson:

@@ -22,7 +22,7 @@ plus a paired-comparison frame with:
      signal,                                     ← retained in headline
      signal_direction)
 
-**Statistical approach — Option C (preregistered rationale).**
+**Statistical approach — preregistration v2 §6.**
 
 The primary hypothesis test is **Fisher's exact test** on the 2 × 2
 pre-vs-post × resistant-vs-susceptible contingency table. Fisher's
@@ -39,11 +39,19 @@ extreme p̂. Clopper–Pearson trades tightness for correctness — a
 deliberate choice for a paper whose headline is a public-health
 claim.
 
+**Signal criterion (preregistration v2 §6).** A stratum shows a
+signal iff all three hold: post > pre, the difference is at least
+`MIN_DELTA_PREV` (0.5 pp — the clinical-relevance floor from H1), and
+the BH-adjusted Fisher q within its tier is ≤ `FDR_Q`. The Newcombe
+delta CI is reported and plotted but is deliberately not part of the
+criterion — a CI-excludes-zero rule plus an FDR rule would test the
+same hypothesis twice at two different error rates.
+
 **Tiered inclusion.**
 
-* **Primary tier**: n_pre ≥ 30 AND n_post ≥ 30. This matches the
-  preregistered threshold (Fig 4 preregistration §6). Signals in this
-  tier count toward the confirmatory headline.
+* **Primary tier**: n_pre ≥ 30 AND n_post ≥ 30, the threshold locked
+  in Fig 4 preregistration §4. Signals in this tier count toward the
+  confirmatory headline.
 * **Secondary tier**: n_pre ≥ 5 AND n_post ≥ 5, but not both ≥ 30.
   Signals in this tier are reported as *exploratory*, do not count
   toward the preregistered FDR budget, and are labelled accordingly
@@ -54,8 +62,12 @@ primary-tier set. Secondary-tier p-values are BH-adjusted separately
 and reported for context.
 
 Preregistered analysis plan lives in
-`paper1_tools/preregistration_fig04.md`. Any deviation from that
-plan is exploratory and must be labelled as such in the manuscript.
+`paper1_tools/preregistration_fig04.md` (v2). Any deviation from that
+plan is exploratory and must be labelled as such in the manuscript. If
+this module and the preregistration ever disagree again, the
+preregistration wins and the code is the thing that changes — unless
+the document has not yet been filed, in which case amend it and log the
+amendment in its §12.
 """
 
 from __future__ import annotations
@@ -88,8 +100,14 @@ MIN_EPOCH_N_PRIMARY: int = 30
 # the preregistered FDR budget.
 MIN_EPOCH_N_SECONDARY: int = 5
 
-# BH-FDR level — preregistered.
+# BH-FDR level — preregistered (§7).
 FDR_Q: float = 0.05
+
+# Clinical-relevance floor from H1 (§3) — a stratum needs at least a
+# 0.5 percentage-point rise to count as a signal, however significant
+# the test. Guards against a very large stratum turning a trivial shift
+# into a public-health claim.
+MIN_DELTA_PREV: float = 0.005
 
 Tier = Literal["primary", "secondary"]
 
@@ -258,6 +276,7 @@ def aggregate_dtg_landscape(
     min_epoch_n_primary: int = MIN_EPOCH_N_PRIMARY,
     min_epoch_n_secondary: int = MIN_EPOCH_N_SECONDARY,
     fdr_q: float = FDR_Q,
+    min_delta_prev: float = MIN_DELTA_PREV,
 ) -> tuple[pl.DataFrame, pl.DataFrame, DTGSummary]:
     """Return (per-epoch frame, delta frame, summary).
 
@@ -402,9 +421,14 @@ def aggregate_dtg_landscape(
         for i, q in zip(secondary_idx, secondary_qs, strict=True):
             delta_rows[i]["bh_q"] = q
 
-        # Signal criterion: post > pre AND BH-adjusted q ≤ fdr_q.
+        # Signal criterion (preregistration §6): direction up AND at
+        # least MIN_DELTA_PREV AND BH-adjusted q ≤ fdr_q.
         for r in delta_rows:
-            r["signal"] = bool((r["signal_direction"] == "up") and (r["bh_q"] <= fdr_q))
+            r["signal"] = bool(
+                (r["signal_direction"] == "up")
+                and (r["delta_prev"] >= min_delta_prev)
+                and (r["bh_q"] <= fdr_q)
+            )
 
         delta = pl.from_dicts(delta_rows).sort(["tier", "country", "subtype"])
 
@@ -435,7 +459,7 @@ def aggregate_dtg_landscape(
         n_headline_after_fdr=n_sig_primary,
     )
     logger.info(
-        "DTG landscape (Option C): pre=%d, post=%d — %d primary (%d signal, BH-FDR q<=%.2g), "
+        "DTG landscape (prereg v2): pre=%d, post=%d — %d primary (%d signal, BH-FDR q<=%.2g), "
         "%d secondary (%d signal, exploratory)",
         n_pre_seqs,
         n_post_seqs,
@@ -451,6 +475,7 @@ def aggregate_dtg_landscape(
 __all__ = [
     "FDR_Q",
     "INSTI_CLASS",
+    "MIN_DELTA_PREV",
     "MIN_EPOCH_N_PRIMARY",
     "MIN_EPOCH_N_SECONDARY",
     "POST_YEARS",

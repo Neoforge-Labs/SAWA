@@ -1,6 +1,8 @@
 # Preregistration — Paper 1 Figure 4 (DTG-era INSTI resistance case study)
 
 **Registered:** *pending OSF submission — locked here in git until then*
+**Version:** v2 (2026-11-04) — see §12. Amended **before** OSF filing and
+before the analysis has been run against the frozen vintage.
 **Analysis lead:** Kelyn Njeri (NeoForge Labs)
 **Repository:** https://github.com/Neoforge-Labs/SAWA
 **Frozen analysis code:** `notebooks/fig04_dtg_case_study.py` at git SHA `<TAG_ON_SUBMISSION>`
@@ -20,8 +22,11 @@ With DTG now the dominant first-line drug, INSTI major mutations — particularl
 
 ## 3. Hypotheses
 
-- **H1 (primary):** In post-rollout years (2020 onward), INSTI major-mutation prevalence in East African subtype A1, C, or D sequences exceeds the pre-rollout (2010–2018) baseline by ≥ 0.5 percentage points, with a 95 % confidence interval excluding zero.
-- **H0:** Post-rollout prevalence is within the 95 % CI of the pre-rollout baseline.
+- **H1 (primary):** In post-rollout years (2020 onward), INSTI major-mutation prevalence in East African subtype A1, C, or D sequences exceeds the pre-rollout (2010–2018) baseline. A stratum supports H1 only when **all three** of the following hold (see §6 for the operational definition):
+  1. post-rollout prevalence > pre-rollout prevalence,
+  2. the increase is at least **0.5 percentage points** (a clinical-relevance floor, so a statistically significant but trivial shift is not reported as a public-health signal),
+  3. Fisher's exact *p*, after Benjamini–Hochberg correction within the primary tier, is ≤ 0.05.
+- **H0:** Post-rollout prevalence is not distinguishable from the pre-rollout baseline under the criterion above.
 
 ## 4. Cohort definition (frozen before running)
 
@@ -35,7 +40,16 @@ With DTG now the dominant first-line drug, INSTI major mutations — particularl
 **Exclusion criteria:**
 - Duplicate patient (dedup by `patient_hash` where present)
 - Sequence submitted under a clinical-trial identifier (would bias for treated patients)
-- Countries with fewer than 30 sequences per pre/post period stratum
+- Strata (country × subtype) with fewer than **5** sequences in either epoch are dropped entirely and are not analysed or reported.
+
+**Tiered inclusion (amended v2, see §12):**
+
+| Tier | Threshold | Role |
+|---|---|---|
+| **Primary** | n ≥ 30 in *both* epochs | Confirmatory. Carries the preregistered FDR budget and the paper's headline claim. |
+| **Secondary** | n ≥ 5 in both epochs, but not both ≥ 30 | Exploratory. Reported with its own separate BH correction, labelled exploratory in the manuscript, and never counted toward H1. |
+
+The v1 text excluded sub-30 strata outright. Reporting them as an explicitly exploratory tier is strictly more informative than discarding them, provided they cannot contaminate the confirmatory result — which the separate FDR budget guarantees.
 
 ## 5. Exposure and outcome
 
@@ -45,7 +59,33 @@ With DTG now the dominant first-line drug, INSTI major mutations — particularl
 
 ## 6. Statistical analysis (locked before running)
 
-**Primary:** two-proportion test (Wilson score interval) per (country × subtype) stratum. Effect = post-rollout prevalence − pre-rollout prevalence, with 95 % CI. A stratum "shows a signal" iff CI excludes zero AND post > pre.
+**Primary test — Fisher's exact** (amended v2, see §12) on the 2 × 2
+pre-vs-post × resistant-vs-susceptible contingency table, per
+(country × subtype) stratum. Fisher's exact makes no normal-approximation
+assumption and stays valid down to expected counts of 1 per cell, which
+the smaller East African strata (Rwanda, Burundi, Ethiopia) require. The
+odds ratio uses a Haldane–Anscombe 0.5 correction when any cell is zero
+so it stays finite.
+
+**Interval estimates.** Per-epoch prevalence is reported with
+**Clopper–Pearson exact binomial** 95 % CIs — conservative but valid at
+any *n*, including the extreme p̂ where the Wilson score interval named
+in v1 becomes anti-conservative. The pre→post difference is reported
+with a **Newcombe hybrid-score** 95 % CI. Both are reported for every
+stratum; neither is the significance criterion.
+
+**Signal criterion.** A stratum "shows a signal" iff **all three** hold:
+
+1. post-rollout prevalence > pre-rollout prevalence;
+2. the difference is ≥ **0.005** (0.5 percentage points), per H1;
+3. the BH-adjusted Fisher *q* within that stratum's tier is ≤ 0.05.
+
+Criteria (1) and (3) are the statistical test; (2) is the
+clinical-relevance floor from H1. The Newcombe CI is reported and
+plotted but is deliberately *not* part of the criterion — using both a
+CI-excludes-zero rule and an FDR rule would be two tests of the same
+hypothesis at two different error rates.
+
 
 **Secondary:** interrupted time-series (ITS) with 2019 as the intervention point. Model: `prevalence ~ year + post + year:post` fit as segmented regression per country stratum. The `post` and interaction coefficients are the effect estimates of interest.
 
@@ -59,7 +99,16 @@ If the primary result and > 2 of 4 sensitivity analyses agree in direction, we c
 
 ## 7. Multiple testing
 
-The primary test runs across 6 countries × 4 subtypes = 24 strata. We apply Benjamini-Hochberg FDR correction at q = 0.05. Only BH-corrected significant strata contribute to the paper's headline claim.
+The primary test runs across at most 6 countries × 4 subtypes = 24
+strata; strata that fail the §4 thresholds are never tested, so the
+realised family is smaller.
+
+Benjamini–Hochberg FDR correction at q = 0.05 is applied **separately
+within each tier** (amended v2, see §12). The primary tier carries the
+preregistered FDR budget and is the only tier that contributes to the
+headline claim. Secondary-tier q-values are computed over the secondary
+family alone and are reported for context only — pooling the two
+families would spend the confirmatory budget on exploratory strata.
 
 ## 8. Analysis code
 
@@ -68,6 +117,11 @@ The primary test runs across 6 countries × 4 subtypes = 24 strata. We apply Ben
 - `tests/paper1/test_fig04_dtg.py` — semantic tests
 
 Any deviation from this plan must be documented as an exploratory finding, clearly labelled in the manuscript, and not counted toward the primary hypothesis test.
+
+Deviations found **before** OSF filing are corrected by amending this
+document, with the change and its rationale recorded in §12. Deviations
+found **after** filing are reported as deviations in the manuscript and
+are never resolved by editing this document.
 
 ## 9. Data provenance
 
@@ -87,3 +141,32 @@ Any deviation from this plan must be documented as an exploratory finding, clear
 
 - **Kelyn Njeri** (NeoForge Labs, Nairobi) — lead analyst, corresponding author
 - Additional co-authors added on manuscript submission per the standing MODULES.md authorship contract
+
+## 12. Amendment log
+
+### v2 — 2026-11-04 (pre-filing, pre-analysis)
+
+A repository audit found that `src/hivdrwatch/paper1/fig04_dtg.py`
+implemented a different statistical plan from the one this document
+locked in v1. Because the document has not been filed on OSF and the
+analysis has not been run against the frozen vintage, the divergence is
+resolved here, in advance, rather than reported as a deviation later.
+
+| # | v1 said | v2 says | Why |
+|---|---|---|---|
+| 1 | Primary test: two-proportion test with Wilson score interval | Primary test: Fisher's exact; Clopper–Pearson per-epoch CIs; Newcombe CI for the difference | Fisher's exact needs no normal approximation and stays valid at the cell counts the smaller strata actually have. Clopper–Pearson is valid at extreme p̂ where Wilson is anti-conservative. |
+| 2 | Signal iff "CI excludes zero AND post > pre" | Signal iff direction up **and** ≥ 0.5 pp **and** BH-adjusted Fisher *q* ≤ 0.05 | v1 mixed a CI rule with the §7 FDR rule, which tests the same hypothesis twice at two error rates. v2 makes the FDR rule the single significance criterion and states H1's 0.5 pp floor as an explicit conjunct — it had no operational definition in the code before this amendment. |
+| 3 | Excluded strata with < 30 sequences per epoch outright | Two tiers: primary n ≥ 30 (confirmatory), secondary n ≥ 5 (exploratory, separate FDR family); < 5 still dropped | Reporting small strata as explicitly exploratory is more informative than discarding them, and a separate FDR family keeps them out of the confirmatory result. |
+| 4 | BH correction over one family of 24 | BH applied within each tier separately | Follows from #3. |
+
+**Direction of the change.** Every amendment above is neutral or
+*more* conservative than v1: Fisher's exact and Clopper–Pearson are
+both conservative relative to their normal-approximation counterparts,
+the 0.5 pp floor was in v1's H1 but had no operational definition and
+now gates the signal, and the tier split can only remove strata from
+the confirmatory family, never add them. No amendment makes a positive
+finding easier to obtain.
+
+**Outstanding at v2.** The §6 secondary ITS analysis is still
+unimplemented. It must be built and unit-tested before the analysis
+runs, or withdrawn in a dated v3 amendment before filing.
