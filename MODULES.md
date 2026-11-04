@@ -114,7 +114,7 @@ returns; audit log captures every step.
 | Software citation | `CITATION.cff` on day 1; Zenodo–GitHub integration for auto-DOI on tagged release | ✓ (`CITATION.cff` + `.zenodo.json`; DOI issues automatically on `paperN-vX.Y.Z` GitHub Release once the Zenodo–GitHub integration is enabled in the repo settings.) |
 | Reproducibility artifact | Every release tagged with `paperN-vX.Y.Z` for the frozen state that matches the preprint | · |
 | Manuscripts | Quarto (`manuscript.qmd`) per paper under `paperN_*/`, pulling figures from notebooks | ~ (`paper1_tools/manuscript.qmd` + `refs.bib` skeleton with all 5 figure placeholders wired. Paper 2-4 skeletons pending.) |
-| Preregistration | OSF preregistration for the Paper 1 case-study analysis; filed before running the analysis | ~ (`paper1_tools/preregistration_fig04.md` locked in git — cohort, primary hypothesis, statistical plan, sensitivity analyses, BH-FDR. Awaiting OSF submission before Fig 4 runs on real data.) |
+| Preregistration | OSF preregistration for the Paper 1 case-study analysis; filed before running the analysis | ~ (`paper1_tools/preregistration_fig04.md` at v3 — cohort, primary hypothesis (Fisher exact + BH-FDR + 0.5 pp floor), secondary ITS, sensitivity analyses. §12 logs every pre-filing amendment. Both the primary (`paper1/fig04_dtg.py`) and secondary (`paper1/fig04_its.py`) analyses are implemented and unit-tested. Awaiting OSF submission before Fig 4 runs on real data.) |
 | Benchmarks | `benchmarks/` folder with results JSON checked in and updated by CI; feeds paper tables directly | ✓ (`benchmarks/{scale_ingest,scale_align,scale_cluster}.py` + `BenchmarkResult` schema + `measure_block` context manager; results under `benchmarks/results/*.json`; weekly CI refresh; Fig 5 consumes.) |
 | Documentation | README (JOSS-shaped), CONTRIBUTING.md, DEPLOYMENT.md, per-module READMEs | ✓ (JOSS-shaped root `README.md`, `DEPLOYMENT.md`, per-module READMEs for `ingest/`, `resistance/`, `align/`, `phylo/`, `cluster/`, `pipeline/`, `paper1/`, `causal/`, `cli/`. `CONTRIBUTING.md` still to write.) |
 | Experiment tracking | MLflow server (via docker-compose) with per-run parameters, metrics, artifacts | ✓ (`src/hivdrwatch/tracking.py` no-op wrapper; every pipeline flow logs) |
@@ -202,8 +202,10 @@ Preregister analysis on OSF (before touching data)
 ```
 
 **Acceptance:** the preregistration is public, the analysis code is a
-single notebook (`notebooks/fig04_dtg_case_study.py`), and re-running
-it against the frozen Parquet vintage produces the identical figure.
+single notebook (`notebooks/fig04_dtg_case_study.py`) over two tested
+aggregators (`paper1/fig04_dtg.py` primary, `paper1/fig04_its.py`
+secondary ITS), and re-running it against the frozen Parquet vintage
+produces the identical figure.
 
 ### Flow 6 — Causal identification pipeline *(Paper 2)*
 

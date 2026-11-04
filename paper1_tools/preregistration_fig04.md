@@ -1,7 +1,7 @@
 # Preregistration — Paper 1 Figure 4 (DTG-era INSTI resistance case study)
 
 **Registered:** *pending OSF submission — locked here in git until then*
-**Version:** v2 (2026-11-04) — see §12. Amended **before** OSF filing and
+**Version:** v3 (2026-11-04) — see §12. Amended **before** OSF filing and
 before the analysis has been run against the frozen vintage.
 **Analysis lead:** Kelyn Njeri (NeoForge Labs)
 **Repository:** https://github.com/Neoforge-Labs/SAWA
@@ -87,7 +87,22 @@ CI-excludes-zero rule and an FDR rule would be two tests of the same
 hypothesis at two different error rates.
 
 
-**Secondary:** interrupted time-series (ITS) with 2019 as the intervention point. Model: `prevalence ~ year + post + year:post` fit as segmented regression per country stratum. The `post` and interaction coefficients are the effect estimates of interest.
+**Secondary — interrupted time-series (ITS)** with 2019 as the intervention
+point. Per-country segmented regression of yearly INSTI-resistance
+prevalence:
+
+    prevalence ~ t + post + t:post
+
+Operationalised as follows (specified in v3; v1 and v2 left these details open):
+
+* The unit of observation is one (country, year) with `prevalence = n_resistant / n_sequences`, using the same outcome definition as §5 and the same cohort as the primary analysis.
+* `t = year − 2019`, so `t = 0` is the interruption and the `post` coefficient reads as the level change *at* the interruption rather than an extrapolation to year zero.
+* The rollout year 2019 is excluded from the series, exactly as §5 excludes it from both epochs. `post = 1` for years after it.
+* The `post` coefficient (level change) and the `t:post` interaction (slope change) are the effect estimates of interest, each with a 95 % CI and a t-test on the residual degrees of freedom.
+* A country with only one segment, or with fewer than 5 usable years, cannot identify the four parameters and is reported as not fittable rather than fit.
+* Estimation is ordinary least squares. This is the standard segmented-regression formulation, but it is OLS on a proportion, so the homoscedastic standard errors are approximate — the residual variance of a proportion depends on both prevalence and the per-year denominator. Per-year `n_sequences` is reported alongside every fit. This is why ITS is secondary and the Fisher test in the primary tier carries the confirmatory claim.
+
+Implemented and unit-tested in `src/hivdrwatch/paper1/fig04_its.py`.
 
 **Sensitivity analyses:**
 1. Alternate epoch cutoffs (2018/2020, 2019/2021)
@@ -112,9 +127,11 @@ families would spend the confirmatory budget on exploratory strata.
 
 ## 8. Analysis code
 
-- `src/hivdrwatch/paper1/fig04_dtg.py` — aggregator (unit-tested)
+- `src/hivdrwatch/paper1/fig04_dtg.py` — primary aggregator, epoch comparison (unit-tested)
+- `src/hivdrwatch/paper1/fig04_its.py` — secondary aggregator, segmented regression (unit-tested)
 - `notebooks/fig04_dtg_case_study.py` — figure + statistical test
-- `tests/paper1/test_fig04_dtg.py` — semantic tests
+- `tests/paper1/test_fig04_dtg.py` — semantic tests for the primary
+- `tests/paper1/test_fig04_its.py` — semantic tests for the ITS, including a cross-check of the hand-rolled OLS against `scipy.stats.linregress`
 
 Any deviation from this plan must be documented as an exploratory finding, clearly labelled in the manuscript, and not counted toward the primary hypothesis test.
 
@@ -170,3 +187,26 @@ finding easier to obtain.
 **Outstanding at v2.** The §6 secondary ITS analysis is still
 unimplemented. It must be built and unit-tested before the analysis
 runs, or withdrawn in a dated v3 amendment before filing.
+
+### v3 — 2026-11-04 (pre-filing, pre-analysis)
+
+Closes the item left outstanding at v2: the §6 secondary ITS analysis is
+now implemented (`src/hivdrwatch/paper1/fig04_its.py`) and unit-tested
+(`tests/paper1/test_fig04_its.py`). The commitment is kept, not withdrawn.
+
+v1 and v2 specified the ITS only as a model formula. v3 writes down the
+operational detail that formula left open — the unit of observation, the
+centring of `t` on 2019, the exclusion of 2019 from the series, which
+coefficients are the effect estimates, the not-fittable rule, and the
+estimator. None of this changes the hypothesis or the primary analysis;
+it removes the latitude that would otherwise let the implementation
+choose after seeing the data.
+
+Two points recorded deliberately:
+
+* **2019 is excluded from the ITS series**, matching §5's treatment of it as an implementation buffer, so the secondary analysis runs on the same cohort as the primary. v1 said "2019 as the intervention point" without saying which segment the year itself belonged to.
+* **The estimator is OLS on a proportion**, with the heteroscedasticity caveat stated in §6 rather than left for a reviewer to raise. Per-year denominators are reported with every fit. ITS remains secondary; the confirmatory claim rests on the primary tier.
+
+No new dependency was added — the regression is least squares on numpy
+with a scipy t reference distribution, and the tests check it against
+`scipy.stats.linregress` on the single-predictor case it reduces to.
