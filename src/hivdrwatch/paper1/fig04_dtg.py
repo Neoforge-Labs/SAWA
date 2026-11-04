@@ -269,6 +269,34 @@ def _benjamini_hochberg(pvals: list[float], q: float) -> list[float]:
 # ------------------------------------------------------------------
 
 
+def build_insti_indicator(dr_results: pl.DataFrame, curated: pl.DataFrame) -> pl.DataFrame:
+    """One row per accession: `is_insti_resistant` plus country/year/subtype.
+
+    The single definition of the Fig 4 outcome (preregistration §5): a
+    sequence counts as resistant if *any* INSTI drug came back at a
+    Sierra level in `RESISTANT_LEVELS`. Both the primary epoch analysis
+    and the secondary ITS consume this, so the two can never disagree
+    about what "resistant" means.
+
+    Rows with a null country, collection year or subtype are dropped.
+    """
+    per_seq = (
+        dr_results.filter(pl.col("drug_class") == INSTI_CLASS)
+        .with_columns(pl.col("level").is_in(list(RESISTANT_LEVELS)).alias("_is_r"))
+        .group_by("accession")
+        .agg(pl.col("_is_r").any().alias("is_insti_resistant"))
+    )
+    return per_seq.join(
+        curated.select(["accession", "country", "collection_year", "subtype"]),
+        on="accession",
+        how="inner",
+    ).filter(
+        pl.col("country").is_not_null()
+        & pl.col("collection_year").is_not_null()
+        & pl.col("subtype").is_not_null()
+    )
+
+
 def aggregate_dtg_landscape(
     dr_results: pl.DataFrame,
     curated: pl.DataFrame,
@@ -298,23 +326,7 @@ def aggregate_dtg_landscape(
         if missing:
             raise ValueError(f"{name} missing required columns: {sorted(missing)}")
 
-    # Per-sequence "any INSTI resistant" indicator.
-    per_seq = (
-        dr_results.filter(pl.col("drug_class") == INSTI_CLASS)
-        .with_columns(pl.col("level").is_in(list(RESISTANT_LEVELS)).alias("_is_r"))
-        .group_by("accession")
-        .agg(pl.col("_is_r").any().alias("is_insti_resistant"))
-    )
-
-    joined = per_seq.join(
-        curated.select(["accession", "country", "collection_year", "subtype"]),
-        on="accession",
-        how="inner",
-    ).filter(
-        pl.col("country").is_not_null()
-        & pl.col("collection_year").is_not_null()
-        & pl.col("subtype").is_not_null()
-    )
+    joined = build_insti_indicator(dr_results, curated)
 
     joined = joined.with_columns(
         pl.col("collection_year").map_elements(_epoch, return_dtype=pl.Utf8).alias("epoch")
@@ -484,4 +496,5 @@ __all__ = [
     "ROLLOUT_YEAR",
     "DTGSummary",
     "aggregate_dtg_landscape",
+    "build_insti_indicator",
 ]
